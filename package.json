@@ -1,0 +1,32 @@
+{
+  "name": "gentyl",
+  "version": "0.0.0",
+  "description": "A Recursive Object Synthesizer for Javascript",
+  "main": "core.js",
+  "scripts": {
+    "test": "jasmine"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Space-Ed/gentyl.git"
+  },
+  "keywords": [
+    "generator",
+    "procedural",
+    "random",
+    "data",
+    "hierarchy"
+  ],
+  "author": "Edward Dalley",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Space-Ed/gentyl/issues"
+  },
+  "homepage": "https://github.com/Space-Ed/gentyl#readme",
+  "devDependencies": {
+    "browserify": "^13.1.0",
+    "jasmine-node": "^1.14.5",
+    "tsify": "^1.0.1",
+    "typescript": "^1.8.10"
+  }
+}
