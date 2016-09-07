@@ -2,7 +2,6 @@
 /// <reference path="../../typings/globals/jasmine/index.d.ts"/>
 
 var G = require("../dist/gentyl.js");
-
 var g = G.g;
 
 describe("operationality", function () {
@@ -15,38 +14,48 @@ describe("operationality", function () {
 
 
     it("should generate a single object with string properties", function () {
-        var gen = g( {
+        var gen = g({
             a: "stringa",
             b: "stringb"
-        }, function (obj) {
-            return obj;
-        });
+        },{
+            f:function (obj) {
+                return obj;
+            }
+        }).prepare();
+
         var res = gen.resolve();
         expect(res).toEqual({ a: "stringa", b: "stringb" });
     });
 
 
     it("should generate from context properties", function(){
-        var gen = g(  {
-                _prop:"value"
-            },function(obj){
-                return this.prop;
+        var gen = g({}
+            ,{
+                f:function(obj){
+                    return this.prop;
+                }
+            },{
+                prop:"value"
             }
-        );
+        ).prepare();
 
         var res = gen.resolve();
         expect(res).toEqual("value")
     })
 
     it("should generate from changing context properties", function(){
-        var gen = g(  {
-                _prop:0,
+        var gen = g({
                 inc:1
-            },function(obj, args){
-                this.prop += obj.inc;
-                return this.prop;
+            },{
+                f:function(obj, args){
+                    this.prop += obj.inc;
+                    return this.prop;
+                }
+            },
+            {
+                prop:0
             }
-        );
+        ).prepare();
 
         var res = gen.resolve();
         expect(res).toEqual(1);
@@ -57,16 +66,19 @@ describe("operationality", function () {
 
     it("should generate from arg set context properties", function(){
         var gen = g({
-            _prop:0
-        },function(obj, arg){
+        },{
+            f:function(obj, arg){
 
-            if(arg == undefined){
-                return this.prop
-            }else{
-                this.prop = arg;
-                return "set"
+                if(arg == undefined){
+                    return this.prop
+                }else{
+                    this.prop = arg;
+                    return "set"
+                }
             }
-        });
+        },{
+            prop:0
+        }).prepare();
 
         var res = gen.resolve(1);
         expect(res).toEqual("set");
@@ -85,7 +97,7 @@ describe("recursability",function(){
                     prop:0
                 }
             }
-        });
+        }).prepare();
 
         var res = gen.resolve();
         expect(res).toEqual({
@@ -104,7 +116,7 @@ describe("recursability",function(){
             ]),
             4,
             5
-        ]);
+        ]).prepare();
 
         var res = gen.resolve();
         expect(res).toEqual([[1,2,3],4,5]);

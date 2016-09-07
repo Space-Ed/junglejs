@@ -17,6 +17,8 @@ namespace Gentyl {
 
         ownProperties:any;
         propertyLayerMap:any;
+        closed:boolean;
+
 
         constructor(private host:ResolutionNode, hostContext:any, private mode:string){
             //parse modes
@@ -34,7 +36,13 @@ namespace Gentyl {
                     writable:true,
                     enumerable:false,
                     configurable:false
-                }
+                },
+
+                closed:{
+                    value:false,
+                    writable:true,
+                    enumerable:false,
+                    configurable:false,                }
             });
 
 
@@ -61,6 +69,7 @@ namespace Gentyl {
                     //     break;
                     // }
                     // case (ASSOCMODE.TRACK):{
+                    //     this.addTrackedLayer()
                     //     break;
                     // }
                     default:{
@@ -78,19 +87,35 @@ namespace Gentyl {
          */
         parseMode(modestr:string):ContextLayer[] {
             var layers:ContextLayer[] = []
-            var splitexp = modestr.split(',')
+            var splitexp = modestr.split(/\s/);
+            const validmode = /^[&|=]$/;
+            const validsource = /^[+_]$/;
+            const validwhole = /^([&|=])([+_])$/
 
-            if (splitexp[0] == ''){
+            let i = 0
+            if (splitexp[0] === '!'){
+                this.closed = true;
+                i = 1;
+            }
+
+            if (splitexp[i] === '' || splitexp[i] == undefined){
                 return layers
             }
 
-            for (let i = 0; i < splitexp.length; i += 1) {
+            for (; i < splitexp.length; i += 1) {
                 var layer:ContextLayer = {mode:null, source:null}
 
                 var typeSourceKey = splitexp[i]
+                var match = typeSourceKey.match(validwhole)
 
-                var tKey = typeSourceKey[0];
-                var sKey = typeSourceKey[1][0]; //will be parsed to give depth control;
+                if(!match){
+                    throw Error("Invalid source mode expression " + typeSourceKey +" must fit /^([&\|=])([\+_])$/ ")
+                }
+
+                var tKey = match[1];
+                var sKey = match[2]; //will be parsed to give depth control;
+
+                console.log("tkey: %s , sKey: %s",tKey, sKey)
 
                 layer.mode =  {"&":ASSOCMODE.SHARE, "|":ASSOCMODE.INHERIT, "=":ASSOCMODE.TRACK}[tKey]
                 layer.source =  (sKey == "+" ? this.host.getParent(1) : sKey == "_" ? this.host.getRoot() : this.host).ctx
@@ -104,6 +129,7 @@ namespace Gentyl {
          *
          */
         addOwnProperty(name:string, defaultValue){
+            console.log("addOwnProperty(name:%s, defaultValue:%s)", name, defaultValue)
 
             // TODO: Handle own property derivation conflict
             this.ownProperties[name] = defaultValue;
@@ -111,7 +137,7 @@ namespace Gentyl {
 
             Object.defineProperty(this, name, {
                 set: this.setItem.bind(this, name),
-                get:this.getItem.bind(this, name),
+                get: this.getItem.bind(this, name),
                 enumerable:true,
                 configurable:true
             });
@@ -140,7 +166,10 @@ namespace Gentyl {
 
         getItem(key):any{
             let layer:ContextLayer = this.propertyLayerMap[key];
-            return layer.source.ownProperties[key];
+            let result = layer.source.ownProperties[key];
+
+            console.log("getItem %s resulting in:", key , result);
+            return result;
 
         }
 
@@ -179,7 +208,10 @@ namespace Gentyl {
                 if(this.propertyLayerMap[prop] != undefined && (this.propertyLayerMap[prop].mode != propVal.mode || this.propertyLayerMap[prop].source != propVal.source) ){
                     throw new Error("source layer introduces incompatible source/mode of property")
                 }else{
-                    this.propertyLayerMap[prop] = {source:propVal.source, mode:propVal.mode};
+                    //the source is the holder of the information whereas the mode is attributed to this contexts layer perspective
+                    this.propertyLayerMap[prop] = {source:propVal.source, mode:layer.mode};
+
+                    console.log("add source layer property prop:%s", prop)
 
                     Object.defineProperty(this, prop, {
                         set: this.setItem.bind(this, prop),

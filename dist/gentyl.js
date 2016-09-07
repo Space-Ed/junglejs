@@ -1,8 +1,3 @@
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
 var Gentyl;
 (function (Gentyl) {
     var Util;
@@ -126,6 +121,7 @@ var Gentyl;
         function ResolutionContext(host, hostContext, mode) {
             //parse modes
             this.host = host;
+            this.mode = mode;
             Object.defineProperties(this, {
                 ownProperties: {
                     value: {},
@@ -138,9 +134,20 @@ var Gentyl;
                     writable: true,
                     enumerable: false,
                     configurable: false
-                }
+                },
+                closed: {
+                    value: false,
+                    writable: true,
+                    enumerable: false,
+                    configurable: false, }
             });
-            var layers = this.parseMode(mode);
+            //create argumented layer
+            for (var k in hostContext) {
+                this.addOwnProperty(k, hostContext[k]);
+            }
+        }
+        ResolutionContext.prototype.prepare = function () {
+            var layers = this.parseMode(this.mode);
             for (var i = 0; i < layers.length; i++) {
                 var layer = layers[i];
                 switch (layer.mode) {
@@ -153,6 +160,7 @@ var Gentyl;
                     //     break;
                     // }
                     // case (ASSOCMODE.TRACK):{
+                    //     this.addTrackedLayer()
                     //     break;
                     // }
                     default: {
@@ -161,26 +169,35 @@ var Gentyl;
                     }
                 }
             }
-            //create argumented layer
-            for (var k in hostContext) {
-                this.addOwnProperty(k, hostContext[k]);
-            }
-        }
+        };
         /**
          * create the layers, at each stage looking up contexts relative to the host.
          *
          */
         ResolutionContext.prototype.parseMode = function (modestr) {
             var layers = [];
-            var splitexp = modestr.split(',');
-            if (splitexp[0] == '') {
+            var splitexp = modestr.split(/\s/);
+            var validmode = /^[&|=]$/;
+            var validsource = /^[+_]$/;
+            var validwhole = /^([&|=])([+_])$/;
+            var i = 0;
+            if (splitexp[0] === '!') {
+                this.closed = true;
+                i = 1;
+            }
+            if (splitexp[i] === '' || splitexp[i] == undefined) {
                 return layers;
             }
-            for (var i = 0; i < splitexp.length; i += 1) {
+            for (; i < splitexp.length; i += 1) {
                 var layer = { mode: null, source: null };
                 var typeSourceKey = splitexp[i];
-                var tKey = typeSourceKey[0];
-                var sKey = typeSourceKey[1][0];
+                var match = typeSourceKey.match(validwhole);
+                if (!match) {
+                    throw Error("Invalid source mode expression " + typeSourceKey + " must fit /^([&\|=])([\+_])$/ ");
+                }
+                var tKey = match[1];
+                var sKey = match[2]; //will be parsed to give depth control;
+                console.log("tkey: %s , sKey: %s", tKey, sKey);
                 layer.mode = { "&": ASSOCMODE.SHARE, "|": ASSOCMODE.INHERIT, "=": ASSOCMODE.TRACK }[tKey];
                 layer.source = (sKey == "+" ? this.host.getParent(1) : sKey == "_" ? this.host.getRoot() : this.host).ctx;
                 layers.push(layer);
@@ -191,6 +208,7 @@ var Gentyl;
          *
          */
         ResolutionContext.prototype.addOwnProperty = function (name, defaultValue) {
+            console.log("addOwnProperty(name:%s, defaultValue:%s)", name, defaultValue);
             // TODO: Handle own property derivation conflict
             this.ownProperties[name] = defaultValue;
             this.propertyLayerMap[name] = { source: this, mode: ASSOCMODE.SHARE };
@@ -200,16 +218,6 @@ var Gentyl;
                 enumerable: true,
                 configurable: true
             });
-        };
-        /**
-         * add all the properties of the target layer to the ownPropertiesMap.
-         */
-        ResolutionContext.prototype.addInherentLayer = function (layerctx) {
-            for (var prop in layerctx.ownProperties) {
-                // TODO: Maybe not just target layerctxs own properties.
-                var propVal = layerctx.ownProperties[prop];
-                this.addOwnProperty(prop, propVal);
-            }
         };
         /**
          * Access the property-source map and appropriately adjust the value.
@@ -228,7 +236,9 @@ var Gentyl;
         };
         ResolutionContext.prototype.getItem = function (key) {
             var layer = this.propertyLayerMap[key];
-            return layer.source.ownProperties[key];
+            var result = layer.source.ownProperties[key];
+            console.log("getItem %s resulting in:", key, result);
+            return result;
         };
         /**
          * get the actual source of the desired property. use to set/getItems,
@@ -243,7 +253,17 @@ var Gentyl;
             }
         };
         /**
-         * take
+         * add all the properties of the target layer to the ownPropertiesMap.
+         */
+        ResolutionContext.prototype.addInherentLayer = function (layerctx) {
+            for (var prop in layerctx.ownProperties) {
+                // TODO: Maybe not just target layerctxs own properties.
+                var propVal = layerctx.ownProperties[prop];
+                this.addOwnProperty(prop, propVal);
+            }
+        };
+        /**
+         * add a context source layer so that the properties of that layer are accessible in this context.
          */
         ResolutionContext.prototype.addSourceLayer = function (layer) {
             for (var prop in layer.source.propertyLayerMap) {
@@ -252,7 +272,9 @@ var Gentyl;
                     throw new Error("source layer introduces incompatible source/mode of property");
                 }
                 else {
-                    this.propertyLayerMap[prop] = { source: propVal.source, mode: propVal.mode };
+                    //the source is the holder of the information whereas the mode is attributed to this contexts layer perspective
+                    this.propertyLayerMap[prop] = { source: propVal.source, mode: layer.mode };
+                    console.log("add source layer property prop:%s", prop);
                     Object.defineProperty(this, prop, {
                         set: this.setItem.bind(this, prop),
                         get: this.getItem.bind(this, prop),
@@ -271,15 +293,16 @@ var Gentyl;
 var Gentyl;
 (function (Gentyl) {
     var ResolutionNode = (function () {
-        function ResolutionNode(resolver, components, carrier, mode) {
-            //scan for all underscores splitting context node
-            if (carrier === void 0) { carrier = function (x) { return x; }; }
-            if (mode === void 0) { mode = ''; }
-            this.resolver = resolver;
-            this.carrier = carrier;
-            //Initialised properties of state
-            var context = {};
+        function ResolutionNode(components, form, state) {
+            if (form === void 0) { form = {}; }
+            if (state === void 0) { state = {}; }
             var node;
+            //Initialised properties of state
+            var context = Gentyl.Util.copyObject(state) || {};
+            var mode = form.m || "";
+            this.carrier = form.c || function (x) { return x; };
+            this.resolver = form.f || function (x) { return x; };
+            this.depth = 0;
             //construct the node of array object or primative type
             if (components instanceof Array) {
                 node = [];
@@ -296,21 +319,46 @@ var Gentyl;
                     var component = components[k];
                     //convert all objects into resolution nodes, for consistent depth referencing.
                     var c = this.prepareComponent(component);
-                    if (k[0] == "_") {
-                        context[k.slice(1)] = c;
-                    }
-                    else {
-                        node[k] = c;
-                    }
+                    node[k] = c;
                 }
             }
             else {
                 node = components;
             }
             this.node = node;
-            //find the resolution nodes buried in the components arg:make this the parent of them
             this.ctx = new Gentyl.ResolutionContext(this, context, mode);
         }
+        /**
+         * setup the state tree, recursively preparing the contexts
+         */
+        ResolutionNode.prototype.prepare = function () {
+            this.prepared = true;
+            if (!this.functional) {
+                this.ctx.prepare();
+            }
+            if (this.node instanceof Array) {
+                for (var i = 0; i < this.node.length; i++) {
+                    var val = this.node[i];
+                    if (val instanceof ResolutionNode) {
+                        val.prepare();
+                    }
+                }
+            }
+            else if (this.node instanceof Object) {
+                for (var k in this.node) {
+                    var val = this.node[k];
+                    if (val instanceof ResolutionNode) {
+                        val.prepare();
+                    }
+                }
+            }
+            else {
+                if (this.node instanceof ResolutionNode) {
+                    this.node.prepare();
+                }
+            }
+            return this;
+        };
         ResolutionNode.prototype.prepareComponent = function (component) {
             var c;
             if (component instanceof ResolutionNode) {
@@ -318,7 +366,7 @@ var Gentyl;
                 c.setParent(this);
             }
             else if (component instanceof Object) {
-                c = new BlankNode(component);
+                c = new ResolutionNode(component);
                 c.setParent(this);
             }
             else {
@@ -393,30 +441,22 @@ var Gentyl;
             return result;
         };
         ResolutionNode.prototype.resolve = function (resolveArgs) {
+            if (!this.prepared && !this.functional) {
+                throw Error("Node with state is not prepared, unable to resolve");
+            }
             //recurse on the contained node
-            var resolvedNode = this.resolveNode(this.node, resolveArgs);
+            var resolvedNode = this.resolveNode(this.node, this.carrier.call(this.ctx, resolveArgs));
             //modifies the resolved context and returns the processed result
-            var result = this.resolver.call(this.ctx, resolvedNode, this.carrier(resolveArgs));
+            var result = this.resolver.call(this.ctx, resolvedNode, resolveArgs);
             return result;
         };
         return ResolutionNode;
     }());
     Gentyl.ResolutionNode = ResolutionNode;
-    var BlankNode = (function (_super) {
-        __extends(BlankNode, _super);
-        function BlankNode(components) {
-            _super.call(this, function (x) { return x; }, components);
-        }
-        return BlankNode;
-    }(ResolutionNode));
-    Gentyl.BlankNode = BlankNode;
-    function _(components, resolver, carrier, mode) {
-        if (resolver === void 0) { resolver = function (x, a) { return x; }; }
-        if (carrier === void 0) { carrier = function (x) { return x; }; }
-        if (mode === void 0) { mode = ''; }
-        return new ResolutionNode(resolver, components, carrier, mode);
+    function g(components, form, state) {
+        return new ResolutionNode(components, form, state);
     }
-    Gentyl._ = _;
+    Gentyl.g = g;
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {

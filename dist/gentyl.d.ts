@@ -24,9 +24,12 @@ declare namespace Gentyl {
      */
     class ResolutionContext {
         private host;
+        private mode;
         ownProperties: any;
         propertyLayerMap: any;
+        closed: boolean;
         constructor(host: ResolutionNode, hostContext: any, mode: string);
+        prepare(): void;
         /**
          * create the layers, at each stage looking up contexts relative to the host.
          *
@@ -36,10 +39,6 @@ declare namespace Gentyl {
          *
          */
         addOwnProperty(name: string, defaultValue: any): void;
-        /**
-         * add all the properties of the target layer to the ownPropertiesMap.
-         */
-        addInherentLayer(layerctx: ResolutionContext): void;
         /**
          * Access the property-source map and appropriately adjust the value.
          If the context holds this property(the property source maps to this) then set the value of the property.
@@ -54,21 +53,36 @@ declare namespace Gentyl {
          */
         getItemSource(key: any): ResolutionContext;
         /**
-         * take
+         * add all the properties of the target layer to the ownPropertiesMap.
+         */
+        addInherentLayer(layerctx: ResolutionContext): void;
+        /**
+         * add a context source layer so that the properties of that layer are accessible in this context.
          */
         addSourceLayer(layer: ContextLayer): void;
     }
 }
 declare namespace Gentyl {
+    interface Form {
+        f?: (obj, args?) => any;
+        c?: (args?) => any;
+        m?: string;
+    }
     class ResolutionNode {
-        private resolver;
-        private carrier;
         ctx: ResolutionContext;
         node: any;
         parent: ResolutionNode;
         depth: number;
         root: ResolutionNode;
-        constructor(resolver: Function, components: Object, carrier?: (x: any) => any, mode?: string);
+        prepared: boolean;
+        functional: boolean;
+        carrier: (obj) => any;
+        resolver: (obj) => any;
+        constructor(components: any, form?: Form, state?: any);
+        /**
+         * setup the state tree, recursively preparing the contexts
+         */
+        prepare(): ResolutionNode;
         private prepareComponent(component);
         getParent(toDepth?: number): ResolutionNode;
         getRoot(): ResolutionNode;
@@ -79,10 +93,7 @@ declare namespace Gentyl {
         private resolveUnderscore(resolver, resolveArgs);
         resolve(resolveArgs: any): any;
     }
-    class BlankNode extends ResolutionNode {
-        constructor(components: any);
-    }
-    function _(components: Object, resolver?: (x: any, a: any) => any, carrier?: (x: any) => any, mode?: string): ResolutionNode;
+    function g(components: Object, form: any, state: any): ResolutionNode;
 }
 declare namespace Gentyl {
     function sA(components: any, resolveArgs: any): any;

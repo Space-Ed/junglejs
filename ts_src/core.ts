@@ -3,6 +3,12 @@
 
 namespace Gentyl {
 
+    export interface Form {
+        f?:(obj, args?)=>any;
+        c?:(args?)=>any;
+        m?:string
+    }
+
     export class ResolutionNode {
         ctx:ResolutionContext;
         node:any;
@@ -14,13 +20,20 @@ namespace Gentyl {
         prepared:boolean;
         functional:boolean;
 
+        carrier:(obj)=>any;
+        resolver:(obj)=>any;
 
-        constructor(private resolver:Function, components:Object, private carrier=(x)=>{return x}, mode=''){
-            //scan for all underscores splitting context node
+        constructor(components:any, form:Form = {}, state:any = {}){
+
+            var node;
 
             //Initialised properties of state
-            var context = {}
-            var node;
+            var context = Util.copyObject(state) || {}
+            var mode = form.m || "";
+            this.carrier = form.c || function(x){return x};
+            this.resolver = form.f || function(x){return x};
+
+            this.depth = 0;
 
             //construct the node of array object or primative type
             if(components instanceof Array){
@@ -39,13 +52,7 @@ namespace Gentyl {
                     var component = components[k];
                     //convert all objects into resolution nodes, for consistent depth referencing.
                     var c = this.prepareComponent(component);
-
-                    if(k[0] == "_"){
-                        this.functional = false;
-                        context[k.slice(1)] = c;
-                    } else {
-                        node[k] = c;
-                    }
+                    node[k] = c;
                 }
             }else {
                 node = components;
@@ -60,7 +67,7 @@ namespace Gentyl {
         /**
          * setup the state tree, recursively preparing the contexts
          */
-        public prepare(){
+        public prepare():ResolutionNode{
             this.prepared = true;
 
             if(!this.functional){
@@ -88,6 +95,8 @@ namespace Gentyl {
                     this.node.prepare();
                 }
             }
+
+            return this
         }
 
         private prepareComponent(component):any{
@@ -96,7 +105,7 @@ namespace Gentyl {
                 c = component
                 c.setParent(this);
             }else if (component instanceof Object){
-                c = new BlankNode(component)
+                c = new ResolutionNode(component)
                 c.setParent(this);
             }else {
                 c = component
@@ -190,26 +199,19 @@ namespace Gentyl {
             }
 
             //recurse on the contained node
-            var resolvedNode = this.resolveNode(this.node, resolveArgs)
+            var resolvedNode = this.resolveNode(this.node,  this.carrier.call(this.ctx, resolveArgs))
 
             //modifies the resolved context and returns the processed result
-            var result = this.resolver.call(this.ctx, resolvedNode, this.carrier(resolveArgs))
+            var result = this.resolver.call(this.ctx, resolvedNode,  resolveArgs)
 
 
             return result
         }
     }
 
-    export class BlankNode extends ResolutionNode {
 
-        constructor(components){
-            super(function(x){return x}, components)
-        }
-
+    export function g(components:Object, form, state){
+        return new ResolutionNode(components,form, state)
     }
 
-
-    export function g(components:Object, resolver=(x, a)=>{return x}, carrier=(x)=>{return x}, mode=''){
-        return new ResolutionNode(resolver, components, carrier, mode)
-    }
 }
