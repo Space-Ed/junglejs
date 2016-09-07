@@ -1,6 +1,6 @@
 {
   "name": "gentyl",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A Recursive Object Synthesizer for Javascript",
   "main": "core.js",
   "scripts": {
