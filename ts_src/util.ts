@@ -75,6 +75,33 @@ namespace Gentyl{
             return melded
         }
 
+        export function isDeepReplica(node1, node2){
+            if(typeof(node1) != typeof(node2)){
+                return false // nodes not same type
+            }
+            else if (node1 instanceof Object){
+                if(node1 === node2){
+                    return false // identical object
+                }else{
+                    for (var k in node1){
+                        if(!(k in node2)){
+                            return false; // key in node1 but node node2
+                        }
+                    }
+                    for (var q in node2){
+                        if(!(q in node1)){
+                            return false;// key in node2 and not node1
+                        }else if(!isDeepReplica(node1[q], node2[q])){
+                                return false; //recursive came up false.
+                        }
+                    }
+                    return true; // no false flag
+                }
+            } else {
+                return (node1 === node2); ///primitive equality
+            }
+        }
+
         //merge, when there is a conflict, neither is taken
         export function softAssoc(from, onto){
             for (var k in from){

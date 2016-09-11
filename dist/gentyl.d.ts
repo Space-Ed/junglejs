@@ -3,6 +3,7 @@ declare namespace Gentyl {
     namespace Util {
         function translator(node: any, translation: any): any;
         function melder(node1: any, node2: any, merge?: (a: any, b: any) => any, concatArrays?: boolean): any;
+        function isDeepReplica(node1: any, node2: any): boolean;
         function softAssoc(from: any, onto: any): void;
         function assoc(from: any, onto: any): void;
         function copyObject(object: any): {};
@@ -73,17 +74,22 @@ declare namespace Gentyl {
         node: any;
         parent: ResolutionNode;
         depth: number;
+        isRoot: boolean;
         root: ResolutionNode;
         prepared: boolean;
         functional: boolean;
         carrier: (obj) => any;
         resolver: (obj) => any;
+        ancestor: ResolutionNode;
+        ctxmode: string;
+        ctxcache: any;
         constructor(components: any, form?: Form, state?: any);
         /**
          * setup the state tree, recursively preparing the contexts
          */
         prepare(): ResolutionNode;
-        private prepareComponent(component);
+        private inductComponent(component);
+        replicate(): ResolutionNode;
         getParent(toDepth?: number): ResolutionNode;
         getRoot(): ResolutionNode;
         private setParent(parentNode);

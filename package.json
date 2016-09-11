@@ -4,7 +4,7 @@
   "description": "A Recursive Object Synthesizer for Javascript",
   "main": "core.js",
   "scripts": {
-    "test": "jasmine"
+    "test": "./script/test"
   },
   "repository": {
     "type": "git",

@@ -76,6 +76,36 @@ var Gentyl;
             return melded;
         }
         Util.melder = melder;
+        function isDeepReplica(node1, node2) {
+            if (typeof (node1) != typeof (node2)) {
+                return false; // nodes not same type
+            }
+            else if (node1 instanceof Object) {
+                if (node1 === node2) {
+                    return false; // identical object
+                }
+                else {
+                    for (var k in node1) {
+                        if (!(k in node2)) {
+                            return false; // key in node1 but node node2
+                        }
+                    }
+                    for (var q in node2) {
+                        if (!(q in node1)) {
+                            return false; // key in node2 and not node1
+                        }
+                        else if (!isDeepReplica(node1[q], node2[q])) {
+                            return false; //recursive came up false.
+                        }
+                    }
+                    return true; // no false flag
+                }
+            }
+            else {
+                return (node1 === node2); ///primitive equality
+            }
+        }
+        Util.isDeepReplica = isDeepReplica;
         //merge, when there is a conflict, neither is taken
         function softAssoc(from, onto) {
             for (var k in from) {
@@ -298,18 +328,20 @@ var Gentyl;
             if (state === void 0) { state = {}; }
             var node;
             //Initialised properties of state
-            var context = Gentyl.Util.copyObject(state) || {};
-            var mode = form.m || "";
+            this.ctxcache = state || {};
+            var context = Gentyl.Util.copyObject(this.ctxcache);
+            var mode = this.ctxmode = form.m || "";
             this.carrier = form.c || function (x) { return x; };
             this.resolver = form.f || function (x) { return x; };
             this.depth = 0;
+            this.isRoot = true;
             //construct the node of array object or primative type
             if (components instanceof Array) {
                 node = [];
                 node.lenth = components.length;
                 for (var i = 0; i < components.length; i++) {
                     var component = components[i];
-                    var c = this.prepareComponent(component);
+                    var c = this.inductComponent(component);
                     node[i] = c;
                 }
             }
@@ -318,7 +350,7 @@ var Gentyl;
                 for (var k in components) {
                     var component = components[k];
                     //convert all objects into resolution nodes, for consistent depth referencing.
-                    var c = this.prepareComponent(component);
+                    var c = this.inductComponent(component);
                     node[k] = c;
                 }
             }
@@ -332,6 +364,8 @@ var Gentyl;
          * setup the state tree, recursively preparing the contexts
          */
         ResolutionNode.prototype.prepare = function () {
+            //TODO:if already prepared
+            this.ancestor = this.replicate();
             this.prepared = true;
             if (!this.functional) {
                 this.ctx.prepare();
@@ -340,7 +374,10 @@ var Gentyl;
                 for (var i = 0; i < this.node.length; i++) {
                     var val = this.node[i];
                     if (val instanceof ResolutionNode) {
-                        val.prepare();
+                        var rep = val.replicate();
+                        rep.setParent(this);
+                        rep.prepare();
+                        this.node[i] = rep;
                     }
                 }
             }
@@ -348,31 +385,44 @@ var Gentyl;
                 for (var k in this.node) {
                     var val = this.node[k];
                     if (val instanceof ResolutionNode) {
-                        val.prepare();
+                        var rep = val.replicate();
+                        rep.setParent(this);
+                        rep.prepare();
+                        this.node[k] = rep;
                     }
                 }
             }
             else {
                 if (this.node instanceof ResolutionNode) {
-                    this.node.prepare();
+                    var rep = this.node.replicate();
+                    rep.prepare();
+                    this.node = rep;
                 }
             }
             return this;
         };
-        ResolutionNode.prototype.prepareComponent = function (component) {
+        ResolutionNode.prototype.inductComponent = function (component) {
             var c;
             if (component instanceof ResolutionNode) {
                 c = component;
-                c.setParent(this);
             }
             else if (component instanceof Object) {
                 c = new ResolutionNode(component);
-                c.setParent(this);
             }
             else {
                 c = component;
             }
             return c;
+        };
+        ResolutionNode.prototype.replicate = function () {
+            if (this.prepared) {
+                //this node is prepared so we will be creating a new based off the ancestor;
+                return this.ancestor.replicate();
+            }
+            else {
+                //this is a raw node, either an ancestor
+                return new ResolutionNode(this.node, { f: this.resolver, c: this.carrier, m: this.ctxmode }, this.ctxcache);
+            }
         };
         ResolutionNode.prototype.getParent = function (toDepth) {
             if (toDepth === void 0) { toDepth = 1; }
@@ -391,7 +441,8 @@ var Gentyl;
         };
         ResolutionNode.prototype.setParent = function (parentNode) {
             this.parent = parentNode;
-            this.depth = parentNode.depth + 1;
+            this.isRoot = false;
+            this.depth = this.parent.depth + 1;
         };
         ResolutionNode.prototype.resolveArray = function (array, resolveArgs) {
             var resolution = [];

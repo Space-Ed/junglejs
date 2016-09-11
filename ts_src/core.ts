@@ -16,6 +16,7 @@ namespace Gentyl {
         parent:ResolutionNode;
         depth:number;
 
+        isRoot:boolean;
         root:ResolutionNode;
         prepared:boolean;
         functional:boolean;
@@ -23,17 +24,24 @@ namespace Gentyl {
         carrier:(obj)=>any;
         resolver:(obj)=>any;
 
+        ancestor:ResolutionNode;
+        isAncestor:boolean;
+        ctxmode:string;
+        ctxcache:any
+
         constructor(components:any, form:Form = {}, state:any = {}){
 
             var node;
 
             //Initialised properties of state
-            var context = Util.copyObject(state) || {}
-            var mode = form.m || "";
+            this.ctxcache = state || {};
+            var context = Util.copyObject(this.ctxcache);
+            var mode = this.ctxmode =  form.m || "";
             this.carrier = form.c || function(x){return x};
             this.resolver = form.f || function(x){return x};
 
             this.depth = 0;
+            this.isRoot = true;
 
             //construct the node of array object or primative type
             if(components instanceof Array){
@@ -41,7 +49,7 @@ namespace Gentyl {
                 node.lenth= components.length;
                 for (var i = 0; i < components.length; i++){
                     var component = components[i];
-                    var c = this.prepareComponent(component);
+                    var c = this.inductComponent(component);
                     node[i] = c
                 }
 
@@ -51,7 +59,7 @@ namespace Gentyl {
                 for (var k in components){
                     var component = components[k];
                     //convert all objects into resolution nodes, for consistent depth referencing.
-                    var c = this.prepareComponent(component);
+                    var c = this.inductComponent(component);
                     node[k] = c;
                 }
             }else {
@@ -68,7 +76,15 @@ namespace Gentyl {
          * setup the state tree, recursively preparing the contexts
          */
         public prepare():ResolutionNode{
+
+            //TODO:if already prepared
+
+            this.ancestor = this.ancestor || this.replicate();
+            this.ancestor.isAncestor = true;
+
             this.prepared = true;
+
+
 
             if(!this.functional){
                 this.ctx.prepare();
@@ -78,7 +94,10 @@ namespace Gentyl {
                 for (let i = 0; i < this.node.length; i++){
                     let val = this.node[i];
                     if(val instanceof ResolutionNode){
-                        val.prepare();
+                        var rep = val.replicate()
+                        rep.setParent(this);
+                        rep.prepare();
+                        this.node[i] = rep
                     }
                 }
 
@@ -86,32 +105,53 @@ namespace Gentyl {
                 for (let k in this.node){
                     let val = this.node[k];
                     if(val instanceof ResolutionNode){
-                        val.prepare();
+                        var rep = val.replicate()
+                        rep.setParent(this);
+                        rep.prepare();
+                        this.node[k] = rep
                     }
                 }
 
             }else{
                 if(this.node instanceof ResolutionNode){
-                    this.node.prepare();
+                    var rep = this.node.replicate()
+                    rep.prepare();
+                    this.node = rep
                 }
             }
 
             return this
         }
 
-        private prepareComponent(component):any{
+        private inductComponent(component):any{
             var c
             if (component instanceof ResolutionNode){
                 c = component
-                c.setParent(this);
+                //c.setParent(this);
             }else if (component instanceof Object){
                 c = new ResolutionNode(component)
-                c.setParent(this);
+                //c.setParent(this);
             }else {
                 c = component
             }
 
             return c;
+        }
+
+        replicate():ResolutionNode{
+            if(this.prepared){
+                //this node is prepared so we will be creating a new based off the ancestor;
+                return this.ancestor.replicate()
+            }else{
+
+                //this is a raw node, either an ancestor
+                var repl = new ResolutionNode(this.node, {f:this.resolver, c:this.carrier, m:this.ctxmode}, this.ctxcache)
+                if(this.isAncestor){
+                    repl.ancestor = this;
+                    repl.prepare();
+                }
+                return repl
+            }
         }
 
         public getParent(toDepth = 1):ResolutionNode{
@@ -130,7 +170,8 @@ namespace Gentyl {
 
         private setParent(parentNode:ResolutionNode){
             this.parent = parentNode;
-            this.depth = parentNode.depth + 1;
+            this.isRoot = false;
+            this.depth = this.parent.depth + 1;
         }
 
         private  resolveArray(array:any[],resolveArgs):any[]{
