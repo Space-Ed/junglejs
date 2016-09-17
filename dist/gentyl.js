@@ -1,7 +1,16 @@
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
 var Gentyl;
 (function (Gentyl) {
     var Util;
     (function (Util) {
+        function identity(x) {
+            return x;
+        }
+        Util.identity = identity;
         function translator(node, translation) {
             var translated;
             //array?
@@ -76,12 +85,13 @@ var Gentyl;
             return melded;
         }
         Util.melder = melder;
-        function isDeepReplica(node1, node2) {
+        function deeplyEquals(node1, node2, allowIdentical) {
+            if (allowIdentical === void 0) { allowIdentical = true; }
             if (typeof (node1) != typeof (node2)) {
                 return false; // nodes not same type
             }
             else if (node1 instanceof Object) {
-                if (node1 === node2) {
+                if (node1 === node2 && !allowIdentical) {
                     return false; // identical object
                 }
                 else {
@@ -94,7 +104,7 @@ var Gentyl;
                         if (!(q in node1)) {
                             return false; // key in node2 and not node1
                         }
-                        else if (!isDeepReplica(node1[q], node2[q])) {
+                        else if (!deeplyEquals(node1[q], node2[q], allowIdentical)) {
                             return false; //recursive came up false.
                         }
                     }
@@ -105,7 +115,52 @@ var Gentyl;
                 return (node1 === node2); ///primitive equality
             }
         }
+        Util.deeplyEquals = deeplyEquals;
+        function deeplyEqualsThrow(node1, node2, derefstack, seen, allowIdentical) {
+            if (allowIdentical === void 0) { allowIdentical = true; }
+            var derefstack = derefstack || [];
+            var seen = seen || [];
+            //circularity prevention
+            if (seen.indexOf(node1) || seen.indexOf(node2)) {
+                return;
+            }
+            if (typeof (node1) != typeof (node2)) {
+                throw new Error("nodes not same type, derefs: [" + derefstack + "]");
+            }
+            else if (node1 instanceof Object) {
+                if (node1 === node2 && !allowIdentical) {
+                    throw new Error("identical object not replica, derefs:[" + derefstack + "]");
+                }
+                else {
+                    for (var k in node1) {
+                        if (!(k in node2)) {
+                            throw new Error("key " + k + " in object1 but not object2, derefs:[" + derefstack + "]");
+                        }
+                    }
+                    for (var q in node2) {
+                        if (!(q in node1)) {
+                            throw new Error("key " + k + " in object2 but node object1, derefs:[" + derefstack + "]"); // key in node2 and not node1
+                        }
+                        else {
+                            deeplyEqualsThrow(node1[q], node2[q], derefstack.concat(q), allowIdentical);
+                        }
+                    }
+                    return true; // no false flag
+                }
+            }
+            else if (node1 !== node2) {
+                throw new Error(node1 + " and " + node2 + " not equal, derefs:[" + derefstack + "]");
+            }
+        }
+        Util.deeplyEqualsThrow = deeplyEqualsThrow;
+        function isDeepReplica(node1, node2) {
+            deeplyEquals(node1, node2, false);
+        }
         Util.isDeepReplica = isDeepReplica;
+        function isDeepReplicaThrow(node1, node2, derefstack) {
+            deeplyEqualsThrow(node1, node2, derefstack, null, false);
+        }
+        Util.isDeepReplicaThrow = isDeepReplicaThrow;
         //merge, when there is a conflict, neither is taken
         function softAssoc(from, onto) {
             for (var k in from) {
@@ -133,6 +188,42 @@ var Gentyl;
             });
         }
         Util.applyMixins = applyMixins;
+        function typeCaseSplitF(objectOrAllFunction, arrayFunc, primativeFunc) {
+            var ofunc, afunc, pfunc;
+            if (primativeFunc == undefined && arrayFunc == undefined) {
+                ofunc = objectOrAllFunction || identity;
+                afunc = objectOrAllFunction || identity;
+                pfunc = objectOrAllFunction || identity;
+            }
+            else {
+                ofunc = objectOrAllFunction || identity;
+                afunc = arrayFunc || identity;
+                pfunc = primativeFunc || identity;
+            }
+            return function (inThing) {
+                var outThing;
+                if (inThing instanceof Array) {
+                    outThing = [];
+                    outThing.lenth = inThing.length;
+                    for (var i = 0; i < inThing.length; i++) {
+                        var subBundle = inThing[i];
+                        outThing[i] = afunc(subBundle, i);
+                    }
+                }
+                else if (inThing instanceof Object) {
+                    outThing = {};
+                    for (var k in inThing) {
+                        var subBundle = inThing[k];
+                        outThing[k] = ofunc(subBundle, k);
+                    }
+                }
+                else {
+                    outThing = pfunc(inThing);
+                }
+                return outThing;
+            };
+        }
+        Util.typeCaseSplitF = typeCaseSplitF;
     })(Util = Gentyl.Util || (Gentyl.Util = {}));
 })(Gentyl || (Gentyl = {}));
 module.exports = Gentyl;
@@ -155,13 +246,13 @@ var Gentyl;
             Object.defineProperties(this, {
                 ownProperties: {
                     value: {},
-                    writable: true,
+                    writable: false,
                     enumerable: false,
                     configurable: false
                 },
                 propertyLayerMap: {
                     value: {},
-                    writable: true,
+                    writable: false,
                     enumerable: false,
                     configurable: false
                 },
@@ -169,7 +260,8 @@ var Gentyl;
                     value: false,
                     writable: true,
                     enumerable: false,
-                    configurable: false, }
+                    configurable: false,
+                }
             });
             //create argumented layer
             for (var k in hostContext) {
@@ -199,10 +291,13 @@ var Gentyl;
                     }
                 }
             }
+            //freeze context here so that modifier functions cannot add, change or delete properties
+        };
+        ResolutionContext.prototype.extract = function () {
+            return this.ownProperties;
         };
         /**
          * create the layers, at each stage looking up contexts relative to the host.
-         *
          */
         ResolutionContext.prototype.parseMode = function (modestr) {
             var layers = [];
@@ -238,7 +333,7 @@ var Gentyl;
          *
          */
         ResolutionContext.prototype.addOwnProperty = function (name, defaultValue) {
-            console.log("addOwnProperty(name:%s, defaultValue:%s)", name, defaultValue);
+            //console.log("addOwnProperty(name:%s, defaultValue:%s)", name, defaultValue)
             // TODO: Handle own property derivation conflict
             this.ownProperties[name] = defaultValue;
             this.propertyLayerMap[name] = { source: this, mode: ASSOCMODE.SHARE };
@@ -267,12 +362,11 @@ var Gentyl;
         ResolutionContext.prototype.getItem = function (key) {
             var layer = this.propertyLayerMap[key];
             var result = layer.source.ownProperties[key];
-            console.log("getItem %s resulting in:", key, result);
+            //console.log("getItem %s resulting in:", key , result);
             return result;
         };
         /**
-         * get the actual source of the desired property. use to set/getItems,
-         should be recursive with a base of either reaching a node without the key or which hold the key
+         * get the actual source of the desired property. use to set/getItems
          */
         ResolutionContext.prototype.getItemSource = function (key) {
             if (key in this.propertyLayerMap) {
@@ -304,7 +398,7 @@ var Gentyl;
                 else {
                     //the source is the holder of the information whereas the mode is attributed to this contexts layer perspective
                     this.propertyLayerMap[prop] = { source: propVal.source, mode: layer.mode };
-                    console.log("add source layer property prop:%s", prop);
+                    //console.log("add source layer property prop:%s", prop)
                     Object.defineProperty(this, prop, {
                         set: this.setItem.bind(this, prop),
                         get: this.getItem.bind(this, prop),
@@ -326,16 +420,15 @@ var Gentyl;
         function ResolutionNode(components, form, state) {
             if (form === void 0) { form = {}; }
             if (state === void 0) { state = {}; }
-            var node;
-            //Initialised properties of state
-            this.ctxcache = state || {};
-            var context = Gentyl.Util.copyObject(this.ctxcache);
+            var context = Gentyl.Util.copyObject(state);
             var mode = this.ctxmode = form.m || "";
-            this.carrier = form.c || function (x) { return x; };
-            this.resolver = form.f || function (x) { return x; };
+            this.carrier = form.c || Gentyl.Util.identity;
+            this.resolver = form.f || Gentyl.Util.identity;
             this.depth = 0;
             this.isRoot = true;
+            this.prepared = false;
             //construct the node of array object or primative type
+            var node;
             if (components instanceof Array) {
                 node = [];
                 node.lenth = components.length;
@@ -357,6 +450,8 @@ var Gentyl;
             else {
                 node = components;
             }
+            //var inductor = this.inductComponent.bind(this);
+            //this.node = Util.typeCaseSplitF(inductor, inductor, null)(components)
             this.node = node;
             this.ctx = new Gentyl.ResolutionContext(this, context, mode);
         }
@@ -364,42 +459,83 @@ var Gentyl;
          * setup the state tree, recursively preparing the contexts
          */
         ResolutionNode.prototype.prepare = function () {
-            //TODO:if already prepared
-            this.ancestor = this.replicate();
-            this.prepared = true;
-            if (!this.functional) {
-                this.ctx.prepare();
-            }
-            if (this.node instanceof Array) {
-                for (var i = 0; i < this.node.length; i++) {
-                    var val = this.node[i];
-                    if (val instanceof ResolutionNode) {
-                        var rep = val.replicate();
-                        rep.setParent(this);
-                        rep.prepare();
-                        this.node[i] = rep;
+            //if already prepared the ancestor is reestablished
+            this.ancestor = this.ancestor || this.replicate();
+            this.ancestor.isAncestor = true;
+            if (!this.prepared) {
+                this.prepared = true;
+                if (!this.functional) {
+                    this.ctx.prepare();
+                }
+                if (this.node instanceof Array) {
+                    for (var i = 0; i < this.node.length; i++) {
+                        var val = this.node[i];
+                        if (val instanceof ResolutionNode) {
+                            var rep = val.replicate();
+                            rep.setParent(this);
+                            rep.prepare();
+                            this.node[i] = rep;
+                        }
                     }
                 }
-            }
-            else if (this.node instanceof Object) {
-                for (var k in this.node) {
-                    var val = this.node[k];
-                    if (val instanceof ResolutionNode) {
-                        var rep = val.replicate();
-                        rep.setParent(this);
-                        rep.prepare();
-                        this.node[k] = rep;
+                else if (this.node instanceof Object) {
+                    for (var k in this.node) {
+                        var val = this.node[k];
+                        if (val instanceof ResolutionNode) {
+                            var rep = val.replicate();
+                            rep.setParent(this);
+                            rep.prepare();
+                            this.node[k] = rep;
+                        }
                     }
                 }
-            }
-            else {
-                if (this.node instanceof ResolutionNode) {
+                else if (this.node instanceof ResolutionNode) {
                     var rep = this.node.replicate();
                     rep.prepare();
                     this.node = rep;
                 }
             }
+            else {
+            }
             return this;
+        };
+        ResolutionNode.prototype.replicate = function () {
+            if (this.prepared) {
+                //this node is prepared so we will be creating a new based off the ancestor;
+                return this.ancestor.replicate();
+            }
+            else {
+                //this is a raw node, either an ancestor
+                //var repl = new Reconstruction(this.bundle())
+                var repl = new ResolutionNode(this.node, { f: this.resolver, c: this.carrier, m: this.ctxmode }, this.ctx.extract());
+                //in the case of the ancestor it comes from prepared
+                if (this.isAncestor) {
+                    repl.ancestor = this;
+                    repl.prepare();
+                }
+                return repl;
+            }
+        };
+        ResolutionNode.prototype.bundle = function () {
+            function bundler(node) {
+                if (node instanceof ResolutionNode) {
+                    var product = node.bundle();
+                    return product;
+                }
+                else {
+                    console.log("watch out for this guy", node);
+                    return node;
+                }
+            }
+            var recurrentNodeBundle = Gentyl.Util.typeCaseSplitF(bundler, bundler, null)(this.node);
+            console.log("recurrentNodeBundle: \n ", recurrentNodeBundle);
+            var product = {
+                node: recurrentNodeBundle,
+                form: Gentyl.deformulate(this),
+                state: this.ctx.extract()
+            };
+            console.log("product:\n ", product);
+            return product;
         };
         ResolutionNode.prototype.inductComponent = function (component) {
             var c;
@@ -413,16 +549,6 @@ var Gentyl;
                 c = component;
             }
             return c;
-        };
-        ResolutionNode.prototype.replicate = function () {
-            if (this.prepared) {
-                //this node is prepared so we will be creating a new based off the ancestor;
-                return this.ancestor.replicate();
-            }
-            else {
-                //this is a raw node, either an ancestor
-                return new ResolutionNode(this.node, { f: this.resolver, c: this.carrier, m: this.ctxmode }, this.ctxcache);
-            }
         };
         ResolutionNode.prototype.getParent = function (toDepth) {
             if (toDepth === void 0) { toDepth = 1; }
@@ -509,6 +635,92 @@ var Gentyl;
     }
     Gentyl.g = g;
 })(Gentyl || (Gentyl = {}));
+var uuid = require('uuid');
+var Gentyl;
+(function (Gentyl) {
+    function isBundle(object) {
+        return object instanceof Object && "form" in object && "state" in object && "node" in object;
+    }
+    Gentyl.isBundle = isBundle;
+    /**
+     * A rudimetary implementation not supporting failure cases or serialization
+     * if a function is stored already this will override it will throw the
+     * value error if the function is not there
+     */
+    var ObjectFunctionCache = (function () {
+        function ObjectFunctionCache() {
+            this.functions = {};
+        }
+        ObjectFunctionCache.prototype.storeFunction = function (func) {
+            var name = (["", 'anonymous', undefined].indexOf(func.name) == -1) ? func.name : uuid.v1();
+            this.functions[name] = func;
+            return name;
+        };
+        ObjectFunctionCache.prototype.recoverFunction = function (id) {
+            return this.functions[id];
+        };
+        return ObjectFunctionCache;
+    }());
+    var liveCache = new ObjectFunctionCache();
+    /**
+     * build a form ref object for the bundle by storing the function externally
+     * and only storing in the bundle a uuid or function name;
+     */
+    function deformulate(fromNode) {
+        var preform = {
+            f: fromNode.resolver,
+            c: fromNode.carrier,
+            m: fromNode.ctxmode
+        };
+        var exForm = {};
+        for (var k in preform) {
+            var val = preform[k];
+            if (val instanceof Function) {
+                //TODO: Replacible with local storage mechanisms
+                exForm[k] = liveCache.storeFunction(val);
+            }
+            else {
+                //should only be a string or at least value
+                exForm[k] = val;
+            }
+        }
+        return exForm;
+    }
+    Gentyl.deformulate = deformulate;
+    /**
+    * rebuild the form object by recovering the stored function from the cache using the uuids and labels.
+     */
+    function reformulate(formRef) {
+        var recovered = {};
+        for (var k in formRef) {
+            recovered[k] = liveCache.recoverFunction(formRef[k]);
+        }
+        return recovered;
+    }
+    Gentyl.reformulate = reformulate;
+    var Reconstruction = (function (_super) {
+        __extends(Reconstruction, _super);
+        function Reconstruction(bundle) {
+            //construct the node of array, object or primative,
+            function debundle(bundle) {
+                if (isBundle(bundle)) {
+                    return new Reconstruction(bundle);
+                }
+                else {
+                    console.log("this is not a bundle will terminate reconstruction recursion here");
+                    return bundle;
+                }
+            }
+            var node = Gentyl.Util.typeCaseSplitF(debundle)(bundle.node);
+            //reconstruction is almost entirely for this, so that it can pass through reformulation.
+            var form = Gentyl.reformulate(bundle.form);
+            var state = bundle.state;
+            _super.call(this, node, form, state);
+        }
+        return Reconstruction;
+    }(Gentyl.ResolutionNode));
+    Gentyl.Reconstruction = Reconstruction;
+})(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {
     function sA(components, resolveArgs) {
@@ -542,6 +754,7 @@ var Gentyl;
 /// <reference path="../typings/index.d.ts"/>
 /// <reference path="util.ts"/>
 /// <reference path="core.ts"/>
+/// <reference path="reconstruction"/>
 /// <reference path="nodes.ts"/>
 // require("./core.ts")
 // require("./nodes.ts")

@@ -13,8 +13,6 @@ namespace Gentyl {
      * The state manager for a resolution node. Handles the association of contexts and modification therin
      */
     export class ResolutionContext {
-
-
         ownProperties:any;
         propertyLayerMap:any;
         closed:boolean;
@@ -26,14 +24,14 @@ namespace Gentyl {
             Object.defineProperties(this,{
                 ownProperties:{
                     value:{},
-                    writable:true,
+                    writable:false,
                     enumerable:false,
                     configurable:false
                 },
 
                 propertyLayerMap:{
                     value:{},
-                    writable:true,
+                    writable:false,
                     enumerable:false,
                     configurable:false
                 },
@@ -42,15 +40,17 @@ namespace Gentyl {
                     value:false,
                     writable:true,
                     enumerable:false,
-                    configurable:false,                }
+                    configurable:false,
+                }
             });
-
 
             //create argumented layer
 
             for(var k in hostContext){
                 this.addOwnProperty(k, hostContext[k])
             }
+
+
         }
 
         prepare(){
@@ -79,11 +79,16 @@ namespace Gentyl {
                 }
 
             }
+
+            //freeze context here so that modifier functions cannot add, change or delete properties
+        }
+
+        extract(){
+            return this.ownProperties
         }
 
         /**
          * create the layers, at each stage looking up contexts relative to the host.
-         *
          */
         parseMode(modestr:string):ContextLayer[] {
             var layers:ContextLayer[] = []
@@ -129,7 +134,7 @@ namespace Gentyl {
          *
          */
         addOwnProperty(name:string, defaultValue){
-            console.log("addOwnProperty(name:%s, defaultValue:%s)", name, defaultValue)
+            //console.log("addOwnProperty(name:%s, defaultValue:%s)", name, defaultValue)
 
             // TODO: Handle own property derivation conflict
             this.ownProperties[name] = defaultValue;
@@ -168,14 +173,13 @@ namespace Gentyl {
             let layer:ContextLayer = this.propertyLayerMap[key];
             let result = layer.source.ownProperties[key];
 
-            console.log("getItem %s resulting in:", key , result);
+            //console.log("getItem %s resulting in:", key , result);
             return result;
 
         }
 
         /**
-         * get the actual source of the desired property. use to set/getItems,
-         should be recursive with a base of either reaching a node without the key or which hold the key
+         * get the actual source of the desired property. use to set/getItems
          */
         getItemSource(key):ResolutionContext{
             if(key in this.propertyLayerMap){
@@ -211,7 +215,7 @@ namespace Gentyl {
                     //the source is the holder of the information whereas the mode is attributed to this contexts layer perspective
                     this.propertyLayerMap[prop] = {source:propVal.source, mode:layer.mode};
 
-                    console.log("add source layer property prop:%s", prop)
+                    //console.log("add source layer property prop:%s", prop)
 
                     Object.defineProperty(this, prop, {
                         set: this.setItem.bind(this, prop),

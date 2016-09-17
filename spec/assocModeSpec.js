@@ -98,13 +98,12 @@ describe("context construction",function(){
             },{
                 propx:0
             }
-        )
-        .prepare();
+        ).prepare();
 
+        console.log(gen.node.a.ctx.propertyLayerMap)
         expect(gen.node.a.ctx.propertyLayerMap['propx'].source).toBe(gen.ctx)
         expect(gen.ctx.propertyLayerMap["propx"].source).toBe(gen.ctx)
 
-        console.log(gen.ctx.ownProperties)
         expect(gen.resolve("a")).toBe("a")
         console.log(gen.ctx.ownProperties)
         expect(gen.resolve("b")).toBe("b")

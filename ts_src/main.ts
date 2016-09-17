@@ -4,6 +4,7 @@
 /// <reference path="../typings/index.d.ts"/>
 /// <reference path="util.ts"/>
 /// <reference path="core.ts"/>
+/// <reference path="reconstruction"/>
 /// <reference path="nodes.ts"/>
 
 // require("./core.ts")

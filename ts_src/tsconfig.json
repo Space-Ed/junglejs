@@ -31,10 +31,12 @@
         "./**/*.ts"
     ],
     "files": [
+        "./bundle.ts",
         "./context.ts",
         "./core.ts",
         "./main.ts",
         "./nodes.ts",
+        "./reconstruction.ts",
         "./util.ts"
     ]
 }

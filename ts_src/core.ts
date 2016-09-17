@@ -31,19 +31,17 @@ namespace Gentyl {
 
         constructor(components:any, form:Form = {}, state:any = {}){
 
-            var node;
-
-            //Initialised properties of state
-            this.ctxcache = state || {};
-            var context = Util.copyObject(this.ctxcache);
+            var context = Util.copyObject(state);
             var mode = this.ctxmode =  form.m || "";
-            this.carrier = form.c || function(x){return x};
-            this.resolver = form.f || function(x){return x};
+            this.carrier = form.c || Gentyl.Util.identity;
+            this.resolver = form.f || Gentyl.Util.identity;
 
             this.depth = 0;
             this.isRoot = true;
+            this.prepared = false;
 
             //construct the node of array object or primative type
+            var node;
             if(components instanceof Array){
                 node = [];
                 node.lenth= components.length;
@@ -66,9 +64,11 @@ namespace Gentyl {
                 node = components;
             }
 
+            //var inductor = this.inductComponent.bind(this);
+            //this.node = Util.typeCaseSplitF(inductor, inductor, null)(components)
+
             this.node = node;
             this.ctx = new ResolutionContext(this, context, mode);
-
 
         }
 
@@ -77,50 +77,97 @@ namespace Gentyl {
          */
         public prepare():ResolutionNode{
 
-            //TODO:if already prepared
-
+            //if already prepared the ancestor is reestablished
             this.ancestor = this.ancestor || this.replicate();
             this.ancestor.isAncestor = true;
 
-            this.prepared = true;
+            if(!this.prepared){
 
+                this.prepared = true;
 
+                if(!this.functional){
+                    this.ctx.prepare();
 
-            if(!this.functional){
-                this.ctx.prepare();
-            }
-
-            if(this.node instanceof Array){
-                for (let i = 0; i < this.node.length; i++){
-                    let val = this.node[i];
-                    if(val instanceof ResolutionNode){
-                        var rep = val.replicate()
-                        rep.setParent(this);
-                        rep.prepare();
-                        this.node[i] = rep
-                    }
+                    //TODO:apply preparation process to context
                 }
 
-            }else if (this.node instanceof Object){
-                for (let k in this.node){
-                    let val = this.node[k];
-                    if(val instanceof ResolutionNode){
-                        var rep = val.replicate()
-                        rep.setParent(this);
-                        rep.prepare();
-                        this.node[k] = rep
+                if(this.node instanceof Array){
+                    for (let i = 0; i < this.node.length; i++){
+                        let val = this.node[i];
+                        if(val instanceof ResolutionNode){
+                            var rep = val.replicate()
+                            rep.setParent(this);
+                            rep.prepare();
+                            this.node[i] = rep
+                        }
                     }
-                }
 
-            }else{
-                if(this.node instanceof ResolutionNode){
+                }else if (this.node instanceof Object){
+                    for (let k in this.node){
+                        let val = this.node[k];
+                        if(val instanceof ResolutionNode){
+                            var rep = val.replicate()
+                            rep.setParent(this);
+                            rep.prepare();
+                            this.node[k] = rep
+                        }
+                    }
+
+                }else if(this.node instanceof ResolutionNode){
                     var rep = this.node.replicate()
                     rep.prepare();
                     this.node = rep
                 }
+            } else {
+
             }
 
             return this
+        }
+
+        replicate():ResolutionNode{
+            if(this.prepared){
+                //this node is prepared so we will be creating a new based off the ancestor;
+                return this.ancestor.replicate()
+            }else{
+
+                //this is a raw node, either an ancestor
+                //var repl = new Reconstruction(this.bundle())
+                var repl = new ResolutionNode(this.node, {f:this.resolver, c:this.carrier ,m:this.ctxmode}, this.ctx.extract())
+
+                //in the case of the ancestor it comes from prepared
+                if(this.isAncestor){
+                    repl.ancestor = this;
+                    repl.prepare();
+                }
+                return repl
+            }
+        }
+
+        bundle():Bundle{
+            function bundler(node){
+                if(node instanceof ResolutionNode){
+                    var product = node.bundle()
+                    return product
+                }else{
+                    console.log("watch out for this guy", node);
+                    return node
+                }
+            }
+
+            var recurrentNodeBundle = Util.typeCaseSplitF(bundler, bundler, null)(this.node)
+
+            console.log("recurrentNodeBundle: \n ", recurrentNodeBundle)
+
+            var product = {
+                node:recurrentNodeBundle,
+                form:Gentyl.deformulate(this),
+                state:this.ctx.extract()
+            }
+
+            console.log("product:\n ", product)
+
+            return product
         }
 
         private inductComponent(component):any{
@@ -136,22 +183,6 @@ namespace Gentyl {
             }
 
             return c;
-        }
-
-        replicate():ResolutionNode{
-            if(this.prepared){
-                //this node is prepared so we will be creating a new based off the ancestor;
-                return this.ancestor.replicate()
-            }else{
-
-                //this is a raw node, either an ancestor
-                var repl = new ResolutionNode(this.node, {f:this.resolver, c:this.carrier, m:this.ctxmode}, this.ctxcache)
-                if(this.isAncestor){
-                    repl.ancestor = this;
-                    repl.prepare();
-                }
-                return repl
-            }
         }
 
         public getParent(toDepth = 1):ResolutionNode{

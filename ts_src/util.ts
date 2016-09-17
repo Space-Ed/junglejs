@@ -1,6 +1,10 @@
 namespace Gentyl{
      export namespace Util
      {
+        export function identity(x){
+            return x
+        }
+
         export function translator(node, translation){
             var translated
 
@@ -75,12 +79,13 @@ namespace Gentyl{
             return melded
         }
 
-        export function isDeepReplica(node1, node2){
+
+        export function deeplyEquals(node1, node2, allowIdentical=true){
             if(typeof(node1) != typeof(node2)){
                 return false // nodes not same type
             }
             else if (node1 instanceof Object){
-                if(node1 === node2){
+                if(node1 === node2 && !allowIdentical){
                     return false // identical object
                 }else{
                     for (var k in node1){
@@ -91,7 +96,7 @@ namespace Gentyl{
                     for (var q in node2){
                         if(!(q in node1)){
                             return false;// key in node2 and not node1
-                        }else if(!isDeepReplica(node1[q], node2[q])){
+                        }else if(!deeplyEquals(node1[q], node2[q], allowIdentical)){
                                 return false; //recursive came up false.
                         }
                     }
@@ -100,6 +105,49 @@ namespace Gentyl{
             } else {
                 return (node1 === node2); ///primitive equality
             }
+        }
+
+        export function deeplyEqualsThrow(node1, node2, derefstack, seen, allowIdentical=true){
+            var derefstack = derefstack || [];
+            var seen = seen || []
+
+            //circularity prevention
+            if(seen.indexOf(node1) || seen.indexOf(node2)){
+                return
+            }
+
+            if(typeof(node1) != typeof(node2)){
+                throw new Error(`nodes not same type, derefs: [${derefstack}]`)
+            }
+            else if (node1 instanceof Object){
+                if(node1 === node2 && !allowIdentical){
+                    throw new Error(`identical object not replica, derefs:[${derefstack}]`)
+                }else{
+                    for (var k in node1){
+                        if(!(k in node2)){
+                            throw new Error(`key ${k} in object1 but not object2, derefs:[${derefstack}]`)
+                        }
+                    }
+                    for (var q in node2){
+                        if(!(q in node1)){
+                            throw new Error(`key ${k} in object2 but node object1, derefs:[${derefstack}]`)// key in node2 and not node1
+                        }else{
+                            deeplyEqualsThrow(node1[q], node2[q], derefstack.concat(q), allowIdentical)
+                        }
+                    }
+                    return true; // no false flag
+                }
+            } else if(node1 !== node2){
+                throw new Error(`${node1} and ${node2} not equal, derefs:[${derefstack}]`)
+            }
+        }
+
+        export function isDeepReplica(node1, node2){
+            deeplyEquals(node1,node2,false)
+        }
+
+        export function isDeepReplicaThrow(node1, node2, derefstack){
+            deeplyEqualsThrow(node1, node2, derefstack, null, false)
         }
 
         //merge, when there is a conflict, neither is taken
@@ -128,6 +176,45 @@ namespace Gentyl{
                 });
             });
         }
+
+        export function typeCaseSplitF(objectOrAllFunction, arrayFunc?, primativeFunc?){
+            var ofunc, afunc, pfunc;
+
+            if( primativeFunc == undefined && arrayFunc == undefined){
+                ofunc = objectOrAllFunction || identity;
+                afunc = objectOrAllFunction || identity;
+                pfunc = objectOrAllFunction  || identity;
+            } else{
+                ofunc = objectOrAllFunction || identity;
+                afunc = arrayFunc || identity;
+                pfunc = primativeFunc  || identity;
+            }
+
+            return function(inThing){
+                var outThing;
+                if(inThing instanceof Array){
+                    outThing = [];
+                    outThing.lenth= inThing.length;
+                    for (var i = 0; i < inThing.length; i++){
+                        var subBundle = inThing[i];
+                        outThing[i] = afunc(subBundle, i)
+                    }
+
+                }else if(inThing instanceof Object){
+                    outThing = {}
+                    for (var k in inThing){
+                        var subBundle = inThing[k];
+                        outThing[k] = ofunc(subBundle, k)
+                    }
+                }else {
+                    outThing = pfunc(inThing);
+                }
+                return outThing
+
+            }
+        }
+
+
     }
 }
 

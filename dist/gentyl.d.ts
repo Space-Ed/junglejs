@@ -1,13 +1,18 @@
 /// <reference path="../typings/index.d.ts" />
 declare namespace Gentyl {
     namespace Util {
+        function identity(x: any): any;
         function translator(node: any, translation: any): any;
         function melder(node1: any, node2: any, merge?: (a: any, b: any) => any, concatArrays?: boolean): any;
-        function isDeepReplica(node1: any, node2: any): boolean;
+        function deeplyEquals(node1: any, node2: any, allowIdentical?: boolean): boolean;
+        function deeplyEqualsThrow(node1: any, node2: any, derefstack: any, seen: any, allowIdentical?: boolean): boolean;
+        function isDeepReplica(node1: any, node2: any): void;
+        function isDeepReplicaThrow(node1: any, node2: any, derefstack: any): void;
         function softAssoc(from: any, onto: any): void;
         function assoc(from: any, onto: any): void;
         function copyObject(object: any): {};
         function applyMixins(derivedCtor: any, baseCtors: any[]): void;
+        function typeCaseSplitF(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;
     }
 }
 declare namespace Gentyl {
@@ -31,9 +36,9 @@ declare namespace Gentyl {
         closed: boolean;
         constructor(host: ResolutionNode, hostContext: any, mode: string);
         prepare(): void;
+        extract(): any;
         /**
          * create the layers, at each stage looking up contexts relative to the host.
-         *
          */
         parseMode(modestr: string): ContextLayer[];
         /**
@@ -49,8 +54,7 @@ declare namespace Gentyl {
         setItem(key: any, data: any): void;
         getItem(key: any): any;
         /**
-         * get the actual source of the desired property. use to set/getItems,
-         should be recursive with a base of either reaching a node without the key or which hold the key
+         * get the actual source of the desired property. use to set/getItems
          */
         getItemSource(key: any): ResolutionContext;
         /**
@@ -81,6 +85,7 @@ declare namespace Gentyl {
         carrier: (obj) => any;
         resolver: (obj) => any;
         ancestor: ResolutionNode;
+        isAncestor: boolean;
         ctxmode: string;
         ctxcache: any;
         constructor(components: any, form?: Form, state?: any);
@@ -88,8 +93,9 @@ declare namespace Gentyl {
          * setup the state tree, recursively preparing the contexts
          */
         prepare(): ResolutionNode;
-        private inductComponent(component);
         replicate(): ResolutionNode;
+        bundle(): Bundle;
+        private inductComponent(component);
         getParent(toDepth?: number): ResolutionNode;
         getRoot(): ResolutionNode;
         private setParent(parentNode);
@@ -100,6 +106,36 @@ declare namespace Gentyl {
         resolve(resolveArgs: any): any;
     }
     function g(components: Object, form: any, state: any): ResolutionNode;
+}
+declare var uuid: any;
+declare namespace Gentyl {
+    interface FormRef {
+        f: string;
+        c: string;
+        m: string;
+    }
+    interface FunctionCache {
+        storeFunction(func: Function): string;
+        recoverFunction(id: string): Function;
+    }
+    interface Bundle {
+        node: any;
+        form: FormRef;
+        state: any;
+    }
+    function isBundle(object: any): boolean;
+    /**
+     * build a form ref object for the bundle by storing the function externally
+     * and only storing in the bundle a uuid or function name;
+     */
+    function deformulate(fromNode: ResolutionNode): any;
+    /**
+    * rebuild the form object by recovering the stored function from the cache using the uuids and labels.
+     */
+    function reformulate(formRef: FormRef): Form;
+    class Reconstruction extends ResolutionNode {
+        constructor(bundle: Bundle);
+    }
 }
 declare namespace Gentyl {
     function sA(components: any, resolveArgs: any): any;
