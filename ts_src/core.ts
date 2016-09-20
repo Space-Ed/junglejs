@@ -1,13 +1,29 @@
 /// <reference path="./util.ts"/>
 /// <reference path="./context.ts"/>
 
+var signals = <SignalWrapper>require('signals')
+
 namespace Gentyl {
 
     export interface Form {
         f?:(obj, args?)=>any;
         c?:(args?)=>any;
-        m?:string
+        s?:(keys, arg?)=>any;
+        p?:(arg)=>void;
+        m?:string;
+        i?:(arg)=>any;
+        o?:(arg)=>any;
+        il?:string;
+        ol?:string;
+        t?:any
     }
+
+
+    export interface SignalShell {
+        ins:any //that is a mapping from names to infunctions
+        outs:any //that is a mapping from names to signal objects
+    }
+
 
     export class ResolutionNode {
         ctx:ResolutionContext;
@@ -21,13 +37,25 @@ namespace Gentyl {
         prepared:boolean;
         functional:boolean;
 
-        carrier:(obj)=>any;
-        resolver:(obj)=>any;
+        ctxmode:string;
+        carrier:(arg)=>any;
+        resolver:(obj, arg)=>any;
+        selector:(keys, arg)=>any;
+        preparator:(arg)=>void;
+
+        targeting:any;
+        inputLabel:string;
+        outputLabel:string;
+        inputFunction:(arg)=>any;
+        outputFunction:(arg)=>any;
+
+        inputNodes:any;
+        outputNodes:any;
+        signalShell:SignalShell;
+        targeted:boolean;
 
         ancestor:ResolutionNode;
         isAncestor:boolean;
-        ctxmode:string;
-        ctxcache:any
 
         constructor(components:any, form:Form = {}, state:any = {}){
 
@@ -35,10 +63,19 @@ namespace Gentyl {
             var mode = this.ctxmode =  form.m || "";
             this.carrier = form.c || Gentyl.Util.identity;
             this.resolver = form.f || Gentyl.Util.identity;
+            this.selector = form.s || Gentyl.Util.identity;
+            this.preparator = form.p || function(x){}
+            this.inputLabel = form.il;
+            this.outputLabel = form.ol;
+            this.inputFunction = form.i || Gentyl.Util.identity;
+            this.outputFunction = form.o || Gentyl.Util.identity;
+            this.targeting = form.t;
+
 
             this.depth = 0;
             this.isRoot = true;
             this.prepared = false;
+            this.targeted = false;
 
             //construct the node of array object or primative type
             var node;
@@ -75,70 +112,94 @@ namespace Gentyl {
         /**
          * setup the state tree, recursively preparing the contexts
          */
-        public prepare():ResolutionNode{
+        public prepare(prepargs=null):ResolutionNode{
 
             //if already prepared the ancestor is reestablished
             this.ancestor = this.ancestor || this.replicate();
             this.ancestor.isAncestor = true;
 
             if(!this.prepared){
-
                 this.prepared = true;
 
                 if(!this.functional){
                     this.ctx.prepare();
-
-                    //TODO:apply preparation process to context
+                    this.preparator.call(this, prepargs);
                 }
+
+                //
+                this.prepareIO();
 
                 if(this.node instanceof Array){
                     for (let i = 0; i < this.node.length; i++){
                         let val = this.node[i];
-                        if(val instanceof ResolutionNode){
-                            var rep = val.replicate()
-                            rep.setParent(this);
-                            rep.prepare();
-                            this.node[i] = rep
-                        }
+                        this.node[i] = this.prepareChild(val);
                     }
 
                 }else if (this.node instanceof Object){
                     for (let k in this.node){
                         let val = this.node[k];
-                        if(val instanceof ResolutionNode){
-                            var rep = val.replicate()
-                            rep.setParent(this);
-                            rep.prepare();
-                            this.node[k] = rep
-                        }
+                        this.node[k] = this.prepareChild(val);
                     }
-
-                }else if(this.node instanceof ResolutionNode){
-                    var rep = this.node.replicate()
-                    rep.prepare();
-                    this.node = rep
+                }else {
+                    this.node = this.prepareChild(this.node);
                 }
             } else {
 
             }
 
-            return this
+            return this;
         }
 
-        replicate():ResolutionNode{
+        private prepareIO(){
+            this.inputNodes  = {}
+            if (typeof(this.inputLabel)  == 'string'){
+                this.inputNodes[this.inputLabel] = [this]
+            }
+
+            this.outputNodes  = {}
+            if (typeof(this.outputLabel)  == 'string'){
+                this.outputNodes[this.outputLabel] = this
+            }
+        }
+
+        private prepareChild(child):ResolutionNode{
+            if(child instanceof ResolutionNode){
+                var rep = child.replicate();
+                rep.setParent(this);
+                rep.prepare();
+                //collect nodes from children allowing parallel input not out
+                Util.parassoc(rep.inputNodes, this.inputNodes)
+                Util.assoc(rep.outputNodes, this.outputNodes)
+                return rep;
+            }else{
+                return child;
+            }
+        }
+
+        replicate(prepargs=null):ResolutionNode{
             if(this.prepared){
                 //this node is prepared so we will be creating a new based off the ancestor;
-                return this.ancestor.replicate()
+                return this.ancestor.replicate(prepargs)
             }else{
 
                 //this is a raw node, either an ancestor
                 //var repl = new Reconstruction(this.bundle())
-                var repl = new ResolutionNode(this.node, {f:this.resolver, c:this.carrier ,m:this.ctxmode}, this.ctx.extract())
+                var repl = new ResolutionNode(this.node, {
+                    f:this.resolver,
+                    c:this.carrier ,
+                    m:this.ctxmode ,
+                    p:this.preparator,
+                    il:this.inputLabel,
+                    ol:this.outputLabel,
+                    i:this.inputFunction,
+                    o:this.outputFunction,
+                    t:this.targeting,
+                    s:this.selector}, this.ctx.extract())
 
                 //in the case of the ancestor it comes from prepared
                 if(this.isAncestor){
                     repl.ancestor = this;
-                    repl.prepare();
+                    repl.prepare(prepargs);
                 }
                 return repl
             }
@@ -150,25 +211,115 @@ namespace Gentyl {
                     var product = node.bundle()
                     return product
                 }else{
-                    console.log("watch out for this guy", node);
                     return node
                 }
             }
 
             var recurrentNodeBundle = Util.typeCaseSplitF(bundler, bundler, null)(this.node)
 
-            console.log("recurrentNodeBundle: \n ", recurrentNodeBundle)
-
             var product = {
                 node:recurrentNodeBundle,
                 form:Gentyl.deformulate(this),
                 state:this.ctx.extract()
             }
-
-            console.log("product:\n ", product)
-
-            return product
+            return product;
         }
+
+
+        getTargets(input, root){
+            //create submap of the output nodes being only those activted by the current node targeting
+            function strtargs(targs, input, root){
+                var targets = {};
+                if(targs == undefined){
+                    //no targets on node
+                }else if(targs instanceof Array){
+                    for (let i = 0; i < targs.length; i++) {
+                        let val = targs[i];
+                        if(val in root.outputNodes){
+                            targets[val] = root.outputNodes[val]
+                        }
+                    }
+                }else{
+                    if(targs in root.outputNodes){
+                        targets[targs] = root.outputNodes[targs]
+                    }
+                }
+                console.log("returned targets:", targets)
+                return targets
+            }
+
+            if(typeof(this.targeting) == 'function'){
+                return strtargs(this.targeting(input), input, root)
+            }else{
+                return strtargs(this.targeting, input, root)
+            }
+        }
+
+        shell():SignalShell{
+
+            if(!this.prepared){
+                throw new Error("unable to shell unprepared node")
+            }
+
+            //implicit root labelling;
+            var root = this.getRoot();
+
+            //only operate on root
+            root.inputLabel = root.inputLabel || "_";
+            root.outputLabel = root.outputLabel || "_";
+            root.outputNodes["_"] = root
+            root.inputNodes["_"] = [root]
+            var inpnodesmap = root.inputNodes;
+            var outnodemap = root.outputNodes;
+
+
+            var shell = {
+                ins:{},
+                outs:{}
+            }
+
+            //create the output signals.
+            for(let k in outnodemap){
+                shell.outs[k] = new signals.Signal()
+            }
+
+            //create input functions
+            for(let k in inpnodesmap){
+                var v = {inps:inpnodesmap[k], root:root}
+
+                shell.ins[k] = function(data){
+
+                    //construct a map of olabel:Onode that will be activated this time
+                    var allTargets = {};
+
+                    for (let i = 0; i < this.inps.length; i++){
+                        var inode = <ResolutionNode>this.inps[i];
+                        var iresult = inode.inputFunction.call(inode.ctx, data);
+                        var targets = inode.getTargets(data, this.root); //Quandry: should it be input function result
+                        Util.assoc(targets, allTargets);
+                        console.log(`itargets:${inode.targeting}
+                            \nilabel:${inode.inputLabel}
+                            \nallTargets:`, allTargets)
+                    }
+
+                    if(Object.keys(allTargets).length == 0){return;} //no resolution if no targets
+
+                    for (let key in allTargets) {
+                        console.log("target %s set targets", key, allTargets[key])
+                        allTargets[key].targeted = true;  //set allTargets
+                    }
+
+                    this.root.resolve(data);           //trigger root resolution
+
+                    for (let key in allTargets) {
+                        allTargets[key].targeted = false;  //clear targets
+                    }
+                }.bind(v)
+            }
+            root.signalShell = shell;
+            return shell
+        }
+
 
         private inductComponent(component):any{
             var c
@@ -186,17 +337,17 @@ namespace Gentyl {
         }
 
         public getParent(toDepth = 1):ResolutionNode{
-            if (toDepth  == 1 ){
+            if (this.parent == undefined){
+                throw new Error("parent not set, or exceeding getParent depth")
+            }else if (toDepth  == 1 ){
                 return this.parent
-            }else if (this.parent == undefined){
-                throw new Error("requested parent depth too great")
             }else{
                 return this.parent.getParent(toDepth - 1)
             }
         }
 
         public getRoot():ResolutionNode{
-            return this.getParent(this.depth);
+            return this.isRoot ? this : this.getParent().getRoot();
         }
 
         private setParent(parentNode:ResolutionNode){
@@ -206,25 +357,33 @@ namespace Gentyl {
         }
 
         private  resolveArray(array:any[],resolveArgs):any[]{
-            var resolution = []
+            //TODO:selector must produce index or array thereof
 
-            for (var i = 0; i < array.length; i++){
-                resolution[i] = this.resolveNode( array[i],resolveArgs)
+            var selection = this.selector.call(this.ctx, Util.range(array.length), resolveArgs)
+            if(selection instanceof Array){
+                var resolution = []
+                for (var i = 0; i < selection.length; i++){
+                    resolution[i] = this.resolveNode(array[selection[i]], resolveArgs)
+                }
+                return resolution
+            }else {
+                return this.resolveNode(array[selection], resolveArgs)
             }
-
-            return resolution
         }
 
         private resolveObject(node, resolveArgs):any{
-            //log("Object to resolve: ", node)
-            var resolution  = {}
+            var selection = this.selector.call(this.ctx, Object.keys(node), resolveArgs)
+            if(selection instanceof Array){
+                var resolution  = {}
 
-            for (var k in node){
-                var val = node[k]
-                //we have an ordinary item
-                resolution[k] = Util.melder(resolution[k], this.resolveNode(val, resolveArgs))
+                for (var i = 0; i < selection.length; i++){
+                    var k = selection[i];
+                    resolution[k] = this.resolveNode(node[k], resolveArgs);
+                }
+                return resolution;
+            }else{
+                return this.resolveNode(node[selection], resolveArgs);
             }
-            return resolution
         }
 
 
@@ -270,12 +429,21 @@ namespace Gentyl {
                 throw  Error("Node with state is not prepared, unable to resolve")
             }
 
+            Object.freeze(resolveArgs)
+            var carried = this.carrier.call(this.ctx, resolveArgs)
+
             //recurse on the contained node
-            var resolvedNode = this.resolveNode(this.node,  this.carrier.call(this.ctx, resolveArgs))
+            var resolvedNode = this.resolveNode(this.node, carried)
 
             //modifies the resolved context and returns the processed result
             var result = this.resolver.call(this.ctx, resolvedNode,  resolveArgs)
 
+            //dispatch if marked
+            console.log(`check Output stage with olabel ${this.outputLabel} reached targeted? , `,this.targeted)
+            if(this.targeted){
+                var outresult = this.outputFunction.call(this.ctx, outresult)
+                this.getRoot().signalShell.outs[this.outputLabel].dispatch(outresult)
+            }
 
             return result
         }

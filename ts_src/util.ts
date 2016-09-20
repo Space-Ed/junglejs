@@ -5,6 +5,42 @@ namespace Gentyl{
             return x
         }
 
+        export function range(...args){
+            var beg, end, step
+
+            switch(args.length){
+                case 1:{
+                    end = args[0]; beg=0; step=1
+                    break;
+                }
+                case 2:{
+                    end =args[1];beg=args[0];step=1
+                    break;
+                }
+                case 3:{
+                    end=args[2];beg=args[0];step=args[1]
+                    break;
+                }
+                default:{
+                    end=0;beg=0;step=1
+                    break
+                }
+            }
+            var rng = []
+            if(beg > end && step < 0){
+                for(let i = beg; i > end; i+=step){
+                    rng.push(i)
+                }
+            } else if (beg < end && step > 0){
+                for(let i = beg; i < end; i+=step){
+                    rng.push(i)
+                }
+            } else {
+                throw new Error("invalid range parameters")
+            }
+            return rng;
+        }
+
         export function translator(node, translation){
             var translated
 
@@ -40,16 +76,17 @@ namespace Gentyl{
                 return node1
             }
 
+            var melded;
+            if(node1 instanceof Array){
+                return concatArrays ? node1.concat(node2) : merge(node1,node2)
+            }
+
             if(typeof(node1) != typeof(node2)){
                 var errmsg = "Expected melding nodes to be the same type \n"+
                             "type of node1: "+typeof(node1)+"\n"+
                             "type of node2: "+typeof(node2)+"\n"
 
                 throw TypeError(errmsg)
-            }
-            var melded;
-            if(node1 instanceof Array){
-                melded = concatArrays ? node1.concat(node2) : merge(node1,node2)
             }
             else if(typeof(node1) == 'object'){
                 melded = {}
@@ -130,7 +167,7 @@ namespace Gentyl{
                     }
                     for (var q in node2){
                         if(!(q in node1)){
-                            throw new Error(`key ${k} in object2 but node object1, derefs:[${derefstack}]`)// key in node2 and not node1
+                            throw new Error(`key ${k} in object2 but not object1, derefs:[${derefstack}]`)// key in node2 and not node1
                         }else{
                             deeplyEqualsThrow(node1[q], node2[q], derefstack.concat(q), allowIdentical)
                         }
@@ -154,6 +191,14 @@ namespace Gentyl{
         export function softAssoc(from, onto){
             for (var k in from){
                 onto[k] = melder(from[k], onto[k])
+            }
+        }
+
+        export function parassoc(from, onto){
+            for (var k in from){
+                onto[k] = melder(onto[k], from[k], function(a,b){
+                    return [a,b]
+                }, true)
             }
         }
 
@@ -214,6 +259,40 @@ namespace Gentyl{
             }
         }
 
+        export function typeCaseSplitM(objectOrAllFunction, arrayFunc?, primativeFunc?){
+            var ofunc, afunc, pfunc;
+
+            if( primativeFunc == undefined && arrayFunc == undefined){
+                ofunc = objectOrAllFunction || identity;
+                afunc = objectOrAllFunction || identity;
+                pfunc = objectOrAllFunction  || identity;
+            } else{
+                ofunc = objectOrAllFunction || identity;
+                afunc = arrayFunc || identity;
+                pfunc = primativeFunc  || identity;
+            }
+
+            return function(inThing){
+                var outThing;
+                if(inThing instanceof Array){
+                    outThing.lenth= inThing.length;
+                    for (var i = 0; i < inThing.length; i++){
+                        var subBundle = inThing[i];
+                        inThing[i] = afunc(subBundle, i)
+                    }
+
+                }else if(inThing instanceof Object){
+                    for (var k in inThing){
+                        var subBundle = inThing[k];
+                        inThing[k] = ofunc(subBundle, k)
+                    }
+                }else {
+                    //wont modify primative
+                }
+                return outThing
+
+            }
+        }
 
     }
 }

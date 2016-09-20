@@ -2,6 +2,7 @@
 declare namespace Gentyl {
     namespace Util {
         function identity(x: any): any;
+        function range(...args: any[]): any[];
         function translator(node: any, translation: any): any;
         function melder(node1: any, node2: any, merge?: (a: any, b: any) => any, concatArrays?: boolean): any;
         function deeplyEquals(node1: any, node2: any, allowIdentical?: boolean): boolean;
@@ -9,10 +10,12 @@ declare namespace Gentyl {
         function isDeepReplica(node1: any, node2: any): void;
         function isDeepReplicaThrow(node1: any, node2: any, derefstack: any): void;
         function softAssoc(from: any, onto: any): void;
+        function parassoc(from: any, onto: any): void;
         function assoc(from: any, onto: any): void;
         function copyObject(object: any): {};
         function applyMixins(derivedCtor: any, baseCtors: any[]): void;
         function typeCaseSplitF(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;
+        function typeCaseSplitM(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;
     }
 }
 declare namespace Gentyl {
@@ -67,11 +70,19 @@ declare namespace Gentyl {
         addSourceLayer(layer: ContextLayer): void;
     }
 }
+declare var signals: SignalWrapper;
 declare namespace Gentyl {
     interface Form {
         f?: (obj, args?) => any;
         c?: (args?) => any;
+        s?: (keys, arg?) => any;
+        p?: (arg) => void;
         m?: string;
+        i?: (arg) => any;
+        o?: (arg) => any;
+        il?: string;
+        ol?: string;
+        t?: any;
     }
     class ResolutionNode {
         ctx: ResolutionContext;
@@ -82,8 +93,19 @@ declare namespace Gentyl {
         root: ResolutionNode;
         prepared: boolean;
         functional: boolean;
-        carrier: (obj) => any;
-        resolver: (obj) => any;
+        carrier: (arg) => any;
+        resolver: (obj, arg) => any;
+        selector: (keys, arg) => any;
+        preparator: (arg) => void;
+        targeting: any;
+        inputLabel: string;
+        outputLabel: string;
+        inputFunction: (arg) => any;
+        outputFunction: (arg) => any;
+        signalShell: SignalShell;
+        targeted: boolean;
+        inputNodes: any;
+        outputNodes: any;
         ancestor: ResolutionNode;
         isAncestor: boolean;
         ctxmode: string;
@@ -92,9 +114,13 @@ declare namespace Gentyl {
         /**
          * setup the state tree, recursively preparing the contexts
          */
-        prepare(): ResolutionNode;
-        replicate(): ResolutionNode;
+        prepare(prepargs?: any): ResolutionNode;
+        private prepareIO();
+        private prepareChild(child);
+        replicate(prepargs?: any): ResolutionNode;
         bundle(): Bundle;
+        getTargets(input: any, root: any): {};
+        shell(): SignalShell;
         private inductComponent(component);
         getParent(toDepth?: number): ResolutionNode;
         getRoot(): ResolutionNode;
@@ -135,6 +161,12 @@ declare namespace Gentyl {
     function reformulate(formRef: FormRef): Form;
     class Reconstruction extends ResolutionNode {
         constructor(bundle: Bundle);
+    }
+}
+declare namespace Gentyl {
+    interface SignalShell {
+        ins: any;
+        outs: any;
     }
 }
 declare namespace Gentyl {
