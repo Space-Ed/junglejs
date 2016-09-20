@@ -1,8 +1,8 @@
 {
   "name": "gentyl",
   "version": "0.1.0",
-  "description": "A Recursive Object Synthesizer for Javascript",
-  "main": "core.js",
+  "description": "A Generator That You'll Love",
+  "main": "./dist/gentyl.js",
   "scripts": {
     "test": "./script/test"
   },
@@ -11,6 +11,11 @@
     "url": "git+https://github.com/Space-Ed/gentyl.git"
   },
   "keywords": [
+    "gentle",
+    "tool",
+    "structural",
+    "synthesis",
+    "language",
     "generator",
     "procedural",
     "random",
@@ -28,5 +33,9 @@
     "jasmine-node": "^1.14.5",
     "tsify": "^1.0.1",
     "typescript": "^1.8.10"
+  },
+  "dependencies": {
+    "signals": "^1.0.0",
+    "uuid": "^2.0.3"
   }
 }
