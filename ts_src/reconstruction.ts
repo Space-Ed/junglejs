@@ -94,7 +94,6 @@ namespace Gentyl {
                 if(isBundle(bundle)){
                     return new Reconstruction(bundle)
                 }else {
-                    console.log("this is not a bundle will terminate reconstruction recursion here")
                     return bundle
                 }
             }

@@ -412,7 +412,7 @@ var Gentyl;
                 }
                 var tKey = match[1];
                 var sKey = match[2]; //will be parsed to give depth control;
-                console.log("tkey: %s , sKey: %s", tKey, sKey);
+                //console.log("tkey: %s , sKey: %s",tKey, sKey)
                 layer.mode = { "&": ASSOCMODE.SHARE, "|": ASSOCMODE.INHERIT, "=": ASSOCMODE.TRACK }[tKey];
                 layer.source = (sKey == "+" ? this.host.getParent(1) : sKey == "_" ? this.host.getRoot() : this.host).ctx;
                 layers.push(layer);
@@ -679,7 +679,7 @@ var Gentyl;
                         targets[targs] = root.outputNodes[targs];
                     }
                 }
-                console.log("returned targets:", targets);
+                //console.log("returned targets:", targets)
                 return targets;
             }
             if (typeof (this.targeting) == 'function') {
@@ -693,15 +693,13 @@ var Gentyl;
             if (!this.prepared) {
                 throw new Error("unable to shell unprepared node");
             }
-            //TODO: cannot shell an unprepared node
-            //find the input nodes
-            //create maps from input labels to one or more input nodes
-            //and output labels to one output
+            //implicit root labelling;
             var root = this.getRoot();
+            //only operate on root
             root.inputLabel = root.inputLabel || "_";
             root.outputLabel = root.outputLabel || "_";
-            this.outputNodes["_"] = root;
-            this.inputNodes["_"] = [root];
+            root.outputNodes["_"] = root;
+            root.inputNodes["_"] = [root];
             var inpnodesmap = root.inputNodes;
             var outnodemap = root.outputNodes;
             var shell = {
@@ -712,6 +710,7 @@ var Gentyl;
             for (var k in outnodemap) {
                 shell.outs[k] = new signals.Signal();
             }
+            //create input functions
             for (var k in inpnodesmap) {
                 var v = { inps: inpnodesmap[k], root: root };
                 shell.ins[k] = function (data) {
@@ -722,13 +721,12 @@ var Gentyl;
                         var iresult = inode.inputFunction.call(inode.ctx, data);
                         var targets = inode.getTargets(data, this.root); //Quandry: should it be input function result
                         Gentyl.Util.assoc(targets, allTargets);
-                        console.log("itargets:" + inode.targeting + "\n                            \nilabel:" + inode.inputLabel + "\n                            \nallTargets:", allTargets);
                     }
                     if (Object.keys(allTargets).length == 0) {
                         return;
                     } //no resolution if no targets
                     for (var key in allTargets) {
-                        console.log("target %s set targets", key, allTargets[key]);
+                        //console.log("target %s set targets", key, allTargets[key])
                         allTargets[key].targeted = true; //set allTargets
                     }
                     this.root.resolve(data); //trigger root resolution
@@ -842,7 +840,7 @@ var Gentyl;
             //modifies the resolved context and returns the processed result
             var result = this.resolver.call(this.ctx, resolvedNode, resolveArgs);
             //dispatch if marked
-            console.log("check Output stage with olabel " + this.outputLabel + " reached targeted? , ", this.targeted);
+            //console.log(`check Output stage with olabel ${this.outputLabel} reached targeted? , `,this.targeted)
             if (this.targeted) {
                 var outresult = this.outputFunction.call(this.ctx, outresult);
                 this.getRoot().signalShell.outs[this.outputLabel].dispatch(outresult);
@@ -929,7 +927,6 @@ var Gentyl;
                     return new Reconstruction(bundle);
                 }
                 else {
-                    console.log("this is not a bundle will terminate reconstruction recursion here");
                     return bundle;
                 }
             }
@@ -977,7 +974,6 @@ var Gentyl;
 /// <reference path="util.ts"/>
 /// <reference path="core.ts"/>
 /// <reference path="reconstruction.ts"/>
-/// <reference path="io.ts"/>
 /// <reference path="nodes.ts"/>
 // require("./core.ts")
 // require("./nodes.ts")

@@ -244,7 +244,7 @@ namespace Gentyl {
                         targets[targs] = root.outputNodes[targs]
                     }
                 }
-                console.log("returned targets:", targets)
+                //console.log("returned targets:", targets)
                 return targets
             }
 
@@ -297,15 +297,12 @@ namespace Gentyl {
                         var iresult = inode.inputFunction.call(inode.ctx, data);
                         var targets = inode.getTargets(data, this.root); //Quandry: should it be input function result
                         Util.assoc(targets, allTargets);
-                        console.log(`itargets:${inode.targeting}
-                            \nilabel:${inode.inputLabel}
-                            \nallTargets:`, allTargets)
                     }
 
                     if(Object.keys(allTargets).length == 0){return;} //no resolution if no targets
 
                     for (let key in allTargets) {
-                        console.log("target %s set targets", key, allTargets[key])
+                        //console.log("target %s set targets", key, allTargets[key])
                         allTargets[key].targeted = true;  //set allTargets
                     }
 
@@ -439,7 +436,7 @@ namespace Gentyl {
             var result = this.resolver.call(this.ctx, resolvedNode,  resolveArgs)
 
             //dispatch if marked
-            console.log(`check Output stage with olabel ${this.outputLabel} reached targeted? , `,this.targeted)
+            //console.log(`check Output stage with olabel ${this.outputLabel} reached targeted? , `,this.targeted)
             if(this.targeted){
                 var outresult = this.outputFunction.call(this.ctx, outresult)
                 this.getRoot().signalShell.outs[this.outputLabel].dispatch(outresult)

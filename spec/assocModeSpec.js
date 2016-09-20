@@ -100,14 +100,11 @@ describe("context construction",function(){
             }
         ).prepare();
 
-        console.log(gen.node.a.ctx.propertyLayerMap)
         expect(gen.node.a.ctx.propertyLayerMap['propx'].source).toBe(gen.ctx)
         expect(gen.ctx.propertyLayerMap["propx"].source).toBe(gen.ctx)
 
-        expect(gen.resolve("a")).toBe("a")
-        console.log(gen.ctx.ownProperties)
-        expect(gen.resolve("b")).toBe("b")
-        console.log(gen.ctx.ownProperties)
+        expect(gen.resolve("a")).toBe("a");
+        expect(gen.resolve("b")).toBe("b");
     });
 
     it("should modify the state of the parent", function(){

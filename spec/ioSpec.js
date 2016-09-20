@@ -86,18 +86,18 @@ describe("input-output", function(){
             g1.signalShell.ins['beamin']("fallacies")
         });
 
-        fit('should modify state using input function',function(){
+        it('should modify state using input function',function(){
             g1.signalShell.ins.arc("hello?")
 
             expect(g1.resolve().arc).toBe("hello?")
 
         })
 
-        fit('should allow signal subscription', function(){
+        it('should allow signal subscription', function(){
             var s = g1.signalShell;
             s.outs["beamout"].add(this.outcatch)
             spyOn(s.outs.beamout, "dispatch")
-            console.log(s)
+            //console.log(s)
 
 
             s.ins.arc(["beamout", "crux"])

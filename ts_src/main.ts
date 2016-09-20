@@ -5,7 +5,6 @@
 /// <reference path="util.ts"/>
 /// <reference path="core.ts"/>
 /// <reference path="reconstruction.ts"/>
-/// <reference path="io.ts"/>
 /// <reference path="nodes.ts"/>
 
 // require("./core.ts")

@@ -84,6 +84,10 @@ declare namespace Gentyl {
         ol?: string;
         t?: any;
     }
+    interface SignalShell {
+        ins: any;
+        outs: any;
+    }
     class ResolutionNode {
         ctx: ResolutionContext;
         node: any;
@@ -93,6 +97,7 @@ declare namespace Gentyl {
         root: ResolutionNode;
         prepared: boolean;
         functional: boolean;
+        ctxmode: string;
         carrier: (arg) => any;
         resolver: (obj, arg) => any;
         selector: (keys, arg) => any;
@@ -102,14 +107,12 @@ declare namespace Gentyl {
         outputLabel: string;
         inputFunction: (arg) => any;
         outputFunction: (arg) => any;
-        signalShell: SignalShell;
-        targeted: boolean;
         inputNodes: any;
         outputNodes: any;
+        signalShell: SignalShell;
+        targeted: boolean;
         ancestor: ResolutionNode;
         isAncestor: boolean;
-        ctxmode: string;
-        ctxcache: any;
         constructor(components: any, form?: Form, state?: any);
         /**
          * setup the state tree, recursively preparing the contexts
@@ -161,12 +164,6 @@ declare namespace Gentyl {
     function reformulate(formRef: FormRef): Form;
     class Reconstruction extends ResolutionNode {
         constructor(bundle: Bundle);
-    }
-}
-declare namespace Gentyl {
-    interface SignalShell {
-        ins: any;
-        outs: any;
     }
 }
 declare namespace Gentyl {

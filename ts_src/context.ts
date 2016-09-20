@@ -120,7 +120,7 @@ namespace Gentyl {
                 var tKey = match[1];
                 var sKey = match[2]; //will be parsed to give depth control;
 
-                console.log("tkey: %s , sKey: %s",tKey, sKey)
+                //console.log("tkey: %s , sKey: %s",tKey, sKey)
 
                 layer.mode =  {"&":ASSOCMODE.SHARE, "|":ASSOCMODE.INHERIT, "=":ASSOCMODE.TRACK}[tKey]
                 layer.source =  (sKey == "+" ? this.host.getParent(1) : sKey == "_" ? this.host.getRoot() : this.host).ctx
