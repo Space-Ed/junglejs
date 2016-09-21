@@ -4,15 +4,25 @@
 
 The purpose of this tool is to provide a means of synthesizing and channeling structured data using a hierarchical state system. The system supports reactive IO and serialization of its dynamic generator objects.
 
-Uhh.. Let's throw some use cases at you, there are an unlimited number;
+Let's throw around some use cases, there are an unlimited number.
 
-- Generating events, worlds and enemies within games.
-- Generating language reflecting the structure of grammar.  
-- Generating Test Cases in an Automated testing program.
-- Generating music and art with WebGL and Web Audio.
-- Generating solutions in an evolutionary computation algorithm.
-- Generating posts to appear in a feed.
-- Generating Whatever.. the list will grow!
+##### Gentyl can generate:
+- events, worlds and enemies within games.
+- language reflecting the structure of grammar.  
+- Test Cases in an Automated testing program.
+- music and art with WebGL and Web Audio.
+- solutions in an evolutionary computation algorithm.
+- posts to appear in a feed.
+- Whatever.. the list will grow!
+
+##### Gentyl can also:
+- Destructure
+- Compose
+- Store
+- Stream processing
+- Asynchonous input-output
+
+**Gentyl is data focused**
 
 ---
 ### Basics
@@ -122,48 +132,52 @@ Gentyl is caring about state, it doesn't marginalise it like other functional re
 
 #### State Construction Modes.
 
-Mode | Symbol | Mnemonic | Meaning
---------|:-:|------------------------------------------
-Track   | = | The train tracks             | No modification only awareness of changes.
-Share   | & | And we will work together    | Child can modify the designated source.
-Inherit | (pipe) | It's you or me          | The parent state is prototype/superclass.
+|Mode | Symbol | Mnemonic | Meaning|
+|--------|:-:|-------------------|-----------------------|
+|Track   | = | The train tracks             | No modification only awareness of changes.|
+|Share   | & | And we will work together    | Child can modify the designated source.|
+|Inherit | (pipe) | It's you or me          | The parent state is prototype/superclass.|
 
 #### Designators
 
-type | symbol | Mnemonic | meaning
----|:-:|--
-parent    | + | up by one       |  designate the direct parent.
-root      | _ | at the bottom   |  designate the root of the structure.
-arbitrary | x | back up x stops |  designate x steps up the parent chain.
+|type | symbol | Mnemonic | meaning|
+|---|:-:|--|
+|parent    | + | up by one       |  designate the direct parent.|
+|root      | _ | at the bottom   |  designate the root of the structure.|
+|arbitrary | x | back up x stops |  designate x steps up the parent chain.|
+
+for example ' &+ ' means share parent, ' |_ '  means inherit from the root. ' =2 ' means track my parents parent. These can be combined but there are rules about conflicting names and not sharing.
 
 
-###Functions(sort of)
+----
+
+### Functions(sort of)
 
 Gentyl is founded on some guiding principles
 - functions are always provided as a single letter property of the form object.
 - functions always use this to refer to the state of thier host node.
 - function arguments and return values represent specific stages in execution of the structure, thus are usually
 
-Function  | Symbol | arguments | returns | role  
-----------|:-:|
-Preparator| p | 1:initialization arguments passed to prepare() and replicate() | void | works as a constructor for the state of the generator
-Carrier   | c | 1: the argument passed from the parent or resolve() of the root| the argument passed to the components | appropriation, elaborating, preparation.
-Selector  | s | 1: the argument returned from the carrier, 2:the full set of keys or indicies as array| the iterable with the indicies or keys of children that will resolve | filtering execution, selective dispatch.
-Resolver  | f | 1: The resolved component object, 2:the value passed to resolve this node| value passed back to the parent | composition, interpretation, filtering data.
+|Function  | Symbol | arguments | returns | role  |
+|----------|:-:|--|---|--|
+|Preparator| p | 1:initialization arguments passed to prepare() and replicate() | void | works as a constructor for the state of the generator|
+|Carrier   | c | 1: the argument passed from the parent or resolve() of the root| the argument passed to the components | appropriation, elaborating, preparation.|
+|Selector  | s | 1: the argument returned from the carrier, 2:the full set of keys or indicies as array| the iterable with the indicies or keys of children that will resolve | filtering, execution, selective dispatch.|
+|Resolver  | f | 1: The resolved component object, 2:the value passed to resolve this node| value passed back to the parent | composition, interpretation, filtering data.|
 
 ---
 
-###Methods
-name | purpose
----|--
-prepare(prepArgs)  | This method transforms the tree of unprepared g-node, creating parent links and constructing the state dependencies. It is a neccessary operation before resolve otherwise the functions would not be able to access the wider context.
-resolve(resArgs) -> result   | Take the resolve args recursively working out to the leaf nodes through carrier and selector and back through the resolver. This is the fundamental generative action the running of the core algorithm.
-replicate(prepArgs) -> G-Node | Produce a copy of the original node(called the ancestor), replicas have isolated state but share their form. The relationship between ancestor, replicate and the resultant gnode is  much like a prototype, new keyword and the instance. Therefore _G-Nodes are their own prototype_.
-bundle() -> G-bundle | This action is a serialization of the G-node structure that can be converted to JSON and recovered later, so long as a means of recovering the functions within the form is provided(currently only recoverable within the required module instance). it is recoverable by calling R(G-bundle).
-shell() -> SignalShell | This is the io mechanism of gentyl. A signal shell is an object with ins and outs: {ins:{label1:inpFunction1, label2:inpFunction2... }, outs:{label1:outputSignal1, label2:outputSignal2}}. calling the input function for a label calls functions that inject data into the system . The output signals can have callbacks attached to them, these will be called when the node with the corresponding output label is resolved.  
+### Methods
+|name | purpose|
+|---|--|
+|prepare(prepArgs)  | This method transforms the tree of unprepared g-node, creating parent links and constructing the state dependencies. It is a neccessary operation before resolve otherwise the functions would not be able to access the wider context.|
+|resolve(resArgs) -> result   | Take the resolve args recursively working out to the leaf nodes through carrier and selector and back through the resolver. This is the fundamental generative action the running of the core algorithm.|
+|replicate(prepArgs) -> G-Node | Produce a copy of the original node(called the ancestor), replicas have isolated state but share their form. The relationship between ancestor, replicate and the resultant gnode is  much like a prototype, new keyword and the instance. Therefore _G-Nodes are their own prototype_.|
+|bundle()-> G-bundle | This action is a serialization of the G-node structure that can be converted to JSON and recovered later, so long as a means of recovering the functions within the form is provided(currently only recoverable within the required module instance). it is recoverable by calling R(G-bundle).|
+|shell() -> SignalShell | This is the io mechanism of gentyl. A signal shell is an object with ins and outs: {ins:{label1:inpFunction1, label2:inpFunction2... }, outs:{label1:outputSignal1, label2:outputSignal2}}. calling the input function for a label calls functions that inject data into the system . The output signals can have callbacks attached to them, these will be called when the node with the corresponding output label is resolved.  |
 
-###Replication
+### Replication
 
-###Bundling and Reconstruction
+### Bundling and Reconstruction
 
-###IO
+### IO
