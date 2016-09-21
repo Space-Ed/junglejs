@@ -121,4 +121,32 @@ describe("recursability",function(){
         var res = gen.resolve();
         expect(res).toEqual([[1,2,3],4,5]);
     })
+
+    it('should not allow sharing between distinct trees',function(){
+        var subg = g({
+        },{
+            f:function(obj, arg){
+                this.prop.inner+=1;
+                return this.prop.inner;
+            }
+        },{
+            prop:{
+                inner:0
+            }
+        })
+
+        var gen = g({
+            ghost:subg
+        }).prepare();
+
+        var gen2 = g({
+            ghost:subg
+        }).prepare();
+
+        var res = gen.resolve();
+        expect(res.ghost).toEqual(1);
+
+        res = gen2.resolve();
+        expect(res.ghost).toEqual(1);
+    })
 })

@@ -84,7 +84,7 @@ namespace Gentyl {
         }
 
         extract(){
-            return this.ownProperties
+            return Util.deepCopy(this.ownProperties)
         }
 
         /**

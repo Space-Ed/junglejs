@@ -76,11 +76,6 @@ namespace Gentyl{
                 return node1
             }
 
-            var melded;
-            if(node1 instanceof Array){
-                return concatArrays ? node1.concat(node2) : merge(node1,node2)
-            }
-
             if(typeof(node1) != typeof(node2)){
                 var errmsg = "Expected melding nodes to be the same type \n"+
                             "type of node1: "+typeof(node1)+"\n"+
@@ -88,7 +83,11 @@ namespace Gentyl{
 
                 throw TypeError(errmsg)
             }
-            else if(typeof(node1) == 'object'){
+
+            var melded;
+            if(node1 instanceof Array){
+                return concatArrays ? node1.concat(node2) : merge(node1,node2)
+            }else if(typeof(node1) == 'object'){
                 melded = {}
 
                 //in one or the other
@@ -208,10 +207,8 @@ namespace Gentyl{
             }
         }
 
-        export function copyObject(object){
-            var cp = {};
-            assoc(object, cp)
-            return cp
+        export function deepCopy(thing){
+            return typeCaseSplitF(deepCopy, deepCopy)(thing)
         }
 
         export function applyMixins(derivedCtor: any, baseCtors: any[]) {
@@ -221,6 +218,7 @@ namespace Gentyl{
                 });
             });
         }
+
 
         export function typeCaseSplitF(objectOrAllFunction, arrayFunc?, primativeFunc?){
             var ofunc, afunc, pfunc;

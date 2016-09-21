@@ -13,6 +13,7 @@ declare namespace Gentyl {
         function parassoc(from: any, onto: any): void;
         function assoc(from: any, onto: any): void;
         function copyObject(object: any): {};
+        function deepCopy(thing: any): any;
         function applyMixins(derivedCtor: any, baseCtors: any[]): void;
         function typeCaseSplitF(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;
         function typeCaseSplitM(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;

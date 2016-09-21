@@ -99,15 +99,15 @@ var Gentyl;
             if (node2 == undefined) {
                 return node1;
             }
-            var melded;
-            if (node1 instanceof Array) {
-                return concatArrays ? node1.concat(node2) : merge(node1, node2);
-            }
             if (typeof (node1) != typeof (node2)) {
                 var errmsg = "Expected melding nodes to be the same type \n" +
                     "type of node1: " + typeof (node1) + "\n" +
                     "type of node2: " + typeof (node2) + "\n";
                 throw TypeError(errmsg);
+            }
+            var melded;
+            if (node1 instanceof Array) {
+                return concatArrays ? node1.concat(node2) : merge(node1, node2);
             }
             else if (typeof (node1) == 'object') {
                 melded = {};
@@ -237,6 +237,10 @@ var Gentyl;
             return cp;
         }
         Util.copyObject = copyObject;
+        function deepCopy(thing) {
+            return typeCaseSplitF(deepCopy, deepCopy)(thing);
+        }
+        Util.deepCopy = deepCopy;
         function applyMixins(derivedCtor, baseCtors) {
             baseCtors.forEach(function (baseCtor) {
                 Object.getOwnPropertyNames(baseCtor.prototype).forEach(function (name) {
@@ -384,7 +388,7 @@ var Gentyl;
             //freeze context here so that modifier functions cannot add, change or delete properties
         };
         ResolutionContext.prototype.extract = function () {
-            return this.ownProperties;
+            return Gentyl.Util.deepCopy(this.ownProperties);
         };
         /**
          * create the layers, at each stage looking up contexts relative to the host.
