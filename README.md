@@ -140,10 +140,10 @@ Gentyl is caring about state, it doesn't marginalise it like other functional re
 
 #### Designators
 
-|type | symbol | Mnemonic | meaning|
-|---|:-:|--|
-|parent    | + | up by one       |  designate the direct parent.|
-|root      | _ | at the bottom   |  designate the root of the structure.|
+|type      | symbol | Mnemonic   | meaning                                |
+|----------|:-:|-----------------|----------------------------------------|
+|parent    | + | up by one       |  designate the direct parent.          |
+|root      | _ | at the bottom   |  designate the root of the structure.  |
 |arbitrary | x | back up x stops |  designate x steps up the parent chain.|
 
 for example ' &+ ' means share parent, ' |_ '  means inherit from the root. ' =2 ' means track my parents parent. These can be combined but there are rules about conflicting names and not sharing.
