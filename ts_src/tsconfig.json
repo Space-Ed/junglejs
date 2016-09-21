@@ -31,9 +31,11 @@
         "./**/*.ts"
     ],
     "files": [
+        "./aliases.ts",
         "./context.ts",
         "./core.ts",
-        "./io.ts",
+        "./inventory/io.ts",
+        "./inventory/select.ts",
         "./main.ts",
         "./nodes.ts",
         "./reconstruction.ts",

@@ -1,5 +1,5 @@
 var G = require("../dist/gentyl.js");
-var g = G.g;
+var g = G.G;
 
 describe("bundle creation",function(){
     beforeEach(function(){

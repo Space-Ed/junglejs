@@ -2,7 +2,7 @@
 /// <reference path="../../typings/globals/jasmine/index.d.ts"/>
 
 var G = require("../dist/gentyl.js");
-var g = G.g;
+var g = G.G;
 
 describe("operationality", function () {
 

@@ -1,5 +1,5 @@
 var Gentyl = require('../dist/gentyl.js')
-var G = Gentyl.g;
+var G = Gentyl.G;
 
 describe("input-output", function(){
     var g1;

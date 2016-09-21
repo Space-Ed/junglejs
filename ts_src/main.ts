@@ -6,6 +6,9 @@
 /// <reference path="core.ts"/>
 /// <reference path="reconstruction.ts"/>
 /// <reference path="nodes.ts"/>
+/// <reference path="inventory/io.ts"/>
+/// <reference path="inventory/select.ts"/>
+/// <reference path="aliases.ts"/>
 
 // require("./core.ts")
 // require("./nodes.ts")

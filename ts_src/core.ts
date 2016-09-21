@@ -57,7 +57,7 @@ namespace Gentyl {
         ancestor:ResolutionNode;
         isAncestor:boolean;
 
-        constructor(components:any, form:Form = {}, state:any = {}){
+        constructor(components:any = {}, form:Form = {}, state:any = {}){
 
             var context = Util.copyObject(state);
             var mode = this.ctxmode =  form.m || "";
@@ -291,10 +291,12 @@ namespace Gentyl {
 
                     //construct a map of olabel:Onode that will be activated this time
                     var allTargets = {};
+                    var rootInput;
 
                     for (let i = 0; i < this.inps.length; i++){
                         var inode = <ResolutionNode>this.inps[i];
                         var iresult = inode.inputFunction.call(inode.ctx, data);
+                        if(inode == this.root){rootInput = iresult}
                         var targets = inode.getTargets(data, this.root); //Quandry: should it be input function result
                         Util.assoc(targets, allTargets);
                     }
@@ -306,7 +308,7 @@ namespace Gentyl {
                         allTargets[key].targeted = true;  //set allTargets
                     }
 
-                    this.root.resolve(data);           //trigger root resolution
+                    this.root.resolve(data);           //trigger root resolution. Quandry: should it be input function result
 
                     for (let key in allTargets) {
                         allTargets[key].targeted = false;  //clear targets
@@ -444,11 +446,6 @@ namespace Gentyl {
 
             return result
         }
-    }
-
-
-    export function g(components:Object, form, state){
-        return new ResolutionNode(components,form, state)
     }
 
 }

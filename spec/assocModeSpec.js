@@ -6,7 +6,7 @@
 */
 
 var G = require("../dist/gentyl.js");
-var g = G.g;
+var g = G.G;
 
 
 describe("context construction mode validity", function(){

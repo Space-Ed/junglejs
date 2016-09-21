@@ -113,7 +113,7 @@ declare namespace Gentyl {
         targeted: boolean;
         ancestor: ResolutionNode;
         isAncestor: boolean;
-        constructor(components: any, form?: Form, state?: any);
+        constructor(components?: any, form?: Form, state?: any);
         /**
          * setup the state tree, recursively preparing the contexts
          */
@@ -134,7 +134,6 @@ declare namespace Gentyl {
         private resolveUnderscore(resolver, resolveArgs);
         resolve(resolveArgs: any): any;
     }
-    function g(components: Object, form: any, state: any): ResolutionNode;
 }
 declare var uuid: any;
 declare namespace Gentyl {
@@ -168,4 +167,32 @@ declare namespace Gentyl {
 }
 declare namespace Gentyl {
     function sA(components: any, resolveArgs: any): any;
+}
+declare namespace Gentyl.Inventory {
+    function placeInput(input: any): void;
+    function pickupInput(input: any): any;
+    function retract(obj: any, arg: any): any;
+}
+declare namespace Gentyl.Inventory {
+    function selectNone(): any[];
+}
+declare namespace Gentyl {
+    /**
+     * Crete a G-Node in a Generic way
+     * @param:component
+     */
+    function G(components: Object, form: any, state: any): ResolutionNode;
+    /**
+     * Alias to create a functional G-node,
+     */
+    function F(func: any, components: any, state: any): ResolutionNode;
+    /**
+     * Create an input leaf node, defaulting to a passive point storage
+     */
+    function I(label: any, target: any[], inputFunction: typeof Inventory.placeInput, resolveFunction: typeof Inventory.pickupInput, state: any): ResolutionNode;
+    /**
+     * Create an output leaf node, a node that passes
+     */
+    function O(label: any, outputFunction: any): ResolutionNode;
+    function R(reconstructionBundle: any): Reconstruction;
 }

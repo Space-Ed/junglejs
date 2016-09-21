@@ -509,6 +509,7 @@ var Gentyl;
 (function (Gentyl) {
     var ResolutionNode = (function () {
         function ResolutionNode(components, form, state) {
+            if (components === void 0) { components = {}; }
             if (form === void 0) { form = {}; }
             if (state === void 0) { state = {}; }
             var context = Gentyl.Util.copyObject(state);
@@ -716,9 +717,13 @@ var Gentyl;
                 shell.ins[k] = function (data) {
                     //construct a map of olabel:Onode that will be activated this time
                     var allTargets = {};
+                    var rootInput;
                     for (var i = 0; i < this.inps.length; i++) {
                         var inode = this.inps[i];
                         var iresult = inode.inputFunction.call(inode.ctx, data);
+                        if (inode == this.root) {
+                            rootInput = iresult;
+                        }
                         var targets = inode.getTargets(data, this.root); //Quandry: should it be input function result
                         Gentyl.Util.assoc(targets, allTargets);
                     }
@@ -729,7 +734,7 @@ var Gentyl;
                         //console.log("target %s set targets", key, allTargets[key])
                         allTargets[key].targeted = true; //set allTargets
                     }
-                    this.root.resolve(data); //trigger root resolution
+                    this.root.resolve(data); //trigger root resolution. Quandry: should it be input function result
                     for (var key in allTargets) {
                         allTargets[key].targeted = false; //clear targets
                     }
@@ -850,10 +855,6 @@ var Gentyl;
         return ResolutionNode;
     }());
     Gentyl.ResolutionNode = ResolutionNode;
-    function g(components, form, state) {
-        return new ResolutionNode(components, form, state);
-    }
-    Gentyl.g = g;
 })(Gentyl || (Gentyl = {}));
 var uuid = require('uuid');
 var Gentyl;
@@ -969,12 +970,82 @@ var Gentyl;
     }
     Gentyl.sA = sA;
 })(Gentyl || (Gentyl = {}));
+var Gentyl;
+(function (Gentyl) {
+    var Inventory;
+    (function (Inventory) {
+        function placeInput(input) {
+            this._placed = input;
+        }
+        Inventory.placeInput = placeInput;
+        function pickupInput(input) {
+            return this._placed = input;
+        }
+        Inventory.pickupInput = pickupInput;
+        function retract(obj, arg) {
+            return arg;
+        }
+        Inventory.retract = retract;
+    })(Inventory = Gentyl.Inventory || (Gentyl.Inventory = {}));
+})(Gentyl || (Gentyl = {}));
+var Gentyl;
+(function (Gentyl) {
+    var Inventory;
+    (function (Inventory) {
+        function selectNone() {
+            return [];
+        }
+        Inventory.selectNone = selectNone;
+    })(Inventory = Gentyl.Inventory || (Gentyl.Inventory = {}));
+})(Gentyl || (Gentyl = {}));
+var Gentyl;
+(function (Gentyl) {
+    /**
+     * Crete a G-Node in a Generic way
+     * @param:component
+     */
+    function G(components, form, state) {
+        return new Gentyl.ResolutionNode(components, form, state);
+    }
+    Gentyl.G = G;
+    /**
+     * Alias to create a functional G-node,
+     */
+    function F(func, components, state) {
+        return new Gentyl.ResolutionNode(components, { f: func }, state);
+    }
+    Gentyl.F = F;
+    /**
+     * Create an input leaf node, defaulting to a passive point storage
+     */
+    function I(label, target, inputFunction, resolveFunction, state) {
+        if (target === void 0) { target = []; }
+        if (inputFunction === void 0) { inputFunction = Gentyl.Inventory.placeInput; }
+        if (resolveFunction === void 0) { resolveFunction = Gentyl.Inventory.pickupInput; }
+        return new Gentyl.ResolutionNode({}, { i: inputFunction, t: target, il: label }, state || { _placed: null });
+    }
+    Gentyl.I = I;
+    /**
+     * Create an output leaf node, a node that passes
+     */
+    function O(label, outputFunction) {
+        return new Gentyl.ResolutionNode({}, { ol: label, o: outputFunction, f: Gentyl.Inventory.retract }, {});
+    }
+    Gentyl.O = O;
+    function R(reconstructionBundle) {
+        return new Gentyl.Reconstruction(reconstructionBundle);
+    }
+    Gentyl.R = R;
+})(Gentyl || (Gentyl = {}));
 ///compile this file with --outFile for commonjs module environment
 /// <reference path="../typings/index.d.ts"/>
 /// <reference path="util.ts"/>
 /// <reference path="core.ts"/>
 /// <reference path="reconstruction.ts"/>
 /// <reference path="nodes.ts"/>
+/// <reference path="inventory/io.ts"/>
+/// <reference path="inventory/select.ts"/>
+/// <reference path="aliases.ts"/>
 // require("./core.ts")
 // require("./nodes.ts")
 // require("./util.ts")
