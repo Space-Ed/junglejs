@@ -4,7 +4,7 @@
   "description": "A Generator That You'll Love",
   "main": "./dist/gentyl.js",
   "scripts": {
-    "test": "./script/test"
+    "test": "jasmine"
   },
   "repository": {
     "type": "git",
