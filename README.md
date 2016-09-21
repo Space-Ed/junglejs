@@ -1,4 +1,4 @@
-# Gentyl
+# Gentyl  [![Build Status](https://travis-ci.org/Space-Ed/gentyl.svg?branch=master)][3]
 
 ## What is Structural Synthesis and what is it for?
 
