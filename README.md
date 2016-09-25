@@ -1,5 +1,6 @@
+![](res/title.png)
 
-# Gentyl  [![Build Status](https://travis-ci.org/Space-Ed/gentyl.png?branch=master)](https://travis-ci.org/Space-Ed/gentyl)
+[![npm version](https://badge.fury.io/js/gentyl.svg)](https://badge.fury.io/js/gentyl) [![Build Status](https://travis-ci.org/Space-Ed/gentyl.png?branch=master)](https://travis-ci.org/Space-Ed/gentyl)
 ## What is Structural Synthesis and what is it for?
 
 The purpose of this tool is to provide a means of synthesizing and channeling structured data using a hierarchical state system. The system supports reactive IO and serialization of its dynamic generator objects.
