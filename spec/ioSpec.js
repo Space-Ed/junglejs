@@ -1,5 +1,5 @@
-var Gentyl = require('../dist/gentyl.js')
-var G = Gentyl.G;
+var Gentyl = require('../dist/gentyl.js');
+var G = Gentyl.G, I = Gentyl.I, O = Gentyl.O;
 
 describe("input-output", function(){
     var g1;
@@ -133,6 +133,47 @@ describe("input-output", function(){
 
         expect(s.outs._.dispatch).toHaveBeenCalled()
 
+    })
+
+    describe('multiple inputs', function(){
+        var g2, shell
+
+
+
+        beforeEach(function(){
+            g2 = G({
+                i1:I('i1','_'),
+                i2:I('i2')
+            },{
+                f:function(obj, arg){
+                    return obj.i1 + obj.i2;
+                },
+                o:Gentyl.Util.identity
+            }).prepare()
+
+            shell = g2.shell();
+
+            spyOn(shell.outs._, 'dispatch')
+        })
+
+        it('should not trigger untargeting',function(){
+            shell.ins.i2("world");
+            expect(shell.outs._.dispatch).not.toHaveBeenCalled();
+        })
+
+        it('should trigger on targeted', function(){
+            shell.ins.i2("world");
+            shell.ins.i1("hello ");
+
+            //g2.resolve("hello");
+
+            expect(g2.node.i1.inputFunction).toBe(Gentyl.Inventory.placeInput)
+
+            expect(g2.node.i1.ctx._placed).toBe('hello ')
+            expect(g2.node.i2.ctx._placed).toBe('world')
+
+            expect(shell.outs._.dispatch).toHaveBeenCalledWith('hello world');
+        })
     })
 
 })

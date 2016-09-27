@@ -9,7 +9,6 @@ describe("operationality", function () {
 
     it("should be present", function () {
         expect(g).not.toBeUndefined();
-        expect(G.sA).not.toBeUndefined();
     });
 
 
