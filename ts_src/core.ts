@@ -59,7 +59,7 @@ namespace Gentyl {
 
         constructor(components:any = {}, form:Form = {}, state:any = {}){
 
-            var context = Util.copyObject(state);
+            var context = Util.deepCopy(state);
             var mode = this.ctxmode =  form.m || "";
             this.carrier = form.c || Gentyl.Util.identity;
             this.resolver = form.f || Gentyl.Util.identity;
@@ -129,20 +129,22 @@ namespace Gentyl {
                 //
                 this.prepareIO();
 
-                if(this.node instanceof Array){
-                    for (let i = 0; i < this.node.length; i++){
-                        let val = this.node[i];
-                        this.node[i] = this.prepareChild(val);
-                    }
+                Util.typeCaseSplitM(this.prepareChild.bind(this))(this.node)
 
-                }else if (this.node instanceof Object){
-                    for (let k in this.node){
-                        let val = this.node[k];
-                        this.node[k] = this.prepareChild(val);
-                    }
-                }else {
-                    this.node = this.prepareChild(this.node);
-                }
+                // if(this.node instanceof Array){
+                //     for (let i = 0; i < this.node.length; i++){
+                //         let val = this.node[i];
+                //         this.node[i] = this.prepareChild(val);
+                //     }
+                //
+                // }else if (this.node instanceof Object){
+                //     for (let k in this.node){
+                //         let val = this.node[k];
+                //         this.node[k] = this.prepareChild(val);
+                //     }
+                // }else {
+                //     this.node = this.prepareChild(this.node);
+                // }
             } else {
 
             }
@@ -183,7 +185,6 @@ namespace Gentyl {
             }else{
 
                 //this is a raw node, either an ancestor
-                //var repl = new Reconstruction(this.bundle())
                 var repl = new ResolutionNode(this.node, {
                     f:this.resolver,
                     c:this.carrier ,
@@ -194,7 +195,8 @@ namespace Gentyl {
                     i:this.inputFunction,
                     o:this.outputFunction,
                     t:this.targeting,
-                    s:this.selector}, this.ctx.extract())
+                    s:this.selector
+                }, this.ctx.extract())
 
                 //in the case of the ancestor it comes from prepared
                 if(this.isAncestor){
@@ -440,7 +442,7 @@ namespace Gentyl {
             //dispatch if marked
             //console.log(`check Output stage with olabel ${this.outputLabel} reached targeted? , `,this.targeted)
             if(this.targeted){
-                var outresult = this.outputFunction.call(this.ctx, outresult)
+                var outresult = this.outputFunction.call(this.ctx, result)
                 this.getRoot().signalShell.outs[this.outputLabel].dispatch(outresult)
             }
 

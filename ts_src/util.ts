@@ -5,6 +5,21 @@ namespace Gentyl{
             return x
         }
 
+        export function weightedChoice(weights:number[]){
+            var sum = weights.reduce(function(a,b){return a+b},0)
+            var cdfArray = weights.reduce(function(coll, next, i){
+               var v = (coll[i-1] || 0)+next/sum
+               return coll.concat([v])
+            },[])
+
+            var r = Math.random();
+            var i = 0;
+
+            //the cdf exceeds r increment
+            while(i < weights.length-1 && r > cdfArray[i]){i++}
+            return i
+        }
+
         export function range(...args){
             var beg, end, step
 
@@ -237,7 +252,7 @@ namespace Gentyl{
                 var outThing;
                 if(inThing instanceof Array){
                     outThing = [];
-                    outThing.lenth= inThing.length;
+                    outThing.length = inThing.length;
                     for (var i = 0; i < inThing.length; i++){
                         var subBundle = inThing[i];
                         outThing[i] = afunc(subBundle, i)
@@ -271,9 +286,7 @@ namespace Gentyl{
             }
 
             return function(inThing){
-                var outThing;
                 if(inThing instanceof Array){
-                    outThing.lenth= inThing.length;
                     for (var i = 0; i < inThing.length; i++){
                         var subBundle = inThing[i];
                         inThing[i] = afunc(subBundle, i)
@@ -287,7 +300,7 @@ namespace Gentyl{
                 }else {
                     //wont modify primative
                 }
-                return outThing
+                return inThing
 
             }
         }

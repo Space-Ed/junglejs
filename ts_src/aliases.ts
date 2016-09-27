@@ -19,7 +19,7 @@ namespace Gentyl {
      * Create an input leaf node, defaulting to a passive point storage
      */
     export function I(label, target=[], inputFunction=Inventory.placeInput, resolveFunction=Inventory.pickupInput, state){
-        return new ResolutionNode({},{i:inputFunction, t:target, il:label}, state || {_placed:null})
+        return new ResolutionNode({},{i:inputFunction, t:target, il:label, f:resolveFunction}, state || {_placed:null})
     }
 
     /**

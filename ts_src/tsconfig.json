@@ -35,9 +35,9 @@
         "./context.ts",
         "./core.ts",
         "./inventory/io.ts",
+        "./inventory/resolver.ts",
         "./inventory/select.ts",
         "./main.ts",
-        "./nodes.ts",
         "./reconstruction.ts",
         "./util.ts"
     ]
