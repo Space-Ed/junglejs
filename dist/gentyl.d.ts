@@ -2,6 +2,7 @@
 declare namespace Gentyl {
     namespace Util {
         function identity(x: any): any;
+        function weightedChoice(weights: number[]): number;
         function range(...args: any[]): any[];
         function translator(node: any, translation: any): any;
         function melder(node1: any, node2: any, merge?: (a: any, b: any) => any, concatArrays?: boolean): any;
@@ -12,7 +13,6 @@ declare namespace Gentyl {
         function softAssoc(from: any, onto: any): void;
         function parassoc(from: any, onto: any): void;
         function assoc(from: any, onto: any): void;
-        function copyObject(object: any): {};
         function deepCopy(thing: any): any;
         function applyMixins(derivedCtor: any, baseCtors: any[]): void;
         function typeCaseSplitF(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;
@@ -166,12 +166,9 @@ declare namespace Gentyl {
         constructor(bundle: Bundle);
     }
 }
-declare namespace Gentyl {
-    function sA(components: any, resolveArgs: any): any;
-}
 declare namespace Gentyl.Inventory {
     function placeInput(input: any): void;
-    function pickupInput(input: any): any;
+    function pickupInput(obj: any, arg: any): any;
     function retract(obj: any, arg: any): any;
 }
 declare namespace Gentyl.Inventory {

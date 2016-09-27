@@ -11,6 +11,21 @@ var Gentyl;
             return x;
         }
         Util.identity = identity;
+        function weightedChoice(weights) {
+            var sum = weights.reduce(function (a, b) { return a + b; }, 0);
+            var cdfArray = weights.reduce(function (coll, next, i) {
+                var v = (coll[i - 1] || 0) + next / sum;
+                return coll.concat([v]);
+            }, []);
+            var r = Math.random();
+            var i = 0;
+            //the cdf exceeds r increment
+            while (i < weights.length - 1 && r > cdfArray[i]) {
+                i++;
+            }
+            return i;
+        }
+        Util.weightedChoice = weightedChoice;
         function range() {
             var args = [];
             for (var _i = 0; _i < arguments.length; _i++) {
@@ -231,12 +246,6 @@ var Gentyl;
             }
         }
         Util.assoc = assoc;
-        function copyObject(object) {
-            var cp = {};
-            assoc(object, cp);
-            return cp;
-        }
-        Util.copyObject = copyObject;
         function deepCopy(thing) {
             return typeCaseSplitF(deepCopy, deepCopy)(thing);
         }
@@ -265,7 +274,7 @@ var Gentyl;
                 var outThing;
                 if (inThing instanceof Array) {
                     outThing = [];
-                    outThing.lenth = inThing.length;
+                    outThing.length = inThing.length;
                     for (var i = 0; i < inThing.length; i++) {
                         var subBundle = inThing[i];
                         outThing[i] = afunc(subBundle, i);
@@ -298,9 +307,7 @@ var Gentyl;
                 pfunc = primativeFunc || identity;
             }
             return function (inThing) {
-                var outThing;
                 if (inThing instanceof Array) {
-                    outThing.lenth = inThing.length;
                     for (var i = 0; i < inThing.length; i++) {
                         var subBundle = inThing[i];
                         inThing[i] = afunc(subBundle, i);
@@ -314,7 +321,7 @@ var Gentyl;
                 }
                 else {
                 }
-                return outThing;
+                return inThing;
             };
         }
         Util.typeCaseSplitM = typeCaseSplitM;
@@ -516,7 +523,7 @@ var Gentyl;
             if (components === void 0) { components = {}; }
             if (form === void 0) { form = {}; }
             if (state === void 0) { state = {}; }
-            var context = Gentyl.Util.copyObject(state);
+            var context = Gentyl.Util.deepCopy(state);
             var mode = this.ctxmode = form.m || "";
             this.carrier = form.c || Gentyl.Util.identity;
             this.resolver = form.f || Gentyl.Util.identity;
@@ -575,21 +582,7 @@ var Gentyl;
                 }
                 //
                 this.prepareIO();
-                if (this.node instanceof Array) {
-                    for (var i = 0; i < this.node.length; i++) {
-                        var val = this.node[i];
-                        this.node[i] = this.prepareChild(val);
-                    }
-                }
-                else if (this.node instanceof Object) {
-                    for (var k in this.node) {
-                        var val = this.node[k];
-                        this.node[k] = this.prepareChild(val);
-                    }
-                }
-                else {
-                    this.node = this.prepareChild(this.node);
-                }
+                Gentyl.Util.typeCaseSplitM(this.prepareChild.bind(this))(this.node);
             }
             else {
             }
@@ -627,7 +620,6 @@ var Gentyl;
             }
             else {
                 //this is a raw node, either an ancestor
-                //var repl = new Reconstruction(this.bundle())
                 var repl = new ResolutionNode(this.node, {
                     f: this.resolver,
                     c: this.carrier,
@@ -638,7 +630,8 @@ var Gentyl;
                     i: this.inputFunction,
                     o: this.outputFunction,
                     t: this.targeting,
-                    s: this.selector }, this.ctx.extract());
+                    s: this.selector
+                }, this.ctx.extract());
                 //in the case of the ancestor it comes from prepared
                 if (this.isAncestor) {
                     repl.ancestor = this;
@@ -851,7 +844,7 @@ var Gentyl;
             //dispatch if marked
             //console.log(`check Output stage with olabel ${this.outputLabel} reached targeted? , `,this.targeted)
             if (this.targeted) {
-                var outresult = this.outputFunction.call(this.ctx, outresult);
+                var outresult = this.outputFunction.call(this.ctx, result);
                 this.getRoot().signalShell.outs[this.outputLabel].dispatch(outresult);
             }
             return result;
@@ -947,43 +940,14 @@ var Gentyl;
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {
-    function sA(components, resolveArgs) {
-        var resolution = {};
-        this.index = this.index || 0;
-        this.mode = this.mode || "revolve";
-        for (var k in components) {
-            if (components[k] instanceof Array) {
-                //Todo: Should be resolving the items
-                var rarray = components[k];
-                if (this.mode == "revolve") {
-                    resolution[k] = rarray[this.index % rarray.length];
-                }
-                else if (this.mode == "cap") {
-                    resolution[k] = rarray[Math.min(this.index, rarray.length)];
-                }
-                else {
-                    throw Error("invalid mode in array revolver");
-                }
-            }
-            else {
-                throw Error("expected all properties in array selection to be arrays");
-            }
-        }
-        this.index++;
-        return resolution;
-    }
-    Gentyl.sA = sA;
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
     var Inventory;
     (function (Inventory) {
         function placeInput(input) {
             this._placed = input;
         }
         Inventory.placeInput = placeInput;
-        function pickupInput(input) {
-            return this._placed = input;
+        function pickupInput(obj, arg) {
+            return this._placed;
         }
         Inventory.pickupInput = pickupInput;
         function retract(obj, arg) {
@@ -1026,7 +990,7 @@ var Gentyl;
         if (target === void 0) { target = []; }
         if (inputFunction === void 0) { inputFunction = Gentyl.Inventory.placeInput; }
         if (resolveFunction === void 0) { resolveFunction = Gentyl.Inventory.pickupInput; }
-        return new Gentyl.ResolutionNode({}, { i: inputFunction, t: target, il: label }, state || { _placed: null });
+        return new Gentyl.ResolutionNode({}, { i: inputFunction, t: target, il: label, f: resolveFunction }, state || { _placed: null });
     }
     Gentyl.I = I;
     /**
@@ -1046,9 +1010,9 @@ var Gentyl;
 /// <reference path="util.ts"/>
 /// <reference path="core.ts"/>
 /// <reference path="reconstruction.ts"/>
-/// <reference path="nodes.ts"/>
 /// <reference path="inventory/io.ts"/>
 /// <reference path="inventory/select.ts"/>
+/// <reference path="inventory/resolver.ts"/>
 /// <reference path="aliases.ts"/>
 // require("./core.ts")
 // require("./nodes.ts")
