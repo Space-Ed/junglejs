@@ -114,7 +114,7 @@ declare namespace Gentyl {
         targeted: boolean;
         ancestor: ResolutionNode;
         isAncestor: boolean;
-        constructor(components?: any, form?: Form, state?: any);
+        constructor(components: any, form?: Form, state?: any);
         /**
          * setup the state tree, recursively preparing the contexts
          */
@@ -129,9 +129,9 @@ declare namespace Gentyl {
         getParent(toDepth?: number): ResolutionNode;
         getRoot(): ResolutionNode;
         private setParent(parentNode);
-        private resolveArray(array, resolveArgs);
-        private resolveObject(node, resolveArgs);
-        private resolveNode(node, resolveArgs);
+        private resolveArray(array, resolveArgs, selection);
+        private resolveObject(node, resolveArgs, selection);
+        private resolveNode(node, resolveArgs, selection);
         private resolveUnderscore(resolver, resolveArgs);
         resolve(resolveArgs: any): any;
     }

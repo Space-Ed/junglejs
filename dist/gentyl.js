@@ -137,7 +137,12 @@ var Gentyl;
                 for (var k in node1) {
                     for (var q in node2) {
                         if (k == q) {
-                            melded[k] = melder(node1[k], node2[k], merge, concatArrays);
+                            if (node1[k] == node2[k]) {
+                                melded[k] = node1[k]; //co-contained
+                            }
+                            else {
+                                melded[k] = melder(node1[k], node2[k], merge, concatArrays); //collision
+                            }
                         }
                     }
                 }
@@ -520,14 +525,13 @@ var Gentyl;
 (function (Gentyl) {
     var ResolutionNode = (function () {
         function ResolutionNode(components, form, state) {
-            if (components === void 0) { components = {}; }
             if (form === void 0) { form = {}; }
             if (state === void 0) { state = {}; }
             var context = Gentyl.Util.deepCopy(state);
             var mode = this.ctxmode = form.m || "";
             this.carrier = form.c || Gentyl.Util.identity;
             this.resolver = form.f || Gentyl.Util.identity;
-            this.selector = form.s || Gentyl.Util.identity;
+            this.selector = form.s || function (keys, carg) { return true; };
             this.preparator = form.p || function (x) { };
             this.inputLabel = form.il;
             this.outputLabel = form.ol;
@@ -539,31 +543,31 @@ var Gentyl;
             this.prepared = false;
             this.targeted = false;
             //construct the node of array object or primative type
-            var node;
-            if (components instanceof Array) {
-                node = [];
-                node.lenth = components.length;
-                for (var i = 0; i < components.length; i++) {
-                    var component = components[i];
-                    var c = this.inductComponent(component);
-                    node[i] = c;
-                }
-            }
-            else if (components instanceof Object) {
-                node = {};
-                for (var k in components) {
-                    var component = components[k];
-                    //convert all objects into resolution nodes, for consistent depth referencing.
-                    var c = this.inductComponent(component);
-                    node[k] = c;
-                }
-            }
-            else {
-                node = components;
-            }
-            //var inductor = this.inductComponent.bind(this);
-            //this.node = Util.typeCaseSplitF(inductor, inductor, null)(components)
-            this.node = node;
+            // var node;
+            // if(components instanceof Array){
+            //     node = [];
+            //     node.length= components.length;
+            //     for (var i = 0; i < components.length; i++){
+            //         var component = components[i];
+            //         var c = this.inductComponent(component);
+            //         node[i] = c
+            //     }
+            //
+            // }else if(components instanceof Object){
+            //     node = {}
+            //
+            //     for (var k in components){
+            //         var component = components[k];
+            //         //convert all objects into resolution nodes, for consistent depth referencing.
+            //         var c = this.inductComponent(component);
+            //         node[k] = c;
+            //     }
+            // }else {
+            //     node = components;
+            // }
+            // this.node = node;
+            var inductor = this.inductComponent.bind(this);
+            this.node = Gentyl.Util.typeCaseSplitF(inductor, inductor, null)(components);
             this.ctx = new Gentyl.ResolutionContext(this, context, mode);
         }
         /**
@@ -773,58 +777,60 @@ var Gentyl;
             this.isRoot = false;
             this.depth = this.parent.depth + 1;
         };
-        ResolutionNode.prototype.resolveArray = function (array, resolveArgs) {
+        ResolutionNode.prototype.resolveArray = function (array, resolveArgs, selection) {
             //TODO:selector must produce index or array thereof
-            var selection = this.selector.call(this.ctx, Gentyl.Util.range(array.length), resolveArgs);
             if (selection instanceof Array) {
                 var resolution = [];
                 for (var i = 0; i < selection.length; i++) {
-                    resolution[i] = this.resolveNode(array[selection[i]], resolveArgs);
+                    resolution[i] = this.resolveNode(array[selection[i]], resolveArgs, true);
                 }
                 return resolution;
             }
             else {
-                return this.resolveNode(array[selection], resolveArgs);
+                return this.resolveNode(array[selection], resolveArgs, true);
             }
         };
-        ResolutionNode.prototype.resolveObject = function (node, resolveArgs) {
-            var selection = this.selector.call(this.ctx, Object.keys(node), resolveArgs);
+        ResolutionNode.prototype.resolveObject = function (node, resolveArgs, selection) {
             if (selection instanceof Array) {
                 var resolution = {};
                 for (var i = 0; i < selection.length; i++) {
                     var k = selection[i];
-                    resolution[k] = this.resolveNode(node[k], resolveArgs);
+                    resolution[k] = this.resolveNode(node[k], resolveArgs, true);
                 }
                 return resolution;
             }
             else {
-                return this.resolveNode(node[selection], resolveArgs);
+                return this.resolveNode(node[selection], resolveArgs, true);
             }
         };
         //main recursion
-        ResolutionNode.prototype.resolveNode = function (node, resolveArgs) {
+        ResolutionNode.prototype.resolveNode = function (node, resolveArgs, selection) {
             //log("node to resolve: ", node)
-            var resolution;
-            if (node == undefined) {
-                return null;
+            var cut = false;
+            if (!selection) {
+                cut = true;
             }
-            else if (node instanceof Array) {
-                resolution = this.resolveArray(node, resolveArgs);
+            else if (selection == true && node instanceof Object) {
+                //select all
+                selection = Object.keys(node);
+            }
+            //at this stage cut determines primitives are nullified and objects empty
+            if (node instanceof Array) {
+                console.log("array key selection ", selection);
+                return this.resolveArray(node, resolveArgs, cut ? [] : selection);
             }
             else if (typeof (node) == "object") {
                 if (node instanceof ResolutionNode) {
-                    resolution = node.resolve(resolveArgs);
+                    return cut ? null : node.resolve(resolveArgs);
                 }
                 else {
-                    //now all nodes are converted into G nodes
-                    resolution = this.resolveObject(node, resolveArgs);
+                    return this.resolveObject(node, resolveArgs, cut ? [] : selection);
                 }
             }
             else {
-                //we have a string or number
-                resolution = node;
+                //we have a primative
+                return cut ? null : node;
             }
-            return resolution;
         };
         ResolutionNode.prototype.resolveUnderscore = function (resolver, resolveArgs) {
             //now this is the parent context
@@ -837,8 +843,13 @@ var Gentyl;
             }
             Object.freeze(resolveArgs);
             var carried = this.carrier.call(this.ctx, resolveArgs);
-            //recurse on the contained node
-            var resolvedNode = this.resolveNode(this.node, carried);
+            var resolvedNode;
+            if (this.node != undefined) {
+                //form the selection for this node
+                var selection = this.selector.call(this.ctx, Object.keys(this.node), resolveArgs);
+                //recurse on the contained node
+                resolvedNode = this.resolveNode(this.node, carried, selection);
+            }
             //modifies the resolved context and returns the processed result
             var result = this.resolver.call(this.ctx, resolvedNode, resolveArgs);
             //dispatch if marked

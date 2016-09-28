@@ -30,10 +30,10 @@ describe("input-output", function(){
                 ,{
                     il:'beamin',
                     ol:'beamout',
-                    i:function(inp){
+                    i(inp){
                         this.buffer.push(inp)
                     },
-                    f:function(obj, arg){
+                    f(obj, arg){
                         return this.buffer.pop() || obj
                     }
                 },{
@@ -138,15 +138,14 @@ describe("input-output", function(){
     describe('multiple inputs', function(){
         var g2, shell
 
-
-
         beforeEach(function(){
             g2 = G({
                 i1:I('i1','_'),
-                i2:I('i2')
+                i2:I('i2'),
+                i3:I('i1')
             },{
                 f:function(obj, arg){
-                    return obj.i1 + obj.i2;
+                    return obj.i1 + obj.i2 + obj.i3;
                 },
                 o:Gentyl.Util.identity
             }).prepare()
@@ -162,18 +161,52 @@ describe("input-output", function(){
         })
 
         it('should trigger on targeted', function(){
-            shell.ins.i2("world");
-            shell.ins.i1("hello ");
+            shell.ins.i2(" breaks ");
+            shell.ins.i1("ice");
 
             //g2.resolve("hello");
 
             expect(g2.node.i1.inputFunction).toBe(Gentyl.Inventory.placeInput)
 
-            expect(g2.node.i1.ctx._placed).toBe('hello ')
-            expect(g2.node.i2.ctx._placed).toBe('world')
+            expect(g2.node.i1.ctx._placed).toBe('ice')
+            expect(g2.node.i2.ctx._placed).toBe(' breaks ')
 
-            expect(shell.outs._.dispatch).toHaveBeenCalledWith('hello world');
+            expect(shell.outs._.dispatch).toHaveBeenCalledWith('ice breaks ice');
         })
+    })
+
+    describe('filter select', function(){
+
+        var g2, shell
+
+        beforeEach(function(){
+            g2 = G(
+                O('out')
+            ,{
+                s(keys, carArg){
+                    console.log('arg in', carArg)
+                    return carArg > 5
+                },
+                t:'out',
+            }).prepare()
+
+            shell = g2.shell();
+
+            spyOn(shell.outs.out, 'dispatch');
+
+        })
+
+        it('input should proceed from root to tip when argument is unfiltered', function(){
+            shell.ins._(10);
+
+            expect(shell.outs.out.dispatch).toHaveBeenCalledWith(10)
+        })
+
+        it('input should not proceed when selector returns false', function(){
+            shell.ins._(0);
+            expect(shell.outs.out.dispatch).not.toHaveBeenCalled()
+        })
+
     })
 
 })

@@ -118,7 +118,11 @@ namespace Gentyl{
                 for(var k  in node1){
                     for(var q in node2){
                         if(k == q){
-                            melded[k] = melder(node1[k], node2[k], merge, concatArrays)
+                            if(node1[k] == node2[k]){
+                                melded[k] = node1[k] //co-contained
+                            }else{
+                                melded[k] = melder(node1[k], node2[k], merge, concatArrays) //collision
+                            }
                         }
                     }
                 }

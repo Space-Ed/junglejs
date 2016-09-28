@@ -113,12 +113,15 @@ describe("recursability",function(){
             g([
                 1,2,3
             ]),
+            g([
+                6,7
+            ]),
             4,
             5
         ]).prepare();
 
         var res = gen.resolve();
-        expect(res).toEqual([[1,2,3],4,5]);
+        expect(res).toEqual([[1,2,3],[6,7],4,5]);
     })
 
     it('should not allow sharing between distinct trees',function(){
