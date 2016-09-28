@@ -1,6 +1,6 @@
 {
   "name": "gentyl",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A Generator That You'll Love",
   "main": "./dist/gentyl.js",
   "scripts": {
