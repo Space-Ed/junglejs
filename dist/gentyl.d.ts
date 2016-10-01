@@ -15,6 +15,7 @@ declare namespace Gentyl {
         function assoc(from: any, onto: any): void;
         function deepCopy(thing: any): any;
         function applyMixins(derivedCtor: any, baseCtors: any[]): void;
+        function isVanillaObject(thing: any): boolean;
         function typeCaseSplitF(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;
         function typeCaseSplitM(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;
     }
@@ -97,7 +98,6 @@ declare namespace Gentyl {
         isRoot: boolean;
         root: ResolutionNode;
         prepared: boolean;
-        functional: boolean;
         ctxmode: string;
         carrier: (arg) => any;
         resolver: (obj, arg) => any;
@@ -119,8 +119,8 @@ declare namespace Gentyl {
          * setup the state tree, recursively preparing the contexts
          */
         prepare(prepargs?: any): ResolutionNode;
+        private prepareChild(prepargs, child);
         private prepareIO();
-        private prepareChild(child);
         replicate(prepargs?: any): ResolutionNode;
         bundle(): Bundle;
         getTargets(input: any, root: any): {};
@@ -194,3 +194,4 @@ declare namespace Gentyl {
     function O(label: any, outputFunction: any): ResolutionNode;
     function R(reconstructionBundle: any): Reconstruction;
 }
+declare var define: any;

@@ -238,6 +238,10 @@ namespace Gentyl{
             });
         }
 
+        export function isVanillaObject(thing){
+            return thing instanceof Object && Object.prototype == Object.getPrototypeOf(thing)
+        }
+
 
         export function typeCaseSplitF(objectOrAllFunction, arrayFunc?, primativeFunc?){
             var ofunc, afunc, pfunc;
@@ -262,7 +266,7 @@ namespace Gentyl{
                         outThing[i] = afunc(subBundle, i)
                     }
 
-                }else if(inThing instanceof Object){
+                }else if(isVanillaObject(inThing)){
                     outThing = {}
                     for (var k in inThing){
                         var subBundle = inThing[k];
@@ -296,7 +300,7 @@ namespace Gentyl{
                         inThing[i] = afunc(subBundle, i)
                     }
 
-                }else if(inThing instanceof Object){
+                }else if(isVanillaObject){
                     for (var k in inThing){
                         var subBundle = inThing[k];
                         inThing[k] = ofunc(subBundle, k)
@@ -305,7 +309,6 @@ namespace Gentyl{
                     //wont modify primative
                 }
                 return inThing
-
             }
         }
 

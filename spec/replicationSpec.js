@@ -7,7 +7,10 @@ describe("node replication", function(){
         this.g = g({
             a:g({
                 meaning:'peace'
-            })
+            }),
+            b:[
+                0,1,2
+            ]
         },{
             f:function(resolved, args){
                 this.fearless += 1
@@ -59,7 +62,5 @@ describe("node replication", function(){
         })
 
     })
-
-    it("should transitively replicate")
 
 })

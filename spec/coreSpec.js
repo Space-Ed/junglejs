@@ -20,7 +20,7 @@ describe("operationality", function () {
             f:function (obj) {
                 return obj;
             }
-        }).prepare();
+        })
 
         var res = gen.resolve();
         expect(res).toEqual({ a: "stringa", b: "stringb" });
@@ -36,7 +36,7 @@ describe("operationality", function () {
             },{
                 prop:"value"
             }
-        ).prepare();
+        )
 
         var res = gen.resolve();
         expect(res).toEqual("value")
@@ -54,7 +54,7 @@ describe("operationality", function () {
             {
                 prop:0
             }
-        ).prepare();
+        )
 
         var res = gen.resolve();
         expect(res).toEqual(1);

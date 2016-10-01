@@ -16,4 +16,17 @@
 // require("./nodes.ts")
 // require("./util.ts")
 
-module.exports = Gentyl
+
+//exports to multiple environments
+
+var define = define || undefined;
+
+if(typeof define === 'function' && define.amd){ //AMD
+    define(function () { return Gentyl; });
+} else if (typeof module !== 'undefined' && module.exports){ //node
+    module.exports = Gentyl;
+} else { //browser
+    //use string because of Google closure compiler ADVANCED_MODE
+    /*jslint sub:true */
+    this['gentyl'] = Gentyl;
+}

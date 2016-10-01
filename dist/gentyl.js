@@ -263,6 +263,10 @@ var Gentyl;
             });
         }
         Util.applyMixins = applyMixins;
+        function isVanillaObject(thing) {
+            return thing instanceof Object && Object.prototype == Object.getPrototypeOf(thing);
+        }
+        Util.isVanillaObject = isVanillaObject;
         function typeCaseSplitF(objectOrAllFunction, arrayFunc, primativeFunc) {
             var ofunc, afunc, pfunc;
             if (primativeFunc == undefined && arrayFunc == undefined) {
@@ -285,7 +289,7 @@ var Gentyl;
                         outThing[i] = afunc(subBundle, i);
                     }
                 }
-                else if (inThing instanceof Object) {
+                else if (isVanillaObject(inThing)) {
                     outThing = {};
                     for (var k in inThing) {
                         var subBundle = inThing[k];
@@ -318,7 +322,7 @@ var Gentyl;
                         inThing[i] = afunc(subBundle, i);
                     }
                 }
-                else if (inThing instanceof Object) {
+                else if (isVanillaObject) {
                     for (var k in inThing) {
                         var subBundle = inThing[k];
                         inThing[k] = ofunc(subBundle, k);
@@ -542,30 +546,6 @@ var Gentyl;
             this.isRoot = true;
             this.prepared = false;
             this.targeted = false;
-            //construct the node of array object or primative type
-            // var node;
-            // if(components instanceof Array){
-            //     node = [];
-            //     node.length= components.length;
-            //     for (var i = 0; i < components.length; i++){
-            //         var component = components[i];
-            //         var c = this.inductComponent(component);
-            //         node[i] = c
-            //     }
-            //
-            // }else if(components instanceof Object){
-            //     node = {}
-            //
-            //     for (var k in components){
-            //         var component = components[k];
-            //         //convert all objects into resolution nodes, for consistent depth referencing.
-            //         var c = this.inductComponent(component);
-            //         node[k] = c;
-            //     }
-            // }else {
-            //     node = components;
-            // }
-            // this.node = node;
             var inductor = this.inductComponent.bind(this);
             this.node = Gentyl.Util.typeCaseSplitF(inductor, inductor, null)(components);
             this.ctx = new Gentyl.ResolutionContext(this, context, mode);
@@ -580,17 +560,35 @@ var Gentyl;
             this.ancestor.isAncestor = true;
             if (!this.prepared) {
                 this.prepared = true;
-                if (!this.functional) {
-                    this.ctx.prepare();
-                    this.preparator.call(this, prepargs);
-                }
-                //
+                this.ctx.prepare();
+                this.preparator.call(this.ctx, prepargs);
+                //create io facilities for node.
                 this.prepareIO();
-                Gentyl.Util.typeCaseSplitM(this.prepareChild.bind(this))(this.node);
+                //prepare children, object, array, primative
+                this.node = Gentyl.Util.typeCaseSplitF(this.prepareChild.bind(this, prepargs))(this.node);
             }
             else {
+                this.ancestor = this.replicate();
+                this.ancestor.isAncestor = true;
             }
             return this;
+        };
+        ResolutionNode.prototype.prepareChild = function (prepargs, child) {
+            if (child instanceof ResolutionNode) {
+                var replica = child.replicate();
+                if (!replica.prepared) {
+                    //the
+                    replica.setParent(this);
+                    replica.prepare(prepargs);
+                }
+                //collect nodes from children allowing parallel input not out
+                Gentyl.Util.parassoc(replica.inputNodes, this.inputNodes);
+                Gentyl.Util.assoc(replica.outputNodes, this.outputNodes);
+                return replica;
+            }
+            else {
+                return child;
+            }
         };
         ResolutionNode.prototype.prepareIO = function () {
             this.inputNodes = {};
@@ -600,20 +598,6 @@ var Gentyl;
             this.outputNodes = {};
             if (typeof (this.outputLabel) == 'string') {
                 this.outputNodes[this.outputLabel] = this;
-            }
-        };
-        ResolutionNode.prototype.prepareChild = function (child) {
-            if (child instanceof ResolutionNode) {
-                var rep = child.replicate();
-                rep.setParent(this);
-                rep.prepare();
-                //collect nodes from children allowing parallel input not out
-                Gentyl.Util.parassoc(rep.inputNodes, this.inputNodes);
-                Gentyl.Util.assoc(rep.outputNodes, this.outputNodes);
-                return rep;
-            }
-            else {
-                return child;
             }
         };
         ResolutionNode.prototype.replicate = function (prepargs) {
@@ -806,6 +790,7 @@ var Gentyl;
         //main recursion
         ResolutionNode.prototype.resolveNode = function (node, resolveArgs, selection) {
             //log("node to resolve: ", node)
+            //cutting dictates that we select nothing and therefore will
             var cut = false;
             if (!selection) {
                 cut = true;
@@ -817,14 +802,14 @@ var Gentyl;
             //at this stage cut determines primitives are nullified and objects empty
             if (node instanceof Array) {
                 console.log("array key selection ", selection);
-                return this.resolveArray(node, resolveArgs, cut ? [] : selection);
+                return cut ? [] : this.resolveArray(node, resolveArgs, selection);
             }
             else if (typeof (node) == "object") {
                 if (node instanceof ResolutionNode) {
                     return cut ? null : node.resolve(resolveArgs);
                 }
                 else {
-                    return this.resolveObject(node, resolveArgs, cut ? [] : selection);
+                    return cut ? {} : this.resolveObject(node, resolveArgs, selection);
                 }
             }
             else {
@@ -838,8 +823,8 @@ var Gentyl;
             return result;
         };
         ResolutionNode.prototype.resolve = function (resolveArgs) {
-            if (!this.prepared && !this.functional) {
-                throw Error("Node with state is not prepared, unable to resolve");
+            if (!this.prepared) {
+                this.prepare();
             }
             Object.freeze(resolveArgs);
             var carried = this.carrier.call(this.ctx, resolveArgs);
@@ -1028,4 +1013,16 @@ var Gentyl;
 // require("./core.ts")
 // require("./nodes.ts")
 // require("./util.ts")
-module.exports = Gentyl;
+//exports to multiple environments
+var define = define || undefined;
+if (typeof define === 'function' && define.amd) {
+    define(function () { return Gentyl; });
+}
+else if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Gentyl;
+}
+else {
+    //use string because of Google closure compiler ADVANCED_MODE
+    /*jslint sub:true */
+    this['gentyl'] = Gentyl;
+}

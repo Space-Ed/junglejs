@@ -35,25 +35,28 @@ namespace Gentyl {
         isRoot:boolean;
         root:ResolutionNode;
         prepared:boolean;
-        functional:boolean;
 
+        //form fundamental
         ctxmode:string;
         carrier:(arg)=>any;
         resolver:(obj, arg)=>any;
         selector:(keys, arg)=>any;
         preparator:(arg)=>void;
 
+        //form io
         targeting:any;
         inputLabel:string;
         outputLabel:string;
         inputFunction:(arg)=>any;
         outputFunction:(arg)=>any;
 
+        //internal io
         inputNodes:any;
         outputNodes:any;
         signalShell:SignalShell;
         targeted:boolean;
 
+        //internal
         ancestor:ResolutionNode;
         isAncestor:boolean;
 
@@ -77,31 +80,6 @@ namespace Gentyl {
             this.prepared = false;
             this.targeted = false;
 
-            //construct the node of array object or primative type
-            // var node;
-            // if(components instanceof Array){
-            //     node = [];
-            //     node.length= components.length;
-            //     for (var i = 0; i < components.length; i++){
-            //         var component = components[i];
-            //         var c = this.inductComponent(component);
-            //         node[i] = c
-            //     }
-            //
-            // }else if(components instanceof Object){
-            //     node = {}
-            //
-            //     for (var k in components){
-            //         var component = components[k];
-            //         //convert all objects into resolution nodes, for consistent depth referencing.
-            //         var c = this.inductComponent(component);
-            //         node[k] = c;
-            //     }
-            // }else {
-            //     node = components;
-            // }
-            // this.node = node;
-
             var inductor = this.inductComponent.bind(this);
             this.node = Util.typeCaseSplitF(inductor, inductor, null)(components)
 
@@ -118,38 +96,44 @@ namespace Gentyl {
             this.ancestor = this.ancestor || this.replicate();
             this.ancestor.isAncestor = true;
 
+
             if(!this.prepared){
                 this.prepared = true;
 
-                if(!this.functional){
-                    this.ctx.prepare();
-                    this.preparator.call(this, prepargs);
-                }
+                this.ctx.prepare();
+                this.preparator.call(this.ctx, prepargs);
 
-                //
+                //create io facilities for node.
                 this.prepareIO();
 
-                Util.typeCaseSplitM(this.prepareChild.bind(this))(this.node)
-
-                // if(this.node instanceof Array){
-                //     for (let i = 0; i < this.node.length; i++){
-                //         let val = this.node[i];
-                //         this.node[i] = this.prepareChild(val);
-                //     }
-                //
-                // }else if (this.node instanceof Object){
-                //     for (let k in this.node){
-                //         let val = this.node[k];
-                //         this.node[k] = this.prepareChild(val);
-                //     }
-                // }else {
-                //     this.node = this.prepareChild(this.node);
-                // }
+                //prepare children, object, array, primative
+                this.node = Util.typeCaseSplitF(this.prepareChild.bind(this, prepargs))(this.node);
             } else {
-
+                this.ancestor = this.replicate();
+                this.ancestor.isAncestor = true;
             }
 
             return this;
+        }
+
+        private prepareChild(prepargs, child):ResolutionNode{
+            if(child instanceof ResolutionNode){
+                var replica = child.replicate();
+
+                if (!replica.prepared){
+                    //the
+                    replica.setParent(this);
+                    replica.prepare(prepargs);
+                }
+
+                //collect nodes from children allowing parallel input not out
+                Util.parassoc(replica.inputNodes, this.inputNodes)
+                Util.assoc(replica.outputNodes, this.outputNodes)
+
+                return replica;
+            }else{
+                return child;
+            }
         }
 
         private prepareIO(){
@@ -164,19 +148,6 @@ namespace Gentyl {
             }
         }
 
-        private prepareChild(child):ResolutionNode{
-            if(child instanceof ResolutionNode){
-                var rep = child.replicate();
-                rep.setParent(this);
-                rep.prepare();
-                //collect nodes from children allowing parallel input not out
-                Util.parassoc(rep.inputNodes, this.inputNodes)
-                Util.assoc(rep.outputNodes, this.outputNodes)
-                return rep;
-            }else{
-                return child;
-            }
-        }
 
         replicate(prepargs=null):ResolutionNode{
             if(this.prepared){
@@ -392,6 +363,7 @@ namespace Gentyl {
         private  resolveNode(node, resolveArgs, selection):any{
             //log("node to resolve: ", node)
 
+            //cutting dictates that we select nothing and therefore will
             var cut = false;
 
             if(!selection){
@@ -406,13 +378,13 @@ namespace Gentyl {
             if (node instanceof Array){
                 console.log("array key selection ", selection)
 
-                return  this.resolveArray(node, resolveArgs, cut ? [] : selection)
+                return cut ? [] : this.resolveArray(node, resolveArgs, selection)
             }
             else if (typeof(node) == "object"){
                 if(node instanceof ResolutionNode){
                     return  cut ? null : node.resolve(resolveArgs)
                 }else{
-                    return this.resolveObject(node, resolveArgs, cut ? [] : selection)
+                    return cut ? {} : this.resolveObject(node, resolveArgs, selection)
                 }
             }
             else{
@@ -433,8 +405,9 @@ namespace Gentyl {
 
         resolve(resolveArgs){
 
-            if (!this.prepared && !this.functional){
-                throw  Error("Node with state is not prepared, unable to resolve")
+            if (!this.prepared){
+                this.prepare();
+                //throw  Error("Node with state is not prepared, unable to resolve")
             }
 
             Object.freeze(resolveArgs)
