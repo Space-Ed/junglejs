@@ -23,7 +23,13 @@ Let's throw around some use cases, there are an unlimited number.
 - Stream processing
 - Asynchonous input-output
 
-**Gentyl is data focused**
+Gentyl is:
+- data focused model of execution
+- dynamically typed
+- built with typescript
+- runnable on any javascript platform
+- tested with jasmine
+- process hierarchy
 
 ---
 ### Basics
@@ -35,8 +41,8 @@ a G-node represents a generator object that can be resolved to produce objects.
 G-nodes have 3 parts:
 
 - Component: |   the compositional structure of what is generated.
-- Form:      |   the processes applied at each stage and description of state.
-- Context:   |   the items of state modified by and informing the aforementioned processes.
+- Form:      |   a description of how the node behaves, through Tractors and other properties.
+- Context:   |   the items of state modified by and informing the results of Tractors. Appears as _this_.
 
 each part is represented by an object argument
 
@@ -69,13 +75,13 @@ catGen.resolve() // -> a size 34 cat with 10 ferocity called Magnus
 
 ```
 
-> __note__: it is neccecary to call prepare() before resolve.
+> although it is __not__ necessary to call prepare() before resolve; it will call it internally if it is left out, it is an important stage in the setup of the node
 
----
+<br>
 
 ### Structure
 
-G-nodes can contain other G-nodes. The recursive architecture means function parameters can be converted to dynamic generators at a whim, as seen with ferocity becoming an increasing function of 'intensity'. The functions can gain access to thier parent node's state using =+ (track parent) or  =_ (track root). Here 'intensity' is a root property that determines both size and ferocity.
+G-nodes contain a map, array, or value that contain/is G-nodes and primitives. The recursive architecture means static values in the tree can be converted to dynamic generators at a whim, as seen with ferocity becoming an increasing function of 'intensity'. The functions can gain access to their parent node's state using _context association mode strings_ =+ (track parent) or  =_ (track root). Here 'intensity' is a root property that determines both size and ferocity.
 
 ```js
 function Linear(obj){
@@ -152,32 +158,111 @@ for example ' &+ ' means share parent, ' |_ '  means inherit from the root. ' =2
 
 ----
 
-### Functions(sort of)
+### Tractors
+At the heart of the execution model, doing all the heavy lifting, are Tractors. These are functions that are bound to the constructed context object of the G-node, that are called at some point in the execution of a G-node. They are called tractors because of how they form a 'tract' through a context from argument to return which is able to disturb the state within. They are always provided as unbound functions, typically not closures, they refer to the context through _this_. Tractors are always provided as a single letter property of the form object. The only possible tractors are currently resolver, carrier, selector and preparator at the core and injector, ejector and targeter in Gentyl's IO system.
 
-Gentyl is founded on some guiding principles
-- functions are always provided as a single letter property of the form object.
-- functions always use this to refer to the state of thier host node.
-- function arguments and return values represent specific stages in execution of the structure, thus are usually
-
-|Function  | Symbol | arguments | returns | role  |
-|----------|:-:|--|---|--|
-|Preparator| p | 1:initialization arguments passed to prepare() and replicate() | void | works as a constructor for the state of the generator|
-|Carrier   | c | 1: the argument passed from the parent or resolve() of the root| the argument passed to the components | appropriation, elaborating, preparation.|
-|Selector  | s | 1: the argument returned from the carrier, 2:the full set of keys or indicies as array| the iterable with the indicies or keys of children that will resolve | filtering, execution, selective dispatch.|
-|Resolver  | f | 1: The resolved component object, 2:the value passed to resolve this node| value passed back to the parent | composition, interpretation, filtering data.|
+<table>
+    <thead>
+        <tr>
+            <th>Function</th>
+            <th style="text-align:center">Symbol</th>
+            <th>Arguments</th>
+            <th>Returns</th>
+            <th>Role</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Preparator</td>
+            <td style="text-align:center">p</td>
+            <td>1:initialization arguments passed to prepare() and replicate()</td>
+            <td>void</td>
+            <td>works as a constructor for the state of the generator</td>
+        </tr>
+        <tr>
+            <td>Carrier</td>
+            <td style="text-align:center">c</td>
+            <td>1: the argument passed from the parent or resolve() of the root</td>
+            <td>the argument passed to the components</td>
+            <td>appropriation, elaborating, preparation.</td>
+        </tr>
+        <tr>
+            <td>Selector</td>
+            <td style="text-align:center">s</td>
+            <td>1: the argument returned from the carrier, 2:the full set of keys or indicies as array</td>
+            <td>the iterable with the indicies or keys of children that will resolve</td>
+            <td>filtering, execution, selective dispatch.</td>
+        </tr>
+        <tr>
+            <td>Resolver</td>
+            <td style="text-align:center">f</td>
+            <td>1: The resolved component object, 2:the value passed to resolve this node</td>
+            <td>value passed back to the parent</td>
+            <td>composition, interpretation, filtering data.</td>
+        </tr>
+        <tr>
+            <td>Injector</td>
+            <td style="text-align:center">i</td>
+            <td>1:the input argument</td>
+            <td>if is root, the value passed to the root resolve for the input event. otherwise unused </td>
+            <td>the function is for feeding data arriving asynchronously into the system</td>
+        </tr>
+        <tr>
+            <td>Ejector(output)</td>
+            <td style="text-align:center">o</td>
+            <td>The resolve return value for the associated G-node</td>
+            <td>The value that is passed to the output dispatching function</td>
+            <td>output preprocessing, extraction, representation<td>
+        </tr>
+        <tr>
+            <td>Targeter</td>
+            <td style="text-align:center">t</td>
+            <td>1: the input argument</td>
+            <td>A string or array of strings that is the output labels of G-nodes that will execute when this node recieves input</td>
+            <td>selective dispatch, output filtering</td>
+    </tbody>
+</table>
 
 ---
 
 ### Methods
-|name | purpose|
-|---|--|
-|prepare(prepArgs)  | This method transforms the tree of unprepared g-node, creating parent links and constructing the state dependencies. It is a neccessary operation before resolve otherwise the functions would not be able to access the wider context.|
-|resolve(resArgs) -> result   | Take the resolve args recursively working out to the leaf nodes through carrier and selector and back through the resolver. This is the fundamental generative action the running of the core algorithm.|
-|replicate(prepArgs) -> G-Node | Produce a copy of the original node(called the ancestor), replicas have isolated state but share their form. The relationship between ancestor, replicate and the resultant gnode is  much like a prototype, new keyword and the instance. Therefore _G-Nodes are their own prototype_.|
-|bundle()-> G-bundle | This action is a serialization of the G-node structure that can be converted to JSON and recovered later, so long as a means of recovering the functions within the form is provided(currently only recoverable within the required module instance). it is recoverable by calling R(G-bundle).|
-|shell() -> SignalShell | This is the io mechanism of gentyl. A signal shell is an object with ins and outs: {ins:{label1:inpFunction1, label2:inpFunction2... }, outs:{label1:outputSignal1, label2:outputSignal2}}. calling the input function for a label calls functions that inject data into the system . The output signals can have callbacks attached to them, these will be called when the node with the corresponding output label is resolved.  |
+
+These are the methods of the G-Node object, most of them perform recursively to capture the whole structure.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Purpose</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>prepare(prepArgs)</td>
+            <td>This method transforms the tree of unprepared g-node, creating parent links and constructing the state dependencies. It is a necessary operation before resolve otherwise the functions would not be able to access the wider context.</td>
+        </tr>
+        <tr>
+            <td>resolve(resArgs) -&gt; result</td>
+            <td>Take the resolve args recursively working out to the leaf nodes through carrier and selector and back through the resolver. This is the fundamental generative action the running of the core algorithm.</td>
+        </tr>
+        <tr>
+            <td>replicate(prepArgs) -&gt; G-Node</td>
+            <td>Produce a copy of the original node(called the ancestor), replicas have isolated state but share their form. The relationship between ancestor, replicate and the resultant gnode is  much like a prototype, new keyword and the instance. Therefore <em>G-Nodes are their own prototype</em>.</td>
+        </tr>
+        <tr>
+            <td>bundle()-&gt; G-bundle</td>
+            <td>This action is a serialization of the G-node structure that can be converted to JSON and recovered later, so long as a means of recovering the functions within the form is provided(currently only recoverable within the required module instance). it is recoverable by calling R(G-bundle).</td>
+        </tr>
+        <tr>
+            <td>shell() -&gt; SignalShell</td>
+            <td>This is the io mechanism of gentyl. A signal shell is an object with ins and outs: {ins:{label1:inpFunction1, label2:inpFunction2... }, outs:{label1:outputSignal1, label2:outputSignal2}}. calling the input function for a label calls functions that inject data into the system . The output signals can have callbacks attached to them, these will be called when the node with the corresponding output label is resolved.</td>
+        </tr>
+    </tbody>
+</table>
 
 ### Replication
+
+### Customization
 
 ### Bundling and Reconstruction
 
