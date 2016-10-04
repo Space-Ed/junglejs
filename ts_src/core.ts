@@ -92,10 +92,13 @@ namespace Gentyl {
          */
         public prepare(prepargs=null):ResolutionNode{
 
+            if(this.isAncestor){
+                throw Error("Ancestors cannot be prepared for resolution")
+            }
+
             //if already prepared the ancestor is reestablished
             this.ancestor = this.ancestor || this.replicate();
             this.ancestor.isAncestor = true;
-
 
             if(!this.prepared){
                 this.prepared = true;
@@ -120,11 +123,8 @@ namespace Gentyl {
             if(child instanceof ResolutionNode){
                 var replica = child.replicate();
 
-                if (!replica.prepared){
-                    //the
-                    replica.setParent(this);
-                    replica.prepare(prepargs);
-                }
+                replica.setParent(this);
+                replica.prepare(prepargs);
 
                 //collect nodes from children allowing parallel input not out
                 Util.parassoc(replica.inputNodes, this.inputNodes)
@@ -149,10 +149,10 @@ namespace Gentyl {
         }
 
 
-        replicate(prepargs=null):ResolutionNode{
+        replicate():ResolutionNode{
             if(this.prepared){
                 //this node is prepared so we will be creating a new based off the ancestor;
-                return this.ancestor.replicate(prepargs)
+                return this.ancestor.replicate()
             }else{
 
                 //this is a raw node, either an ancestor
@@ -172,7 +172,6 @@ namespace Gentyl {
                 //in the case of the ancestor it comes from prepared
                 if(this.isAncestor){
                     repl.ancestor = this;
-                    repl.prepare(prepargs);
                 }
                 return repl
             }
@@ -376,8 +375,6 @@ namespace Gentyl {
             //at this stage cut determines primitives are nullified and objects empty
 
             if (node instanceof Array){
-                console.log("array key selection ", selection)
-
                 return cut ? [] : this.resolveArray(node, resolveArgs, selection)
             }
             else if (typeof(node) == "object"){

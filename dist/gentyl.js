@@ -403,6 +403,10 @@ var Gentyl;
             }
             //freeze context here so that modifier functions cannot add, change or delete properties
         };
+        ResolutionContext.prototype.proxy = function () {
+            var handler = {};
+            return new Proxy(this, handler);
+        };
         ResolutionContext.prototype.extract = function () {
             return Gentyl.Util.deepCopy(this.ownProperties);
         };
@@ -555,6 +559,9 @@ var Gentyl;
          */
         ResolutionNode.prototype.prepare = function (prepargs) {
             if (prepargs === void 0) { prepargs = null; }
+            if (this.isAncestor) {
+                throw Error("Ancestors cannot be prepared for resolution");
+            }
             //if already prepared the ancestor is reestablished
             this.ancestor = this.ancestor || this.replicate();
             this.ancestor.isAncestor = true;
@@ -576,11 +583,8 @@ var Gentyl;
         ResolutionNode.prototype.prepareChild = function (prepargs, child) {
             if (child instanceof ResolutionNode) {
                 var replica = child.replicate();
-                if (!replica.prepared) {
-                    //the
-                    replica.setParent(this);
-                    replica.prepare(prepargs);
-                }
+                replica.setParent(this);
+                replica.prepare(prepargs);
                 //collect nodes from children allowing parallel input not out
                 Gentyl.Util.parassoc(replica.inputNodes, this.inputNodes);
                 Gentyl.Util.assoc(replica.outputNodes, this.outputNodes);
@@ -600,11 +604,10 @@ var Gentyl;
                 this.outputNodes[this.outputLabel] = this;
             }
         };
-        ResolutionNode.prototype.replicate = function (prepargs) {
-            if (prepargs === void 0) { prepargs = null; }
+        ResolutionNode.prototype.replicate = function () {
             if (this.prepared) {
                 //this node is prepared so we will be creating a new based off the ancestor;
-                return this.ancestor.replicate(prepargs);
+                return this.ancestor.replicate();
             }
             else {
                 //this is a raw node, either an ancestor
@@ -623,7 +626,6 @@ var Gentyl;
                 //in the case of the ancestor it comes from prepared
                 if (this.isAncestor) {
                     repl.ancestor = this;
-                    repl.prepare(prepargs);
                 }
                 return repl;
             }

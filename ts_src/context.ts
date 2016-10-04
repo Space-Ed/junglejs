@@ -44,13 +44,10 @@ namespace Gentyl {
                 }
             });
 
-            //create argumented layer
-
+            //create internally held properties.
             for(var k in hostContext){
                 this.addOwnProperty(k, hostContext[k])
             }
-
-
         }
 
         prepare(){
