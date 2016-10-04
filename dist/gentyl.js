@@ -373,7 +373,7 @@ var Gentyl;
                     configurable: false,
                 }
             });
-            //create argumented layer
+            //create internally held properties.
             for (var k in hostContext) {
                 this.addOwnProperty(k, hostContext[k]);
             }
@@ -402,10 +402,6 @@ var Gentyl;
                 }
             }
             //freeze context here so that modifier functions cannot add, change or delete properties
-        };
-        ResolutionContext.prototype.proxy = function () {
-            var handler = {};
-            return new Proxy(this, handler);
         };
         ResolutionContext.prototype.extract = function () {
             return Gentyl.Util.deepCopy(this.ownProperties);
@@ -803,7 +799,6 @@ var Gentyl;
             }
             //at this stage cut determines primitives are nullified and objects empty
             if (node instanceof Array) {
-                console.log("array key selection ", selection);
                 return cut ? [] : this.resolveArray(node, resolveArgs, selection);
             }
             else if (typeof (node) == "object") {

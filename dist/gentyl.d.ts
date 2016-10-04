@@ -41,7 +41,6 @@ declare namespace Gentyl {
         closed: boolean;
         constructor(host: ResolutionNode, hostContext: any, mode: string);
         prepare(): void;
-        proxy(): any;
         extract(): any;
         /**
          * create the layers, at each stage looking up contexts relative to the host.
