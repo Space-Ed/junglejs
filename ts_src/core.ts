@@ -367,7 +367,7 @@ namespace Gentyl {
 
             if(!selection){
                 cut = true;
-            }else if(selection == true && node instanceof Object){
+            }else if(selection === true && node instanceof Object){
                 //select all
                 selection = Object.keys(node);
             }
@@ -377,7 +377,7 @@ namespace Gentyl {
             if (node instanceof Array){
                 return cut ? [] : this.resolveArray(node, resolveArgs, selection)
             }
-            else if (typeof(node) == "object"){
+            else if (typeof(node) === "object"){
                 if(node instanceof ResolutionNode){
                     return  cut ? null : node.resolve(resolveArgs)
                 }else{
