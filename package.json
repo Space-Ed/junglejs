@@ -1,6 +1,6 @@
 {
   "name": "gentyl",
-  "version": "0.4.3",
+  "version": "1.0.0",
   "description": "A Generator That You'll Love",
   "main": "./dist/gentyl.js",
   "scripts": {
@@ -37,6 +37,5 @@
     "signals": "^1.0.0",
     "uuid": "^2.0.3"
   },
-  "dependencies": {
-  }
+  "dependencies": {}
 }
