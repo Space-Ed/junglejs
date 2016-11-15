@@ -55,16 +55,16 @@ describe("context construction mode validity", function(){
                     {},
                     {
                         m:'&+',
-                        f:function(){
+                        f(){
                             return this.propx
                         }
                     }
                 )
             },{
-                c:function(r){
+                c(r){
                     this.propx = r
                 },
-                f:function(n, r){
+                f(n, r){
                     return n.a
                 m:"!"
                 }
@@ -83,16 +83,16 @@ describe("context construction",function(){
                     {},
                     {
                         m:'=+',
-                        f:function(){
+                        f(){
                             return this.propx
                         }
                     }
                 )
             },{
-                c:function(r){
+                c(r){
                     this.propx = r
                 },
-                f:function(n, r){
+                f(n, r){
                     return n.a
                 }
             },{
@@ -113,7 +113,7 @@ describe("context construction",function(){
                     {},
                     {
                         m:'&+',
-                        f:function(){
+                        f(){
                             this.propy += 1;
                             return this.propy
                         }
@@ -121,7 +121,7 @@ describe("context construction",function(){
 
                 )
             },{
-                f:function(n, r){
+                f(n, r){
                     return this.propy
                 }
             },{
@@ -140,17 +140,17 @@ describe("context construction",function(){
                     {},
                     {
                         m:'=_',
-                        f:function(){
+                        f(){
                             return this.propy
                         }
                     }
 
                 )
             },{
-                c:function(r){
+                c(r){
                     this.propy += 1;
                 },
-                f:function(n, r){
+                f(n, r){
                     return n.a
                 }
             },{
@@ -169,7 +169,7 @@ describe("context construction",function(){
                     {},
                     {
                         m:'&_',
-                        f:function(){
+                        f(){
                             this.propy += 1;
                             return this.propy
                         }
@@ -177,7 +177,7 @@ describe("context construction",function(){
 
                 )
             },{
-                f:function(n, r){
+                f(n, r){
                     return this.propy
                 }
             },{
@@ -210,7 +210,7 @@ describe("context construction",function(){
                     }
                 )
             },{
-                f:function(n, r){
+                f(n, r){
                     return n.a + n.b + this.propy
                 }
             },{
@@ -250,13 +250,13 @@ describe("context construction",function(){
                 a:g({},
                     {
                         m:'=+',
-                        f:function(){
+                        f(){
                             this.propy = 1;
                         }
                     }
                 )
             },{
-                f:function(n, r){
+                f(n, r){
                     return this.propy
                 }
             },{

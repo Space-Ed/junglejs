@@ -1,5 +1,8 @@
 var Gentyl = require('../dist/gentyl.js');
+var signals = require('signals')
 var G = Gentyl.G, I = Gentyl.I, O = Gentyl.O;
+
+Gentyl.IO.setDefaultDispatchObject(signals.Signal, 'dispatch')
 
 describe("input-output", function(){
     var g1;
@@ -10,13 +13,13 @@ describe("input-output", function(){
 
                 },{
                     il:'arc',
-                    i:function(input){
+                    i(input){
                         this.saved = input
                     },
-                    f:function(){
+                    f(){
                         return this.saved
                     },
-                    o:function(out){
+                    o(out){
                         return `I have saved ${out}`
                     },
                     t:function(inp){
@@ -43,10 +46,10 @@ describe("input-output", function(){
                 0
                 ,{
                     ol:'crux',
-                    i:function(inp){
+                    i(inp){
                         this.storage = inp
                     },
-                    o:function(obj, arg){
+                    o(obj, arg){
                         return this.storage
                     }
                 },{
@@ -70,6 +73,7 @@ describe("input-output", function(){
     it('should shell up', function(){
         g1.prepare()
         g1.shell()
+
     })
 
     describe("prepared shell",function(){
@@ -77,43 +81,68 @@ describe("input-output", function(){
         beforeEach(function(){
             g1.prepare()
             g1.shell()
-            this.outcatch = function(out){}
-            spyOn(this, 'outcatch')
+
+            //spyOn(this, 'outcatch')
 
         })
 
+
         it("should allow me to call input label",function(){
-            g1.signalShell.ins['beamin']("fallacies")
+            g1.ioShell.ins['beamin']("fallacies")
         });
 
         it('should modify state using input function',function(){
-            g1.signalShell.ins.arc("hello?")
+            g1.ioShell.ins.arc("hello?")
 
             expect(g1.resolve().arc).toBe("hello?")
 
         })
 
-        it('should allow signal subscription', function(){
-            var s = g1.signalShell;
-            s.outs["beamout"].add(this.outcatch)
-            spyOn(s.outs.beamout, "dispatch")
-            //console.log(s)
-
-
-            s.ins.arc(["beamout", "crux"])
-            expect(s.outs.beamout.dispatch).toHaveBeenCalled()
+        it('should have a signal instance on outputs', function(){
+            expect(g1.ioShell.outs._ instanceof signals.Signal).toBe(true)
+            expect(g1.ioShell.outs.beamout instanceof signals.Signal).toBe(true)
+            expect(g1.ioShell.outs.crux instanceof signals.Signal).toBe(true)
         })
+
+        describe('with output detectors',function(){
+
+            beforeEach(function(){
+                this.outcatch = function(out){
+                    console.log('depositing')
+                    this.deposit = out
+                }.bind(this);
+                this.deposit = undefined
+                g1.ioShell.outs["beamout"].add(this.outcatch, this)
+                g1.ioShell.outs["crux"].add(this.outcatch, this)
+                g1.ioShell.outs["_"].add(this.outcatch, this)
+            })
+
+
+
+            it('should allow signal subscription', function(){
+                var s = g1.ioShell;
+                //console.log(s)
+                s.ins.beamin("Buckets")
+                s.ins.arc("beamout");
+                expect(this.deposit).toBe("Buckets")
+
+                //spyOn(s.outs.beamout, "dispatch")
+                //expect(s.outs.beamout.dispatch).toHaveBeenCalled()
+            })
+
+        })
+
     })
 
     it('should do root io', function(){
         var g2 = G({
             x:0
         },{
-            i:function(input){
+            i(input){
                 this.store = input;
                 this.stack.push(input)
             },
-            o:function(output){
+            o(output){
                 return `store: ${this.store} stack: ${this.stack[0]}`
             },
             t:"_"
@@ -144,7 +173,7 @@ describe("input-output", function(){
                 i2:I('i2'),
                 i3:I('i1')
             },{
-                f:function(obj, arg){
+                f(obj, arg){
                     return obj.i1 + obj.i2 + obj.i3;
                 },
                 o:Gentyl.Util.identity
@@ -166,12 +195,12 @@ describe("input-output", function(){
 
             //g2.resolve("hello");
 
-            expect(g2.node.i1.inputFunction).toBe(Gentyl.Inventory.placeInput)
+            expect(g2.node.i1.form.inputFunction).toBe(Gentyl.Inventory.placeInput)
 
             expect(g2.node.i1.ctx._placed).toBe('ice')
             expect(g2.node.i2.ctx._placed).toBe(' breaks ')
 
-            expect(shell.outs._.dispatch).toHaveBeenCalledWith('ice breaks ice');
+            expect(shell.outs._.dispatch).toHaveBeenCalledWith('ice breaks ice', '_');
         })
     })
 
@@ -199,7 +228,7 @@ describe("input-output", function(){
         it('input should proceed from root to tip when argument is unfiltered', function(){
             shell.ins._(10);
 
-            expect(shell.outs.out.dispatch).toHaveBeenCalledWith(10)
+            expect(shell.outs.out.dispatch).toHaveBeenCalledWith(10, 'out')
         })
 
         it('input should not proceed when selector returns false', function(){

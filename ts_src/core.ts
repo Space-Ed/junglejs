@@ -1,23 +1,7 @@
 /// <reference path="./util.ts"/>
 /// <reference path="./context.ts"/>
 
-var signals = <SignalWrapper>require('signals')
-
 namespace Gentyl {
-
-    export interface Form {
-        f?:(obj, args?)=>any;
-        c?:(args?)=>any;
-        s?:(keys, arg?)=>any;
-        p?:(arg)=>void;
-        m?:string;
-        i?:(arg)=>any;
-        o?:(arg)=>any;
-        il?:string;
-        ol?:string;
-        t?:any
-    }
-
 
     export interface SignalShell {
         ins:any //that is a mapping from names to infunctions
@@ -31,60 +15,55 @@ namespace Gentyl {
 
         parent:ResolutionNode;
         depth:number;
+        derefChain:(string|number)[]
 
         isRoot:boolean;
         root:ResolutionNode;
         prepared:boolean;
 
-        //form fundamental
-        ctxmode:string;
-        carrier:(arg)=>any;
-        resolver:(obj, arg)=>any;
-        selector:(keys, arg)=>any;
-        preparator:(arg)=>void;
-
-        //form io
-        targeting:any;
-        inputLabel:string;
-        outputLabel:string;
-        inputFunction:(arg)=>any;
-        outputFunction:(arg)=>any;
+        form:GForm;
 
         //internal io
         inputNodes:any;
         outputNodes:any;
-        signalShell:SignalShell;
+        ioShell:any;
+        outputContext:any;
+        outputCallback:string;
         targeted:boolean;
 
         //internal
         ancestor:ResolutionNode;
         isAncestor:boolean;
 
-        constructor(components:any, form:Form = {}, state:any = {}){
-
-            var context = Util.deepCopy(state);
-            var mode = this.ctxmode =  form.m || "";
-            this.carrier = form.c || Gentyl.Util.identity;
-            this.resolver = form.f || Gentyl.Util.identity;
-            this.selector = form.s || function(keys, carg){return true}
-            this.preparator = form.p || function(x){}
-            this.inputLabel = form.il;
-            this.outputLabel = form.ol;
-            this.inputFunction = form.i || Gentyl.Util.identity;
-            this.outputFunction = form.o || Gentyl.Util.identity;
-            this.targeting = form.t;
-
-
+        constructor(components:any, form:FormSpec = {}, state:any = {}){
             this.depth = 0;
             this.isRoot = true;
             this.prepared = false;
             this.targeted = false;
 
+            this.form = new GForm(form);
+
+            var context = Util.deepCopy(state);
+            this.ctx = new ResolutionContext(this, context, this.form.ctxmode);
+
             var inductor = this.inductComponent.bind(this);
             this.node = Util.typeCaseSplitF(inductor, inductor, null)(components)
 
-            this.ctx = new ResolutionContext(this, context, mode);
+        }
 
+        private inductComponent(component):any{
+            var c
+            if (component instanceof ResolutionNode){
+                c = component
+                //c.setParent(this);
+            }else if (component instanceof Object){
+                c = new ResolutionNode(component)
+                //c.setParent(this);
+            }else {
+                c = component
+            }
+
+            return c;
         }
 
         /**
@@ -96,6 +75,10 @@ namespace Gentyl {
                 throw Error("Ancestors cannot be prepared for resolution")
             }
 
+            // if(this.checkComplete(false)){
+            //     throw Error("Unable to prepare, null terminals still present");
+            // }
+
             //if already prepared the ancestor is reestablished
             this.ancestor = this.ancestor || this.replicate();
             this.ancestor.isAncestor = true;
@@ -104,7 +87,7 @@ namespace Gentyl {
                 this.prepared = true;
 
                 this.ctx.prepare();
-                this.preparator.call(this.ctx, prepargs);
+                this.form.preparator.call(this.ctx, prepargs);
 
                 //create io facilities for node.
                 this.prepareIO();
@@ -119,6 +102,8 @@ namespace Gentyl {
             return this;
         }
 
+
+
         private prepareChild(prepargs, child):ResolutionNode{
             if(child instanceof ResolutionNode){
                 var replica = child.replicate();
@@ -127,8 +112,8 @@ namespace Gentyl {
                 replica.prepare(prepargs);
 
                 //collect nodes from children allowing parallel input not out
-                Util.parassoc(replica.inputNodes, this.inputNodes)
-                Util.assoc(replica.outputNodes, this.outputNodes)
+                Util.parassoc(replica.inputNodes, this.inputNodes);
+                Util.assoc(replica.outputNodes, this.outputNodes);
 
                 return replica;
             }else{
@@ -138,13 +123,13 @@ namespace Gentyl {
 
         private prepareIO(){
             this.inputNodes  = {}
-            if (typeof(this.inputLabel)  == 'string'){
-                this.inputNodes[this.inputLabel] = [this]
+            if (typeof(this.form.inputLabel)  == 'string'){
+                this.inputNodes[this.form.inputLabel] = [this]
             }
 
             this.outputNodes  = {}
-            if (typeof(this.outputLabel)  == 'string'){
-                this.outputNodes[this.outputLabel] = this
+            if (typeof(this.form.outputLabel)  == 'string'){
+                this.outputNodes[this.form.outputLabel] = this
             }
         }
 
@@ -156,18 +141,7 @@ namespace Gentyl {
             }else{
 
                 //this is a raw node, either an ancestor
-                var repl = new ResolutionNode(this.node, {
-                    f:this.resolver,
-                    c:this.carrier ,
-                    m:this.ctxmode ,
-                    p:this.preparator,
-                    il:this.inputLabel,
-                    ol:this.outputLabel,
-                    i:this.inputFunction,
-                    o:this.outputFunction,
-                    t:this.targeting,
-                    s:this.selector
-                }, this.ctx.extract())
+                var repl = new ResolutionNode(this.node, this.form.extract(), this.ctx.extract())
 
                 //in the case of the ancestor it comes from prepared
                 if(this.isAncestor){
@@ -220,10 +194,10 @@ namespace Gentyl {
                 return targets
             }
 
-            if(typeof(this.targeting) == 'function'){
-                return strtargs(this.targeting(input), input, root)
+            if(typeof(this.form.targeting) == 'function'){
+                return strtargs(this.form.targeting(input), input, root)
             }else{
-                return strtargs(this.targeting, input, root)
+                return strtargs(this.form.targeting, input, root)
             }
         }
 
@@ -237,8 +211,8 @@ namespace Gentyl {
             var root = this.getRoot();
 
             //only operate on root
-            root.inputLabel = root.inputLabel || "_";
-            root.outputLabel = root.outputLabel || "_";
+            root.form.inputLabel = root.form.inputLabel || "_";
+            root.form.outputLabel = root.form.outputLabel || "_";
             root.outputNodes["_"] = root
             root.inputNodes["_"] = [root]
             var inpnodesmap = root.inputNodes;
@@ -252,7 +226,21 @@ namespace Gentyl {
 
             //create the output signals.
             for(let k in outnodemap){
-                shell.outs[k] = new signals.Signal()
+                if(Gentyl.IO.ioShellDefault.dispatch === undefined){
+                    //case for a contextless higher order function system
+                    shell.outs[k] = outnodemap[k].outputCallback = Gentyl.IO.ioShellDefault.setup(k);
+                    outnodemap[k].outputContext = undefined;
+                }else if(Gentyl.IO.ioShellDefault.setup === undefined){
+                    //case fot a contextless direct function
+                    shell.outs[k] = outnodemap[k].outputCallback = Gentyl.IO.ioShellDefault.dispatch;
+                    outnodemap[k].outputContext = undefined;
+                }else{
+                    //case for contextual callback system
+                    var ctx = new Gentyl.IO.ioShellDefault.setup(k);
+                    outnodemap[k].outputContext = shell.outs[k] = ctx
+                    outnodemap[k].outputCallback = Gentyl.IO.ioShellDefault.dispatch;
+                }
+
             }
 
             //create input functions
@@ -267,7 +255,7 @@ namespace Gentyl {
 
                     for (let i = 0; i < this.inps.length; i++){
                         var inode = <ResolutionNode>this.inps[i];
-                        var iresult = inode.inputFunction.call(inode.ctx, data);
+                        var iresult = inode.form.inputFunction.call(inode.ctx, data);
                         if(inode == this.root){rootInput = iresult}
                         var targets = inode.getTargets(data, this.root); //Quandry: should it be input function result
                         Util.assoc(targets, allTargets);
@@ -287,25 +275,12 @@ namespace Gentyl {
                     }
                 }.bind(v)
             }
-            root.signalShell = shell;
+            root.ioShell = shell;
             return shell
         }
 
 
-        private inductComponent(component):any{
-            var c
-            if (component instanceof ResolutionNode){
-                c = component
-                //c.setParent(this);
-            }else if (component instanceof Object){
-                c = new ResolutionNode(component)
-                //c.setParent(this);
-            }else {
-                c = component
-            }
 
-            return c;
-        }
 
         public getParent(toDepth = 1):ResolutionNode{
             if (this.parent == undefined){
@@ -319,6 +294,20 @@ namespace Gentyl {
 
         public getRoot():ResolutionNode{
             return this.isRoot ? this : this.getParent().getRoot();
+        }
+
+        public getNominal(label):ResolutionNode{
+            if(this.form.contextLabel === label){
+                return this;
+            }else{
+                if (this.parent == undefined){
+                    throw new Error("Required context label is not found")
+                }else{
+                    return this.parent.getNominal(label)
+                }
+
+            }
+
         }
 
         private setParent(parentNode:ResolutionNode){
@@ -357,6 +346,86 @@ namespace Gentyl {
             }
         }
 
+        /**
+         * create an iterable of all the terminals in the structure
+         */
+        terminalScan(recursive=false, collection=[], locale=null){
+            var locale = locale || this;
+
+            Util.typeCaseSplitF(function(thing, dereferent){
+                if(thing instanceof Terminal){
+                    collection.push({node:locale, term:thing, deref:dereferent})
+                }else if(recursive && thing instanceof ResolutionNode){
+                    thing.terminalScan(true, collection, locale=thing)
+                }//else primitives and non recursion ignored
+            })(this.node);
+
+            return collection
+        }
+
+        /**
+         * check that there are no terminals in the structure
+         */
+        checkComplete(recursive=false){
+            var result = true;
+
+            Util.typeCaseSplitF(function(thing){
+                if(thing instanceof Terminal){
+                    result = false;  //falsify result when terminal found
+                }else if(recursive && thing instanceof ResolutionNode){
+                    thing.checkComplete(true)
+                }//else primitives and non recursion ignored
+            })(this.node);
+
+            return result;
+        }
+
+        /**
+            add an extremity to the structure
+         */
+        add(keyOrVal, val){
+            this.inductComponent(val)
+
+            let al = arguments.length
+            var ins = null
+
+            if(!(al === 1 || al === 2)){
+                throw Error("Requires 1 or 2 arguments")
+            }else if(al === 1){
+                if (this.node instanceof Array){
+                    ins = this.node.length;
+                    this.node.push(val)
+                }else if(Util.isVanillaObject(this.node)){
+                    throw Error("Requires key and value to add to object crown")
+                }else if(this.node instanceof Terminal){
+                    if(this.node.check(val)){
+                        this.node = val;
+                    }
+                }else{
+                    throw Error("Unable to clobber existing value")
+                }
+            }else {
+                if(Util.isVanillaObject(this.node)){
+                    ins = keyOrVal;
+                    this.node[keyOrVal] = val;
+                }else{
+                    throw Error("Requires single arg for non object crown")
+                }
+            }
+
+            //when the structure is prepared as must be the child added.
+            if(this.prepared){
+                this.node[ins] = this.prepareChild(null, this.node[ins])
+            }
+
+        }
+
+        /**
+         * assure that resolultion will always return a certain type
+         */
+        seal(typespec){
+
+        }
 
         //main recursion
         private  resolveNode(node, resolveArgs, selection):any{
@@ -390,7 +459,6 @@ namespace Gentyl {
             }
         }
 
-
         private resolveUnderscore(resolver:ResolutionNode, resolveArgs){
             //now this is the parent context
 
@@ -408,24 +476,29 @@ namespace Gentyl {
             }
 
             Object.freeze(resolveArgs)
-            var carried = this.carrier.call(this.ctx, resolveArgs)
+            var carried = this.form.carrier.call(this.ctx, resolveArgs)
 
             var resolvedNode
             if(this.node != undefined){
                 //form the selection for this node
-                var selection =  this.selector.call(this.ctx, Object.keys(this.node), resolveArgs);
+                var selection =  this.form.selector.call(this.ctx, Object.keys(this.node), resolveArgs);
                 //recurse on the contained node
                 resolvedNode = this.resolveNode(this.node, carried, selection)
             }
 
             //modifies the resolved context and returns the processed result
-            var result = this.resolver.call(this.ctx, resolvedNode,  resolveArgs)
+            var result = this.form.resolver.call(this.ctx, resolvedNode,  resolveArgs)
 
             //dispatch if marked
             //console.log(`check Output stage with olabel ${this.outputLabel} reached targeted? , `,this.targeted)
             if(this.targeted){
-                var outresult = this.outputFunction.call(this.ctx, result)
-                this.getRoot().signalShell.outs[this.outputLabel].dispatch(outresult)
+                var outresult = this.form.outputFunction.call(this.ctx, result)
+                console.log("Output call back called on output", this.form.outputLabel)
+
+                //when there is a context call upon it otherwise without
+                this.outputContext[this.outputCallback](outresult, this.form.outputLabel)
+
+                this.targeted = false;
             }
 
             return result

@@ -1,5 +1,41 @@
 /// <reference path="../typings/index.d.ts" />
 declare namespace Gentyl {
+    function G(components: Object, form: any, state: any): ResolutionNode;
+    function F(func: any, components: any, state: any): ResolutionNode;
+    function I(label: any, target: any[], inputFunction: typeof Inventory.placeInput, resolveFunction: typeof Inventory.pickupInput, state: any): ResolutionNode;
+    function O(label: any, outputFunction: any): ResolutionNode;
+    function R(reconstructionBundle: any): Reconstruction;
+    function T(type: any): Terminal;
+}
+declare namespace Gentyl {
+    enum ASSOCMODE {
+        INHERIT = 0,
+        SHARE = 1,
+        TRACK = 2,
+    }
+    interface ContextLayer {
+        source: ResolutionContext;
+        mode: ASSOCMODE;
+    }
+    class ResolutionContext {
+        private host;
+        private mode;
+        ownProperties: any;
+        propertyLayerMap: any;
+        closed: boolean;
+        constructor(host: ResolutionNode, hostContext: any, mode: string);
+        prepare(): void;
+        extract(): any;
+        parseMode(modestr: string): ContextLayer[];
+        addOwnProperty(name: string, defaultValue: any): void;
+        setItem(key: any, data: any): void;
+        getItem(key: any): any;
+        getItemSource(key: any): ResolutionContext;
+        addInherentLayer(layerctx: ResolutionContext): void;
+        addSourceLayer(layer: ContextLayer): void;
+    }
+}
+declare namespace Gentyl {
     namespace Util {
         function identity(x: any): any;
         function weightedChoice(weights: number[]): number;
@@ -15,66 +51,65 @@ declare namespace Gentyl {
         function assoc(from: any, onto: any): void;
         function deepCopy(thing: any): any;
         function applyMixins(derivedCtor: any, baseCtors: any[]): void;
+        function isPrimative(thing: any): boolean;
         function isVanillaObject(thing: any): boolean;
+        function isVanillaArray(thing: any): boolean;
+        function isTree(thing: any, stack?: any[]): any;
+        function isVanillaTree(thing: any, stack?: any[]): any;
+        function typeCaseSplitR(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any, initial?: any, reductor?: (a: any, b: any, k: any) => void) => any;
         function typeCaseSplitF(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;
-        function typeCaseSplitM(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;
+        function typeCaseSplitM(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => void;
     }
 }
 declare namespace Gentyl {
-    enum ASSOCMODE {
-        INHERIT = 0,
-        SHARE = 1,
-        TRACK = 2,
+    interface SignalShell {
+        ins: any;
+        outs: any;
     }
-    interface ContextLayer {
-        source: ResolutionContext;
-        mode: ASSOCMODE;
-    }
-    /**
-     * The state manager for a resolution node. Handles the association of contexts and modification therin
-     */
-    class ResolutionContext {
-        private host;
-        private mode;
-        ownProperties: any;
-        propertyLayerMap: any;
-        closed: boolean;
-        constructor(host: ResolutionNode, hostContext: any, mode: string);
-        prepare(): void;
-        extract(): any;
-        /**
-         * create the layers, at each stage looking up contexts relative to the host.
-         */
-        parseMode(modestr: string): ContextLayer[];
-        /**
-         *
-         */
-        addOwnProperty(name: string, defaultValue: any): void;
-        /**
-         * Access the property-source map and appropriately adjust the value.
-         If the context holds this property(the property source maps to this) then set the value of the property.
-         If the property is tracked then throw a Unable to modify error
-         If the property is not in the property layer map throw an unavailable property error
-         */
-        setItem(key: any, data: any): void;
-        getItem(key: any): any;
-        /**
-         * get the actual source of the desired property. use to set/getItems
-         */
-        getItemSource(key: any): ResolutionContext;
-        /**
-         * add all the properties of the target layer to the ownPropertiesMap.
-         */
-        addInherentLayer(layerctx: ResolutionContext): void;
-        /**
-         * add a context source layer so that the properties of that layer are accessible in this context.
-         */
-        addSourceLayer(layer: ContextLayer): void;
+    class ResolutionNode {
+        ctx: ResolutionContext;
+        node: any;
+        parent: ResolutionNode;
+        depth: number;
+        derefChain: (string | number)[];
+        isRoot: boolean;
+        root: ResolutionNode;
+        prepared: boolean;
+        form: GForm;
+        inputNodes: any;
+        outputNodes: any;
+        ioShell: any;
+        outputContext: any;
+        outputCallback: string;
+        targeted: boolean;
+        ancestor: ResolutionNode;
+        isAncestor: boolean;
+        constructor(components: any, form?: FormSpec, state?: any);
+        private inductComponent(component);
+        prepare(prepargs?: any): ResolutionNode;
+        private prepareChild(prepargs, child);
+        private prepareIO();
+        replicate(): ResolutionNode;
+        bundle(): Bundle;
+        getTargets(input: any, root: any): {};
+        shell(): SignalShell;
+        getParent(toDepth?: number): ResolutionNode;
+        getRoot(): ResolutionNode;
+        getNominal(label: any): ResolutionNode;
+        private setParent(parentNode);
+        private resolveArray(array, resolveArgs, selection);
+        private resolveObject(node, resolveArgs, selection);
+        terminalScan(recursive?: boolean, collection?: any[], locale?: any): any[];
+        checkComplete(recursive?: boolean): boolean;
+        add(keyOrVal: any, val: any): void;
+        seal(typespec: any): void;
+        private resolveNode(node, resolveArgs, selection);
+        private resolveUnderscore(resolver, resolveArgs);
+        resolve(resolveArgs: any): any;
     }
 }
-declare var signals: SignalWrapper;
 declare namespace Gentyl {
-    interface Form {
+    interface FormSpec {
         f?: (obj, args?) => any;
         c?: (args?) => any;
         s?: (keys, arg?) => any;
@@ -85,19 +120,9 @@ declare namespace Gentyl {
         il?: string;
         ol?: string;
         t?: any;
+        cl?: string;
     }
-    interface SignalShell {
-        ins: any;
-        outs: any;
-    }
-    class ResolutionNode {
-        ctx: ResolutionContext;
-        node: any;
-        parent: ResolutionNode;
-        depth: number;
-        isRoot: boolean;
-        root: ResolutionNode;
-        prepared: boolean;
+    class GForm {
         ctxmode: string;
         carrier: (arg) => any;
         resolver: (obj, arg) => any;
@@ -108,35 +133,19 @@ declare namespace Gentyl {
         outputLabel: string;
         inputFunction: (arg) => any;
         outputFunction: (arg) => any;
-        inputNodes: any;
-        outputNodes: any;
-        signalShell: SignalShell;
-        targeted: boolean;
-        ancestor: ResolutionNode;
-        isAncestor: boolean;
-        constructor(components: any, form?: Form, state?: any);
-        /**
-         * setup the state tree, recursively preparing the contexts
-         */
-        prepare(prepargs?: any): ResolutionNode;
-        private prepareChild(prepargs, child);
-        private prepareIO();
-        replicate(): ResolutionNode;
-        bundle(): Bundle;
-        getTargets(input: any, root: any): {};
-        shell(): SignalShell;
-        private inductComponent(component);
-        getParent(toDepth?: number): ResolutionNode;
-        getRoot(): ResolutionNode;
-        private setParent(parentNode);
-        private resolveArray(array, resolveArgs, selection);
-        private resolveObject(node, resolveArgs, selection);
-        private resolveNode(node, resolveArgs, selection);
-        private resolveUnderscore(resolver, resolveArgs);
-        resolve(resolveArgs: any): any;
+        contextLabel: string;
+        constructor(formObj: FormSpec);
+        extract(): FormSpec;
     }
 }
-declare var uuid: any;
+declare namespace Gentyl.Inventory {
+    function placeInput(input: any): void;
+    function pickupInput(obj: any, arg: any): any;
+    function retract(obj: any, arg: any): any;
+}
+declare namespace Gentyl.Inventory {
+    function selectNone(): any[];
+}
 declare namespace Gentyl {
     interface FormRef {
         f: string;
@@ -153,45 +162,27 @@ declare namespace Gentyl {
         state: any;
     }
     function isBundle(object: any): boolean;
-    /**
-     * build a form ref object for the bundle by storing the function externally
-     * and only storing in the bundle a uuid or function name;
-     */
     function deformulate(fromNode: ResolutionNode): any;
-    /**
-    * rebuild the form object by recovering the stored function from the cache using the uuids and labels.
-     */
-    function reformulate(formRef: FormRef): Form;
+    function reformulate(formRef: FormRef): FormSpec;
     class Reconstruction extends ResolutionNode {
         constructor(bundle: Bundle);
     }
 }
-declare namespace Gentyl.Inventory {
-    function placeInput(input: any): void;
-    function pickupInput(obj: any, arg: any): any;
-    function retract(obj: any, arg: any): any;
-}
-declare namespace Gentyl.Inventory {
-    function selectNone(): any[];
+declare namespace Gentyl {
+    class Terminal {
+        private type;
+        constructor(type: any);
+        check(obj: any): boolean;
+    }
 }
 declare namespace Gentyl {
-    /**
-     * Crete a G-Node in a Generic way
-     * @param:component
-     */
-    function G(components: Object, form: any, state: any): ResolutionNode;
-    /**
-     * Alias to create a functional G-node,
-     */
-    function F(func: any, components: any, state: any): ResolutionNode;
-    /**
-     * Create an input leaf node, defaulting to a passive point storage
-     */
-    function I(label: any, target: any[], inputFunction: typeof Inventory.placeInput, resolveFunction: typeof Inventory.pickupInput, state: any): ResolutionNode;
-    /**
-     * Create an output leaf node, a node that passes
-     */
-    function O(label: any, outputFunction: any): ResolutionNode;
-    function R(reconstructionBundle: any): Reconstruction;
+    namespace IO {
+        var ioShellDefault: {
+            setup: any;
+            dispatch: any;
+        };
+        function setDefaultShell(shellConstructor: (label) => (output: any, label: string) => void | void): void;
+        function setDefaultDispatchFunction(dispatchF: (output: any, label: string) => void): void;
+        function setDefaultDispatchObject(object: Object | Function, method: string | ((output: any, label: string) => void)): void;
+    }
 }
-declare var define: any;

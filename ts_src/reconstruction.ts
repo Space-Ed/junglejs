@@ -1,4 +1,3 @@
-var uuid = require('uuid')
 
 namespace Gentyl {
 
@@ -32,7 +31,7 @@ namespace Gentyl {
         functions = {}
 
         storeFunction(func:Function){
-            var name = (["", 'anonymous', undefined].indexOf((<any>func).name) == -1) ? (<any>func).name :  uuid.v1()
+            var name = (["", 'anonymous', undefined].indexOf((<any>func).name) == -1) ? (<any>func).name : 'anonymous'
             this.functions[name] = func;
             return name;
         }
@@ -49,10 +48,10 @@ namespace Gentyl {
      * and only storing in the bundle a uuid or function name;
      */
     export function deformulate(fromNode:ResolutionNode):any{
-        var preform:Form = {
-            f:fromNode.resolver,
-            c:fromNode.carrier,
-            m:fromNode.ctxmode
+        var preform:FormSpec = {
+            f:fromNode.form.resolver,
+            c:fromNode.form.carrier,
+            m:fromNode.form.ctxmode
         }
 
         var exForm = {};
@@ -73,7 +72,7 @@ namespace Gentyl {
     /**
     * rebuild the form object by recovering the stored function from the cache using the uuids and labels.
      */
-    export function reformulate(formRef:FormRef):Form{
+    export function reformulate(formRef:FormRef):FormSpec{
         var recovered = {}
 
         for (let k in formRef){

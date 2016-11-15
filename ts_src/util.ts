@@ -238,10 +238,76 @@ namespace Gentyl{
             });
         }
 
+        export function isPrimative(thing){
+            return typeof(thing) !== 'object';
+        }
+
         export function isVanillaObject(thing){
             return thing instanceof Object && Object.prototype == Object.getPrototypeOf(thing)
         }
 
+        export function isVanillaArray(thing){
+            return thing instanceof Array && Array.prototype == Object.getPrototypeOf(thing)
+        }
+
+        export function isTree(thing, stack=[]){
+            stack = stack.concat(thing)
+            function decirc(proposed){
+                if((stack.indexOf(proposed) === -1)){
+                    return isTree(proposed, stack)
+                } else {
+                    return false;
+                }
+            }
+            //recursively check for circularity and set the reduction to false.
+            return typeCaseSplitR(decirc, decirc, function(){return true})(thing, true, function(a,b,k){return a && b})
+        }
+
+        export function isVanillaTree(thing, stack=[]){
+
+            function decirc(proposed){
+                if((isVanillaObject(proposed) || isVanillaArray(proposed) && stack.indexOf(proposed) === -1)){
+                    return isVanillaTree(proposed, stack.concat(proposed))
+                }else {
+                    return false;
+                }
+            }
+            //recursively check for circularity and set the reduction to false.
+            return typeCaseSplitR(decirc, decirc, isPrimative)(thing, true, function(a,b,k){return a && b})
+        }
+
+        export function typeCaseSplitR(objectOrAllFunction, arrayFunc?, primativeFunc?){
+            var ofunc, afunc, pfunc;
+
+            if( primativeFunc == undefined && arrayFunc == undefined){
+                ofunc = objectOrAllFunction || identity;
+                afunc = objectOrAllFunction || identity;
+                pfunc = objectOrAllFunction  || identity;
+            } else{
+                ofunc = objectOrAllFunction || identity;
+                afunc = arrayFunc || identity;
+                pfunc = primativeFunc  || identity;
+            }
+
+            return function(inThing, initial=null, reductor=function(a,b,k){}){
+                var result = initial;
+                if(inThing instanceof Array){
+                    for (var i = 0; i < inThing.length; i++){
+                        var subBundle = inThing[i];
+                        result = reductor(result, afunc(subBundle, i), i)
+                    }
+
+                }else if(isVanillaObject(inThing)){
+                    for (var k in inThing){
+                        var subBundle = inThing[k];
+                        result = reductor(result, ofunc(subBundle, k), k)
+                    }
+                }else {
+                    result = pfunc(inThing);
+                }
+                return result
+            }
+        }
 
         export function typeCaseSplitF(objectOrAllFunction, arrayFunc?, primativeFunc?){
             var ofunc, afunc, pfunc;
@@ -307,12 +373,10 @@ namespace Gentyl{
                     }
                 }else {
                     //wont modify primative
+                    pfunc(inThing)
                 }
-                return inThing
             }
         }
 
     }
 }
-
-module.exports = Gentyl

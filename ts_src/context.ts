@@ -91,8 +91,8 @@ namespace Gentyl {
             var layers:ContextLayer[] = []
             var splitexp = modestr.split(/\s/);
             const validmode = /^[&|=]$/;
-            const validsource = /^[+_]$/;
-            const validwhole = /^([&|=])([+_])$/
+            const validsource = /^[+_]|[a-zA-Z]+$/;
+            const validwhole = /^([&|=])([+_]|[a-zA-Z]+)$/
 
             let i = 0
             if (splitexp[0] === '!'){
@@ -120,7 +120,9 @@ namespace Gentyl {
                 //console.log("tkey: %s , sKey: %s",tKey, sKey)
 
                 layer.mode =  {"&":ASSOCMODE.SHARE, "|":ASSOCMODE.INHERIT, "=":ASSOCMODE.TRACK}[tKey]
-                layer.source =  (sKey == "+" ? this.host.getParent(1) : sKey == "_" ? this.host.getRoot() : this.host).ctx
+
+                layer.source = (sKey == "+" ? this.host.getParent(1) : sKey == "_" ? this.host.getRoot() : this.host.getNominal(sKey)).ctx
+
                 layers.push(layer)
             }
 

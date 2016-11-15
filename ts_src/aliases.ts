@@ -33,4 +33,8 @@ namespace Gentyl {
         return new Reconstruction(reconstructionBundle)
     }
 
+    export function T(type){
+        return new Terminal(type)
+    }
+
 }

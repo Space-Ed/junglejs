@@ -5,6 +5,179 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var Gentyl;
 (function (Gentyl) {
+    function G(components, form, state) {
+        return new Gentyl.ResolutionNode(components, form, state);
+    }
+    Gentyl.G = G;
+    function F(func, components, state) {
+        return new Gentyl.ResolutionNode(components, { f: func }, state);
+    }
+    Gentyl.F = F;
+    function I(label, target, inputFunction, resolveFunction, state) {
+        if (target === void 0) { target = []; }
+        if (inputFunction === void 0) { inputFunction = Gentyl.Inventory.placeInput; }
+        if (resolveFunction === void 0) { resolveFunction = Gentyl.Inventory.pickupInput; }
+        return new Gentyl.ResolutionNode({}, { i: inputFunction, t: target, il: label, f: resolveFunction }, state || { _placed: null });
+    }
+    Gentyl.I = I;
+    function O(label, outputFunction) {
+        return new Gentyl.ResolutionNode({}, { ol: label, o: outputFunction, f: Gentyl.Inventory.retract }, {});
+    }
+    Gentyl.O = O;
+    function R(reconstructionBundle) {
+        return new Gentyl.Reconstruction(reconstructionBundle);
+    }
+    Gentyl.R = R;
+    function T(type) {
+        return new Gentyl.Terminal(type);
+    }
+    Gentyl.T = T;
+})(Gentyl || (Gentyl = {}));
+var Gentyl;
+(function (Gentyl) {
+    (function (ASSOCMODE) {
+        ASSOCMODE[ASSOCMODE["INHERIT"] = 0] = "INHERIT";
+        ASSOCMODE[ASSOCMODE["SHARE"] = 1] = "SHARE";
+        ASSOCMODE[ASSOCMODE["TRACK"] = 2] = "TRACK";
+    })(Gentyl.ASSOCMODE || (Gentyl.ASSOCMODE = {}));
+    var ASSOCMODE = Gentyl.ASSOCMODE;
+    var ResolutionContext = (function () {
+        function ResolutionContext(host, hostContext, mode) {
+            this.host = host;
+            this.mode = mode;
+            Object.defineProperties(this, {
+                ownProperties: {
+                    value: {},
+                    writable: false,
+                    enumerable: false,
+                    configurable: false
+                },
+                propertyLayerMap: {
+                    value: {},
+                    writable: false,
+                    enumerable: false,
+                    configurable: false
+                },
+                closed: {
+                    value: false,
+                    writable: true,
+                    enumerable: false,
+                    configurable: false,
+                }
+            });
+            for (var k in hostContext) {
+                this.addOwnProperty(k, hostContext[k]);
+            }
+        }
+        ResolutionContext.prototype.prepare = function () {
+            var layers = this.parseMode(this.mode);
+            for (var i = 0; i < layers.length; i++) {
+                var layer = layers[i];
+                switch (layer.mode) {
+                    case (ASSOCMODE.INHERIT): {
+                        this.addInherentLayer(layer.source);
+                        break;
+                    }
+                    default: {
+                        this.addSourceLayer(layer);
+                        break;
+                    }
+                }
+            }
+        };
+        ResolutionContext.prototype.extract = function () {
+            return Gentyl.Util.deepCopy(this.ownProperties);
+        };
+        ResolutionContext.prototype.parseMode = function (modestr) {
+            var layers = [];
+            var splitexp = modestr.split(/\s/);
+            var validmode = /^[&|=]$/;
+            var validsource = /^[+_]|[a-zA-Z]+$/;
+            var validwhole = /^([&|=])([+_]|[a-zA-Z]+)$/;
+            var i = 0;
+            if (splitexp[0] === '!') {
+                this.closed = true;
+                i = 1;
+            }
+            if (splitexp[i] === '' || splitexp[i] == undefined) {
+                return layers;
+            }
+            for (; i < splitexp.length; i += 1) {
+                var layer = { mode: null, source: null };
+                var typeSourceKey = splitexp[i];
+                var match = typeSourceKey.match(validwhole);
+                if (!match) {
+                    throw Error("Invalid source mode expression " + typeSourceKey + " must fit /^([&\|=])([\+_])$/ ");
+                }
+                var tKey = match[1];
+                var sKey = match[2];
+                layer.mode = { "&": ASSOCMODE.SHARE, "|": ASSOCMODE.INHERIT, "=": ASSOCMODE.TRACK }[tKey];
+                layer.source = (sKey == "+" ? this.host.getParent(1) : sKey == "_" ? this.host.getRoot() : this.host.getNominal(sKey)).ctx;
+                layers.push(layer);
+            }
+            return layers;
+        };
+        ResolutionContext.prototype.addOwnProperty = function (name, defaultValue) {
+            this.ownProperties[name] = defaultValue;
+            this.propertyLayerMap[name] = { source: this, mode: ASSOCMODE.SHARE };
+            Object.defineProperty(this, name, {
+                set: this.setItem.bind(this, name),
+                get: this.getItem.bind(this, name),
+                enumerable: true,
+                configurable: true
+            });
+        };
+        ResolutionContext.prototype.setItem = function (key, data) {
+            var layer = this.propertyLayerMap[key];
+            if (layer.mode == ASSOCMODE.TRACK) {
+                throw new Error("Unable to modify key whose source is tracking only");
+            }
+            else {
+                layer.source.ownProperties[key] = data;
+            }
+        };
+        ResolutionContext.prototype.getItem = function (key) {
+            var layer = this.propertyLayerMap[key];
+            var result = layer.source.ownProperties[key];
+            return result;
+        };
+        ResolutionContext.prototype.getItemSource = function (key) {
+            if (key in this.propertyLayerMap) {
+                return this.propertyLayerMap[key].source;
+            }
+            else {
+                throw new Error("key %s not found in the context");
+            }
+        };
+        ResolutionContext.prototype.addInherentLayer = function (layerctx) {
+            for (var prop in layerctx.ownProperties) {
+                var propVal = layerctx.ownProperties[prop];
+                this.addOwnProperty(prop, propVal);
+            }
+        };
+        ResolutionContext.prototype.addSourceLayer = function (layer) {
+            for (var prop in layer.source.propertyLayerMap) {
+                var propVal = layer.source.propertyLayerMap[prop];
+                if (this.propertyLayerMap[prop] != undefined && (this.propertyLayerMap[prop].mode != propVal.mode || this.propertyLayerMap[prop].source != propVal.source)) {
+                    throw new Error("source layer introduces incompatible source/mode of property");
+                }
+                else {
+                    this.propertyLayerMap[prop] = { source: propVal.source, mode: layer.mode };
+                    Object.defineProperty(this, prop, {
+                        set: this.setItem.bind(this, prop),
+                        get: this.getItem.bind(this, prop),
+                        enumerable: true,
+                        configurable: true
+                    });
+                }
+            }
+        };
+        return ResolutionContext;
+    }());
+    Gentyl.ResolutionContext = ResolutionContext;
+})(Gentyl || (Gentyl = {}));
+var Gentyl;
+(function (Gentyl) {
     var Util;
     (function (Util) {
         function identity(x) {
@@ -19,7 +192,6 @@ var Gentyl;
             }, []);
             var r = Math.random();
             var i = 0;
-            //the cdf exceeds r increment
             while (i < weights.length - 1 && r > cdfArray[i]) {
                 i++;
             }
@@ -77,24 +249,20 @@ var Gentyl;
         Util.range = range;
         function translator(node, translation) {
             var translated;
-            //array?
             if (typeof (node) == "object" && !(node instanceof Array)) {
                 translated = {};
                 for (var k in node) {
                     var tval = translation[k];
                     if (typeof (tval) == "function") {
-                        //rename to the function name with function value
                         translated[tval.name] = tval(node[k]);
                     }
                     if (typeof (tval) == "string") {
-                        //rename the leaf
                         translated[tval] = node[k];
                     }
                     else if (tval != undefined) {
                         translated[k] = translator(node[k], tval);
                     }
                     else {
-                        //dont bother recurring if the translator wont come
                         translated[k] = node[k];
                     }
                 }
@@ -126,29 +294,26 @@ var Gentyl;
             }
             else if (typeof (node1) == 'object') {
                 melded = {};
-                //in one or the other
                 for (var k in node1) {
                     melded[k] = node1[k];
                 }
                 for (var q in node2) {
                     melded[q] = node2[q];
                 }
-                //in both
                 for (var k in node1) {
                     for (var q in node2) {
                         if (k == q) {
                             if (node1[k] == node2[k]) {
-                                melded[k] = node1[k]; //co-contained
+                                melded[k] = node1[k];
                             }
                             else {
-                                melded[k] = melder(node1[k], node2[k], merge, concatArrays); //collision
+                                melded[k] = melder(node1[k], node2[k], merge, concatArrays);
                             }
                         }
                     }
                 }
             }
             else {
-                // if they are not objects just take the second argument
                 melded = merge(node1, node2);
             }
             return melded;
@@ -157,31 +322,31 @@ var Gentyl;
         function deeplyEquals(node1, node2, allowIdentical) {
             if (allowIdentical === void 0) { allowIdentical = true; }
             if (typeof (node1) != typeof (node2)) {
-                return false; // nodes not same type
+                return false;
             }
             else if (node1 instanceof Object) {
                 if (node1 === node2 && !allowIdentical) {
-                    return false; // identical object
+                    return false;
                 }
                 else {
                     for (var k in node1) {
                         if (!(k in node2)) {
-                            return false; // key in node1 but node node2
+                            return false;
                         }
                     }
                     for (var q in node2) {
                         if (!(q in node1)) {
-                            return false; // key in node2 and not node1
+                            return false;
                         }
                         else if (!deeplyEquals(node1[q], node2[q], allowIdentical)) {
-                            return false; //recursive came up false.
+                            return false;
                         }
                     }
-                    return true; // no false flag
+                    return true;
                 }
             }
             else {
-                return (node1 === node2); ///primitive equality
+                return (node1 === node2);
             }
         }
         Util.deeplyEquals = deeplyEquals;
@@ -189,7 +354,6 @@ var Gentyl;
             if (allowIdentical === void 0) { allowIdentical = true; }
             var derefstack = derefstack || [];
             var seen = seen || [];
-            //circularity prevention
             if (seen.indexOf(node1) || seen.indexOf(node2)) {
                 return;
             }
@@ -208,13 +372,13 @@ var Gentyl;
                     }
                     for (var q in node2) {
                         if (!(q in node1)) {
-                            throw new Error("key " + k + " in object2 but not object1, derefs:[" + derefstack + "]"); // key in node2 and not node1
+                            throw new Error("key " + k + " in object2 but not object1, derefs:[" + derefstack + "]");
                         }
                         else {
                             deeplyEqualsThrow(node1[q], node2[q], derefstack.concat(q), allowIdentical);
                         }
                     }
-                    return true; // no false flag
+                    return true;
                 }
             }
             else if (node1 !== node2) {
@@ -230,7 +394,6 @@ var Gentyl;
             deeplyEqualsThrow(node1, node2, derefstack, null, false);
         }
         Util.isDeepReplicaThrow = isDeepReplicaThrow;
-        //merge, when there is a conflict, neither is taken
         function softAssoc(from, onto) {
             for (var k in from) {
                 onto[k] = melder(from[k], onto[k]);
@@ -263,10 +426,80 @@ var Gentyl;
             });
         }
         Util.applyMixins = applyMixins;
+        function isPrimative(thing) {
+            return typeof (thing) !== 'object';
+        }
+        Util.isPrimative = isPrimative;
         function isVanillaObject(thing) {
             return thing instanceof Object && Object.prototype == Object.getPrototypeOf(thing);
         }
         Util.isVanillaObject = isVanillaObject;
+        function isVanillaArray(thing) {
+            return thing instanceof Array && Array.prototype == Object.getPrototypeOf(thing);
+        }
+        Util.isVanillaArray = isVanillaArray;
+        function isTree(thing, stack) {
+            if (stack === void 0) { stack = []; }
+            stack = stack.concat(thing);
+            function decirc(proposed) {
+                if ((stack.indexOf(proposed) === -1)) {
+                    return isTree(proposed, stack);
+                }
+                else {
+                    return false;
+                }
+            }
+            return typeCaseSplitR(decirc, decirc, function () { return true; })(thing, true, function (a, b, k) { return a && b; });
+        }
+        Util.isTree = isTree;
+        function isVanillaTree(thing, stack) {
+            if (stack === void 0) { stack = []; }
+            function decirc(proposed) {
+                if ((isVanillaObject(proposed) || isVanillaArray(proposed) && stack.indexOf(proposed) === -1)) {
+                    return isVanillaTree(proposed, stack.concat(proposed));
+                }
+                else {
+                    return false;
+                }
+            }
+            return typeCaseSplitR(decirc, decirc, isPrimative)(thing, true, function (a, b, k) { return a && b; });
+        }
+        Util.isVanillaTree = isVanillaTree;
+        function typeCaseSplitR(objectOrAllFunction, arrayFunc, primativeFunc) {
+            var ofunc, afunc, pfunc;
+            if (primativeFunc == undefined && arrayFunc == undefined) {
+                ofunc = objectOrAllFunction || identity;
+                afunc = objectOrAllFunction || identity;
+                pfunc = objectOrAllFunction || identity;
+            }
+            else {
+                ofunc = objectOrAllFunction || identity;
+                afunc = arrayFunc || identity;
+                pfunc = primativeFunc || identity;
+            }
+            return function (inThing, initial, reductor) {
+                if (initial === void 0) { initial = null; }
+                if (reductor === void 0) { reductor = function (a, b, k) { }; }
+                var result = initial;
+                if (inThing instanceof Array) {
+                    for (var i = 0; i < inThing.length; i++) {
+                        var subBundle = inThing[i];
+                        result = reductor(result, afunc(subBundle, i), i);
+                    }
+                }
+                else if (isVanillaObject(inThing)) {
+                    for (var k in inThing) {
+                        var subBundle = inThing[k];
+                        result = reductor(result, ofunc(subBundle, k), k);
+                    }
+                }
+                else {
+                    result = pfunc(inThing);
+                }
+                return result;
+            };
+        }
+        Util.typeCaseSplitR = typeCaseSplitR;
         function typeCaseSplitF(objectOrAllFunction, arrayFunc, primativeFunc) {
             var ofunc, afunc, pfunc;
             if (primativeFunc == undefined && arrayFunc == undefined) {
@@ -329,245 +562,54 @@ var Gentyl;
                     }
                 }
                 else {
+                    pfunc(inThing);
                 }
-                return inThing;
             };
         }
         Util.typeCaseSplitM = typeCaseSplitM;
     })(Util = Gentyl.Util || (Gentyl.Util = {}));
 })(Gentyl || (Gentyl = {}));
-module.exports = Gentyl;
-var Gentyl;
-(function (Gentyl) {
-    (function (ASSOCMODE) {
-        ASSOCMODE[ASSOCMODE["INHERIT"] = 0] = "INHERIT";
-        ASSOCMODE[ASSOCMODE["SHARE"] = 1] = "SHARE";
-        ASSOCMODE[ASSOCMODE["TRACK"] = 2] = "TRACK";
-    })(Gentyl.ASSOCMODE || (Gentyl.ASSOCMODE = {}));
-    var ASSOCMODE = Gentyl.ASSOCMODE;
-    /**
-     * The state manager for a resolution node. Handles the association of contexts and modification therin
-     */
-    var ResolutionContext = (function () {
-        function ResolutionContext(host, hostContext, mode) {
-            //parse modes
-            this.host = host;
-            this.mode = mode;
-            Object.defineProperties(this, {
-                ownProperties: {
-                    value: {},
-                    writable: false,
-                    enumerable: false,
-                    configurable: false
-                },
-                propertyLayerMap: {
-                    value: {},
-                    writable: false,
-                    enumerable: false,
-                    configurable: false
-                },
-                closed: {
-                    value: false,
-                    writable: true,
-                    enumerable: false,
-                    configurable: false,
-                }
-            });
-            //create internally held properties.
-            for (var k in hostContext) {
-                this.addOwnProperty(k, hostContext[k]);
-            }
-        }
-        ResolutionContext.prototype.prepare = function () {
-            var layers = this.parseMode(this.mode);
-            for (var i = 0; i < layers.length; i++) {
-                var layer = layers[i];
-                switch (layer.mode) {
-                    case (ASSOCMODE.INHERIT): {
-                        this.addInherentLayer(layer.source);
-                        break;
-                    }
-                    // if sharing needs extra setup
-                    // case (ASSOCMODE.SHARE):{
-                    //     break;
-                    // }
-                    // case (ASSOCMODE.TRACK):{
-                    //     this.addTrackedLayer()
-                    //     break;
-                    // }
-                    default: {
-                        this.addSourceLayer(layer);
-                        break;
-                    }
-                }
-            }
-            //freeze context here so that modifier functions cannot add, change or delete properties
-        };
-        ResolutionContext.prototype.extract = function () {
-            return Gentyl.Util.deepCopy(this.ownProperties);
-        };
-        /**
-         * create the layers, at each stage looking up contexts relative to the host.
-         */
-        ResolutionContext.prototype.parseMode = function (modestr) {
-            var layers = [];
-            var splitexp = modestr.split(/\s/);
-            var validmode = /^[&|=]$/;
-            var validsource = /^[+_]$/;
-            var validwhole = /^([&|=])([+_])$/;
-            var i = 0;
-            if (splitexp[0] === '!') {
-                this.closed = true;
-                i = 1;
-            }
-            if (splitexp[i] === '' || splitexp[i] == undefined) {
-                return layers;
-            }
-            for (; i < splitexp.length; i += 1) {
-                var layer = { mode: null, source: null };
-                var typeSourceKey = splitexp[i];
-                var match = typeSourceKey.match(validwhole);
-                if (!match) {
-                    throw Error("Invalid source mode expression " + typeSourceKey + " must fit /^([&\|=])([\+_])$/ ");
-                }
-                var tKey = match[1];
-                var sKey = match[2]; //will be parsed to give depth control;
-                //console.log("tkey: %s , sKey: %s",tKey, sKey)
-                layer.mode = { "&": ASSOCMODE.SHARE, "|": ASSOCMODE.INHERIT, "=": ASSOCMODE.TRACK }[tKey];
-                layer.source = (sKey == "+" ? this.host.getParent(1) : sKey == "_" ? this.host.getRoot() : this.host).ctx;
-                layers.push(layer);
-            }
-            return layers;
-        };
-        /**
-         *
-         */
-        ResolutionContext.prototype.addOwnProperty = function (name, defaultValue) {
-            //console.log("addOwnProperty(name:%s, defaultValue:%s)", name, defaultValue)
-            // TODO: Handle own property derivation conflict
-            this.ownProperties[name] = defaultValue;
-            this.propertyLayerMap[name] = { source: this, mode: ASSOCMODE.SHARE };
-            Object.defineProperty(this, name, {
-                set: this.setItem.bind(this, name),
-                get: this.getItem.bind(this, name),
-                enumerable: true,
-                configurable: true
-            });
-        };
-        /**
-         * Access the property-source map and appropriately adjust the value.
-         If the context holds this property(the property source maps to this) then set the value of the property.
-         If the property is tracked then throw a Unable to modify error
-         If the property is not in the property layer map throw an unavailable property error
-         */
-        ResolutionContext.prototype.setItem = function (key, data) {
-            var layer = this.propertyLayerMap[key];
-            if (layer.mode == ASSOCMODE.TRACK) {
-                throw new Error("Unable to modify key whose source is tracking only");
-            }
-            else {
-                layer.source.ownProperties[key] = data;
-            }
-        };
-        ResolutionContext.prototype.getItem = function (key) {
-            var layer = this.propertyLayerMap[key];
-            var result = layer.source.ownProperties[key];
-            //console.log("getItem %s resulting in:", key , result);
-            return result;
-        };
-        /**
-         * get the actual source of the desired property. use to set/getItems
-         */
-        ResolutionContext.prototype.getItemSource = function (key) {
-            if (key in this.propertyLayerMap) {
-                return this.propertyLayerMap[key].source;
-            }
-            else {
-                throw new Error("key %s not found in the context");
-            }
-        };
-        /**
-         * add all the properties of the target layer to the ownPropertiesMap.
-         */
-        ResolutionContext.prototype.addInherentLayer = function (layerctx) {
-            for (var prop in layerctx.ownProperties) {
-                // TODO: Maybe not just target layerctxs own properties.
-                var propVal = layerctx.ownProperties[prop];
-                this.addOwnProperty(prop, propVal);
-            }
-        };
-        /**
-         * add a context source layer so that the properties of that layer are accessible in this context.
-         */
-        ResolutionContext.prototype.addSourceLayer = function (layer) {
-            for (var prop in layer.source.propertyLayerMap) {
-                var propVal = layer.source.propertyLayerMap[prop];
-                if (this.propertyLayerMap[prop] != undefined && (this.propertyLayerMap[prop].mode != propVal.mode || this.propertyLayerMap[prop].source != propVal.source)) {
-                    throw new Error("source layer introduces incompatible source/mode of property");
-                }
-                else {
-                    //the source is the holder of the information whereas the mode is attributed to this contexts layer perspective
-                    this.propertyLayerMap[prop] = { source: propVal.source, mode: layer.mode };
-                    //console.log("add source layer property prop:%s", prop)
-                    Object.defineProperty(this, prop, {
-                        set: this.setItem.bind(this, prop),
-                        get: this.getItem.bind(this, prop),
-                        enumerable: true,
-                        configurable: true
-                    });
-                }
-            }
-        };
-        return ResolutionContext;
-    }());
-    Gentyl.ResolutionContext = ResolutionContext;
-})(Gentyl || (Gentyl = {}));
-/// <reference path="./util.ts"/>
-/// <reference path="./context.ts"/>
-var signals = require('signals');
 var Gentyl;
 (function (Gentyl) {
     var ResolutionNode = (function () {
         function ResolutionNode(components, form, state) {
             if (form === void 0) { form = {}; }
             if (state === void 0) { state = {}; }
-            var context = Gentyl.Util.deepCopy(state);
-            var mode = this.ctxmode = form.m || "";
-            this.carrier = form.c || Gentyl.Util.identity;
-            this.resolver = form.f || Gentyl.Util.identity;
-            this.selector = form.s || function (keys, carg) { return true; };
-            this.preparator = form.p || function (x) { };
-            this.inputLabel = form.il;
-            this.outputLabel = form.ol;
-            this.inputFunction = form.i || Gentyl.Util.identity;
-            this.outputFunction = form.o || Gentyl.Util.identity;
-            this.targeting = form.t;
             this.depth = 0;
             this.isRoot = true;
             this.prepared = false;
             this.targeted = false;
+            this.form = new Gentyl.GForm(form);
+            var context = Gentyl.Util.deepCopy(state);
+            this.ctx = new Gentyl.ResolutionContext(this, context, this.form.ctxmode);
             var inductor = this.inductComponent.bind(this);
             this.node = Gentyl.Util.typeCaseSplitF(inductor, inductor, null)(components);
-            this.ctx = new Gentyl.ResolutionContext(this, context, mode);
         }
-        /**
-         * setup the state tree, recursively preparing the contexts
-         */
+        ResolutionNode.prototype.inductComponent = function (component) {
+            var c;
+            if (component instanceof ResolutionNode) {
+                c = component;
+            }
+            else if (component instanceof Object) {
+                c = new ResolutionNode(component);
+            }
+            else {
+                c = component;
+            }
+            return c;
+        };
         ResolutionNode.prototype.prepare = function (prepargs) {
             if (prepargs === void 0) { prepargs = null; }
             if (this.isAncestor) {
                 throw Error("Ancestors cannot be prepared for resolution");
             }
-            //if already prepared the ancestor is reestablished
             this.ancestor = this.ancestor || this.replicate();
             this.ancestor.isAncestor = true;
             if (!this.prepared) {
                 this.prepared = true;
                 this.ctx.prepare();
-                this.preparator.call(this.ctx, prepargs);
-                //create io facilities for node.
+                this.form.preparator.call(this.ctx, prepargs);
                 this.prepareIO();
-                //prepare children, object, array, primative
                 this.node = Gentyl.Util.typeCaseSplitF(this.prepareChild.bind(this, prepargs))(this.node);
             }
             else {
@@ -581,7 +623,6 @@ var Gentyl;
                 var replica = child.replicate();
                 replica.setParent(this);
                 replica.prepare(prepargs);
-                //collect nodes from children allowing parallel input not out
                 Gentyl.Util.parassoc(replica.inputNodes, this.inputNodes);
                 Gentyl.Util.assoc(replica.outputNodes, this.outputNodes);
                 return replica;
@@ -592,34 +633,20 @@ var Gentyl;
         };
         ResolutionNode.prototype.prepareIO = function () {
             this.inputNodes = {};
-            if (typeof (this.inputLabel) == 'string') {
-                this.inputNodes[this.inputLabel] = [this];
+            if (typeof (this.form.inputLabel) == 'string') {
+                this.inputNodes[this.form.inputLabel] = [this];
             }
             this.outputNodes = {};
-            if (typeof (this.outputLabel) == 'string') {
-                this.outputNodes[this.outputLabel] = this;
+            if (typeof (this.form.outputLabel) == 'string') {
+                this.outputNodes[this.form.outputLabel] = this;
             }
         };
         ResolutionNode.prototype.replicate = function () {
             if (this.prepared) {
-                //this node is prepared so we will be creating a new based off the ancestor;
                 return this.ancestor.replicate();
             }
             else {
-                //this is a raw node, either an ancestor
-                var repl = new ResolutionNode(this.node, {
-                    f: this.resolver,
-                    c: this.carrier,
-                    m: this.ctxmode,
-                    p: this.preparator,
-                    il: this.inputLabel,
-                    ol: this.outputLabel,
-                    i: this.inputFunction,
-                    o: this.outputFunction,
-                    t: this.targeting,
-                    s: this.selector
-                }, this.ctx.extract());
-                //in the case of the ancestor it comes from prepared
+                var repl = new ResolutionNode(this.node, this.form.extract(), this.ctx.extract());
                 if (this.isAncestor) {
                     repl.ancestor = this;
                 }
@@ -645,7 +672,6 @@ var Gentyl;
             return product;
         };
         ResolutionNode.prototype.getTargets = function (input, root) {
-            //create submap of the output nodes being only those activted by the current node targeting
             function strtargs(targs, input, root) {
                 var targets = {};
                 if (targs == undefined) {
@@ -663,25 +689,22 @@ var Gentyl;
                         targets[targs] = root.outputNodes[targs];
                     }
                 }
-                //console.log("returned targets:", targets)
                 return targets;
             }
-            if (typeof (this.targeting) == 'function') {
-                return strtargs(this.targeting(input), input, root);
+            if (typeof (this.form.targeting) == 'function') {
+                return strtargs(this.form.targeting(input), input, root);
             }
             else {
-                return strtargs(this.targeting, input, root);
+                return strtargs(this.form.targeting, input, root);
             }
         };
         ResolutionNode.prototype.shell = function () {
             if (!this.prepared) {
                 throw new Error("unable to shell unprepared node");
             }
-            //implicit root labelling;
             var root = this.getRoot();
-            //only operate on root
-            root.inputLabel = root.inputLabel || "_";
-            root.outputLabel = root.outputLabel || "_";
+            root.form.inputLabel = root.form.inputLabel || "_";
+            root.form.outputLabel = root.form.outputLabel || "_";
             root.outputNodes["_"] = root;
             root.inputNodes["_"] = [root];
             var inpnodesmap = root.inputNodes;
@@ -690,54 +713,49 @@ var Gentyl;
                 ins: {},
                 outs: {}
             };
-            //create the output signals.
             for (var k in outnodemap) {
-                shell.outs[k] = new signals.Signal();
+                if (Gentyl.IO.ioShellDefault.dispatch === undefined) {
+                    shell.outs[k] = outnodemap[k].outputCallback = Gentyl.IO.ioShellDefault.setup(k);
+                    outnodemap[k].outputContext = undefined;
+                }
+                else if (Gentyl.IO.ioShellDefault.setup === undefined) {
+                    shell.outs[k] = outnodemap[k].outputCallback = Gentyl.IO.ioShellDefault.dispatch;
+                    outnodemap[k].outputContext = undefined;
+                }
+                else {
+                    var ctx = new Gentyl.IO.ioShellDefault.setup(k);
+                    outnodemap[k].outputContext = shell.outs[k] = ctx;
+                    outnodemap[k].outputCallback = Gentyl.IO.ioShellDefault.dispatch;
+                }
             }
-            //create input functions
             for (var k in inpnodesmap) {
                 var v = { inps: inpnodesmap[k], root: root };
                 shell.ins[k] = function (data) {
-                    //construct a map of olabel:Onode that will be activated this time
                     var allTargets = {};
                     var rootInput;
                     for (var i = 0; i < this.inps.length; i++) {
                         var inode = this.inps[i];
-                        var iresult = inode.inputFunction.call(inode.ctx, data);
+                        var iresult = inode.form.inputFunction.call(inode.ctx, data);
                         if (inode == this.root) {
                             rootInput = iresult;
                         }
-                        var targets = inode.getTargets(data, this.root); //Quandry: should it be input function result
+                        var targets = inode.getTargets(data, this.root);
                         Gentyl.Util.assoc(targets, allTargets);
                     }
                     if (Object.keys(allTargets).length == 0) {
                         return;
-                    } //no resolution if no targets
-                    for (var key in allTargets) {
-                        //console.log("target %s set targets", key, allTargets[key])
-                        allTargets[key].targeted = true; //set allTargets
                     }
-                    this.root.resolve(data); //trigger root resolution. Quandry: should it be input function result
                     for (var key in allTargets) {
-                        allTargets[key].targeted = false; //clear targets
+                        allTargets[key].targeted = true;
+                    }
+                    this.root.resolve(data);
+                    for (var key in allTargets) {
+                        allTargets[key].targeted = false;
                     }
                 }.bind(v);
             }
-            root.signalShell = shell;
+            root.ioShell = shell;
             return shell;
-        };
-        ResolutionNode.prototype.inductComponent = function (component) {
-            var c;
-            if (component instanceof ResolutionNode) {
-                c = component;
-            }
-            else if (component instanceof Object) {
-                c = new ResolutionNode(component);
-            }
-            else {
-                c = component;
-            }
-            return c;
         };
         ResolutionNode.prototype.getParent = function (toDepth) {
             if (toDepth === void 0) { toDepth = 1; }
@@ -754,13 +772,25 @@ var Gentyl;
         ResolutionNode.prototype.getRoot = function () {
             return this.isRoot ? this : this.getParent().getRoot();
         };
+        ResolutionNode.prototype.getNominal = function (label) {
+            if (this.form.contextLabel === label) {
+                return this;
+            }
+            else {
+                if (this.parent == undefined) {
+                    throw new Error("Required context label is not found");
+                }
+                else {
+                    return this.parent.getNominal(label);
+                }
+            }
+        };
         ResolutionNode.prototype.setParent = function (parentNode) {
             this.parent = parentNode;
             this.isRoot = false;
             this.depth = this.parent.depth + 1;
         };
         ResolutionNode.prototype.resolveArray = function (array, resolveArgs, selection) {
-            //TODO:selector must produce index or array thereof
             if (selection instanceof Array) {
                 var resolution = [];
                 for (var i = 0; i < selection.length; i++) {
@@ -785,19 +815,81 @@ var Gentyl;
                 return this.resolveNode(node[selection], resolveArgs, true);
             }
         };
-        //main recursion
+        ResolutionNode.prototype.terminalScan = function (recursive, collection, locale) {
+            if (recursive === void 0) { recursive = false; }
+            if (collection === void 0) { collection = []; }
+            if (locale === void 0) { locale = null; }
+            var locale = locale || this;
+            Gentyl.Util.typeCaseSplitF(function (thing, dereferent) {
+                if (thing instanceof Gentyl.Terminal) {
+                    collection.push({ node: locale, term: thing, deref: dereferent });
+                }
+                else if (recursive && thing instanceof ResolutionNode) {
+                    thing.terminalScan(true, collection, locale = thing);
+                }
+            })(this.node);
+            return collection;
+        };
+        ResolutionNode.prototype.checkComplete = function (recursive) {
+            if (recursive === void 0) { recursive = false; }
+            var result = true;
+            Gentyl.Util.typeCaseSplitF(function (thing) {
+                if (thing instanceof Gentyl.Terminal) {
+                    result = false;
+                }
+                else if (recursive && thing instanceof ResolutionNode) {
+                    thing.checkComplete(true);
+                }
+            })(this.node);
+            return result;
+        };
+        ResolutionNode.prototype.add = function (keyOrVal, val) {
+            this.inductComponent(val);
+            var al = arguments.length;
+            var ins = null;
+            if (!(al === 1 || al === 2)) {
+                throw Error("Requires 1 or 2 arguments");
+            }
+            else if (al === 1) {
+                if (this.node instanceof Array) {
+                    ins = this.node.length;
+                    this.node.push(val);
+                }
+                else if (Gentyl.Util.isVanillaObject(this.node)) {
+                    throw Error("Requires key and value to add to object crown");
+                }
+                else if (this.node instanceof Gentyl.Terminal) {
+                    if (this.node.check(val)) {
+                        this.node = val;
+                    }
+                }
+                else {
+                    throw Error("Unable to clobber existing value");
+                }
+            }
+            else {
+                if (Gentyl.Util.isVanillaObject(this.node)) {
+                    ins = keyOrVal;
+                    this.node[keyOrVal] = val;
+                }
+                else {
+                    throw Error("Requires single arg for non object crown");
+                }
+            }
+            if (this.prepared) {
+                this.node[ins] = this.prepareChild(null, this.node[ins]);
+            }
+        };
+        ResolutionNode.prototype.seal = function (typespec) {
+        };
         ResolutionNode.prototype.resolveNode = function (node, resolveArgs, selection) {
-            //log("node to resolve: ", node)
-            //cutting dictates that we select nothing and therefore will
             var cut = false;
             if (!selection) {
                 cut = true;
             }
             else if (selection === true && node instanceof Object) {
-                //select all
                 selection = Object.keys(node);
             }
-            //at this stage cut determines primitives are nullified and objects empty
             if (node instanceof Array) {
                 return cut ? [] : this.resolveArray(node, resolveArgs, selection);
             }
@@ -810,12 +902,10 @@ var Gentyl;
                 }
             }
             else {
-                //we have a primative
                 return cut ? null : node;
             }
         };
         ResolutionNode.prototype.resolveUnderscore = function (resolver, resolveArgs) {
-            //now this is the parent context
             var result = resolver.resolve(resolveArgs);
             return result;
         };
@@ -824,21 +914,18 @@ var Gentyl;
                 this.prepare();
             }
             Object.freeze(resolveArgs);
-            var carried = this.carrier.call(this.ctx, resolveArgs);
+            var carried = this.form.carrier.call(this.ctx, resolveArgs);
             var resolvedNode;
             if (this.node != undefined) {
-                //form the selection for this node
-                var selection = this.selector.call(this.ctx, Object.keys(this.node), resolveArgs);
-                //recurse on the contained node
+                var selection = this.form.selector.call(this.ctx, Object.keys(this.node), resolveArgs);
                 resolvedNode = this.resolveNode(this.node, carried, selection);
             }
-            //modifies the resolved context and returns the processed result
-            var result = this.resolver.call(this.ctx, resolvedNode, resolveArgs);
-            //dispatch if marked
-            //console.log(`check Output stage with olabel ${this.outputLabel} reached targeted? , `,this.targeted)
+            var result = this.form.resolver.call(this.ctx, resolvedNode, resolveArgs);
             if (this.targeted) {
-                var outresult = this.outputFunction.call(this.ctx, result);
-                this.getRoot().signalShell.outs[this.outputLabel].dispatch(outresult);
+                var outresult = this.form.outputFunction.call(this.ctx, result);
+                console.log("Output call back called on output", this.form.outputLabel);
+                this.outputContext[this.outputCallback](outresult, this.form.outputLabel);
+                this.targeted = false;
             }
             return result;
         };
@@ -846,90 +933,39 @@ var Gentyl;
     }());
     Gentyl.ResolutionNode = ResolutionNode;
 })(Gentyl || (Gentyl = {}));
-var uuid = require('uuid');
 var Gentyl;
 (function (Gentyl) {
-    function isBundle(object) {
-        return object instanceof Object && "form" in object && "state" in object && "node" in object;
-    }
-    Gentyl.isBundle = isBundle;
-    /**
-     * A rudimetary implementation not supporting failure cases or serialization
-     * if a function is stored already this will override it will throw the
-     * value error if the function is not there
-     */
-    var ObjectFunctionCache = (function () {
-        function ObjectFunctionCache() {
-            this.functions = {};
+    var GForm = (function () {
+        function GForm(formObj) {
+            this.ctxmode = formObj.m || "";
+            this.carrier = formObj.c || Gentyl.Util.identity;
+            this.resolver = formObj.f || Gentyl.Util.identity;
+            this.selector = formObj.s || function (keys, carg) { return true; };
+            this.preparator = formObj.p || function (x) { };
+            this.inputLabel = formObj.il;
+            this.outputLabel = formObj.ol;
+            this.inputFunction = formObj.i || Gentyl.Util.identity;
+            this.outputFunction = formObj.o || Gentyl.Util.identity;
+            this.targeting = formObj.t;
+            this.contextLabel = formObj.cl;
         }
-        ObjectFunctionCache.prototype.storeFunction = function (func) {
-            var name = (["", 'anonymous', undefined].indexOf(func.name) == -1) ? func.name : uuid.v1();
-            this.functions[name] = func;
-            return name;
+        GForm.prototype.extract = function () {
+            return {
+                f: this.resolver,
+                c: this.carrier,
+                m: this.ctxmode,
+                p: this.preparator,
+                il: this.inputLabel,
+                ol: this.outputLabel,
+                i: this.inputFunction,
+                o: this.outputFunction,
+                t: this.targeting,
+                s: this.selector
+            };
         };
-        ObjectFunctionCache.prototype.recoverFunction = function (id) {
-            return this.functions[id];
-        };
-        return ObjectFunctionCache;
+        return GForm;
     }());
-    var liveCache = new ObjectFunctionCache();
-    /**
-     * build a form ref object for the bundle by storing the function externally
-     * and only storing in the bundle a uuid or function name;
-     */
-    function deformulate(fromNode) {
-        var preform = {
-            f: fromNode.resolver,
-            c: fromNode.carrier,
-            m: fromNode.ctxmode
-        };
-        var exForm = {};
-        for (var k in preform) {
-            var val = preform[k];
-            if (val instanceof Function) {
-                //TODO: Replacible with local storage mechanisms
-                exForm[k] = liveCache.storeFunction(val);
-            }
-            else {
-                //should only be a string or at least value
-                exForm[k] = val;
-            }
-        }
-        return exForm;
-    }
-    Gentyl.deformulate = deformulate;
-    /**
-    * rebuild the form object by recovering the stored function from the cache using the uuids and labels.
-     */
-    function reformulate(formRef) {
-        var recovered = {};
-        for (var k in formRef) {
-            recovered[k] = liveCache.recoverFunction(formRef[k]);
-        }
-        return recovered;
-    }
-    Gentyl.reformulate = reformulate;
-    var Reconstruction = (function (_super) {
-        __extends(Reconstruction, _super);
-        function Reconstruction(bundle) {
-            //construct the node of array, object or primative,
-            function debundle(bundle) {
-                if (isBundle(bundle)) {
-                    return new Reconstruction(bundle);
-                }
-                else {
-                    return bundle;
-                }
-            }
-            var node = Gentyl.Util.typeCaseSplitF(debundle)(bundle.node);
-            //reconstruction is almost entirely for this, so that it can pass through reformulation.
-            var form = Gentyl.reformulate(bundle.form);
-            var state = bundle.state;
-            _super.call(this, node, form, state);
-        }
-        return Reconstruction;
-    }(Gentyl.ResolutionNode));
-    Gentyl.Reconstruction = Reconstruction;
+    Gentyl.GForm = GForm;
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {
@@ -961,65 +997,146 @@ var Gentyl;
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {
-    /**
-     * Crete a G-Node in a Generic way
-     * @param:component
-     */
-    function G(components, form, state) {
-        return new Gentyl.ResolutionNode(components, form, state);
+    function isBundle(object) {
+        return object instanceof Object && "form" in object && "state" in object && "node" in object;
     }
-    Gentyl.G = G;
-    /**
-     * Alias to create a functional G-node,
-     */
-    function F(func, components, state) {
-        return new Gentyl.ResolutionNode(components, { f: func }, state);
+    Gentyl.isBundle = isBundle;
+    var ObjectFunctionCache = (function () {
+        function ObjectFunctionCache() {
+            this.functions = {};
+        }
+        ObjectFunctionCache.prototype.storeFunction = function (func) {
+            var name = (["", 'anonymous', undefined].indexOf(func.name) == -1) ? func.name : 'anonymous';
+            this.functions[name] = func;
+            return name;
+        };
+        ObjectFunctionCache.prototype.recoverFunction = function (id) {
+            return this.functions[id];
+        };
+        return ObjectFunctionCache;
+    }());
+    var liveCache = new ObjectFunctionCache();
+    function deformulate(fromNode) {
+        var preform = {
+            f: fromNode.form.resolver,
+            c: fromNode.form.carrier,
+            m: fromNode.form.ctxmode
+        };
+        var exForm = {};
+        for (var k in preform) {
+            var val = preform[k];
+            if (val instanceof Function) {
+                exForm[k] = liveCache.storeFunction(val);
+            }
+            else {
+                exForm[k] = val;
+            }
+        }
+        return exForm;
     }
-    Gentyl.F = F;
-    /**
-     * Create an input leaf node, defaulting to a passive point storage
-     */
-    function I(label, target, inputFunction, resolveFunction, state) {
-        if (target === void 0) { target = []; }
-        if (inputFunction === void 0) { inputFunction = Gentyl.Inventory.placeInput; }
-        if (resolveFunction === void 0) { resolveFunction = Gentyl.Inventory.pickupInput; }
-        return new Gentyl.ResolutionNode({}, { i: inputFunction, t: target, il: label, f: resolveFunction }, state || { _placed: null });
+    Gentyl.deformulate = deformulate;
+    function reformulate(formRef) {
+        var recovered = {};
+        for (var k in formRef) {
+            recovered[k] = liveCache.recoverFunction(formRef[k]);
+        }
+        return recovered;
     }
-    Gentyl.I = I;
-    /**
-     * Create an output leaf node, a node that passes
-     */
-    function O(label, outputFunction) {
-        return new Gentyl.ResolutionNode({}, { ol: label, o: outputFunction, f: Gentyl.Inventory.retract }, {});
-    }
-    Gentyl.O = O;
-    function R(reconstructionBundle) {
-        return new Gentyl.Reconstruction(reconstructionBundle);
-    }
-    Gentyl.R = R;
+    Gentyl.reformulate = reformulate;
+    var Reconstruction = (function (_super) {
+        __extends(Reconstruction, _super);
+        function Reconstruction(bundle) {
+            function debundle(bundle) {
+                if (isBundle(bundle)) {
+                    return new Reconstruction(bundle);
+                }
+                else {
+                    return bundle;
+                }
+            }
+            var node = Gentyl.Util.typeCaseSplitF(debundle)(bundle.node);
+            var form = Gentyl.reformulate(bundle.form);
+            var state = bundle.state;
+            _super.call(this, node, form, state);
+        }
+        return Reconstruction;
+    }(Gentyl.ResolutionNode));
+    Gentyl.Reconstruction = Reconstruction;
 })(Gentyl || (Gentyl = {}));
-///compile this file with --outFile for commonjs module environment
-/// <reference path="../typings/index.d.ts"/>
-/// <reference path="util.ts"/>
-/// <reference path="core.ts"/>
-/// <reference path="reconstruction.ts"/>
-/// <reference path="inventory/io.ts"/>
-/// <reference path="inventory/select.ts"/>
-/// <reference path="inventory/resolver.ts"/>
-/// <reference path="aliases.ts"/>
-// require("./core.ts")
-// require("./nodes.ts")
-// require("./util.ts")
-//exports to multiple environments
-var define = define || undefined;
-if (typeof define === 'function' && define.amd) {
-    define(function () { return Gentyl; });
-}
-else if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Gentyl;
-}
-else {
-    //use string because of Google closure compiler ADVANCED_MODE
-    /*jslint sub:true */
-    this['gentyl'] = Gentyl;
-}
+var Gentyl;
+(function (Gentyl) {
+    var Terminal = (function () {
+        function Terminal(type) {
+            this.type = type;
+        }
+        Terminal.prototype.check = function (obj) {
+            return true;
+        };
+        return Terminal;
+    }());
+    Gentyl.Terminal = Terminal;
+})(Gentyl || (Gentyl = {}));
+var Gentyl;
+(function (Gentyl) {
+    var IO;
+    (function (IO) {
+        IO.ioShellDefault = {
+            setup: function (label) {
+            },
+            dispatch: function (output, label) {
+            }
+        };
+        function setDefaultShell(shellConstructor) {
+            Gentyl.IO.ioShellDefault = {
+                setup: shellConstructor,
+                dispatch: undefined
+            };
+        }
+        IO.setDefaultShell = setDefaultShell;
+        function setDefaultDispatchFunction(dispatchF) {
+            Gentyl.IO.ioShellDefault = {
+                setup: function (label) { return dispatchF; },
+                dispatch: undefined
+            };
+        }
+        IO.setDefaultDispatchFunction = setDefaultDispatchFunction;
+        function setDefaultDispatchObject(object, method) {
+            var ctxconstructor;
+            var cb;
+            var error;
+            if (object instanceof Function) {
+                ctxconstructor = object;
+            }
+            else if (object instanceof Object) {
+                ctxconstructor = function () { return object; };
+            }
+            else {
+                error = 'object must be Object or Function';
+            }
+            if (error) {
+                throw new Error(error);
+            }
+            Gentyl.IO.ioShellDefault = {
+                setup: ctxconstructor,
+                dispatch: method
+            };
+        }
+        IO.setDefaultDispatchObject = setDefaultDispatchObject;
+    })(IO = Gentyl.IO || (Gentyl.IO = {}));
+})(Gentyl || (Gentyl = {}));
+(function () {
+    var root = this;
+    var define = define || undefined;
+    if (typeof exports !== 'undefined') {
+        if (typeof module !== 'undefined' && module.exports) {
+            exports = module.exports = Gentyl;
+        }
+        exports.Gentyl = Gentyl;
+    }
+    else if (typeof define !== 'undefined' && define.amd) {
+        define('Gentyl', (function () { return root.Gentyl = Gentyl; })());
+    }
+    else {
+        root.Gentyl = Gentyl;
+    }
+}).call(this);

@@ -8,7 +8,7 @@ describe("bundle creation",function(){
                 meaning:'peace'
             })
         },{
-            f:function fame(resolved, args){
+            f(resolved, args){
                 this.fearless += 1
                 return `peace for ${this.fearless}`
             }
