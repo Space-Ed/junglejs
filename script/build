@@ -1,2 +1,2 @@
 
-tsc -t ES5 --outFile dist/gentyl.js -d ts_src/main.ts
+tsc -p ts_src
