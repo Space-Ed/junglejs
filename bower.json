@@ -1,0 +1,29 @@
+{
+  "name": "gentyl",
+  "description": "A Generator That You'll Love",
+  "main": "./dist/gentyl.js",
+  "authors": [
+    "Edward Dalley"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "gentle",
+    "tool",
+    "structural",
+    "synthesis",
+    "language",
+    "generator",
+    "procedural",
+    "random",
+    "data",
+    "hierarchy"
+  ],
+  "homepage": "https://github.com/Space-Ed/gentyl",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

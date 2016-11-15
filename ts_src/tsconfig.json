@@ -14,7 +14,7 @@
         "noLib": false,
         "preserveConstEnums": true,
         "suppressImplicitAnyIndexErrors": true,
-        "outFile": "dist/gentyl.js"
+        "outFile": "../dist/gentyl.js"
     },
     "exclude": [
         "node_modules",
@@ -34,11 +34,14 @@
         "./aliases.ts",
         "./context.ts",
         "./core.ts",
+        "./form.ts",
         "./inventory/io.ts",
         "./inventory/resolver.ts",
         "./inventory/select.ts",
         "./main.ts",
+        "./module.ts",
         "./reconstruction.ts",
+        "./terminal.ts",
         "./util.ts"
     ]
 }
