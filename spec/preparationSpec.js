@@ -11,11 +11,11 @@ describe("preparation",function(){
                 G(0,{
                     m:"&_",
                     p(parg){this.anteling = parg},
-                    f(){ return this.anteling}
+                    r(){ return this.anteling}
                 }),{
                 m:"|+",
                 p(parg){this.apparation = parg},
-                f(obj){return  this.apparation + obj}
+                r(obj){return  this.apparation + obj}
             },{
 
             }
@@ -23,7 +23,7 @@ describe("preparation",function(){
             p(prepargs){
                 this.creature = prepargs;
             },
-            f(obj, arg){
+            r(obj, arg){
                 return this.creature + obj
             }
         },{
@@ -34,7 +34,7 @@ describe("preparation",function(){
     })
 
     it("should be deeply prepared",function(){
-        expect(g.node instanceof gentyl.ResolutionNode).toBe(true)
+        expect(g.crown instanceof gentyl.GNode).toBe(true)
     })
 
     it("should set properties with preparator",function(){

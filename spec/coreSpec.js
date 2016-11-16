@@ -17,7 +17,7 @@ describe("operationality", function () {
             a: "stringa",
             b: "stringb"
         },{
-            f(obj) {
+            r(obj) {
                 return obj;
             }
         })
@@ -30,7 +30,7 @@ describe("operationality", function () {
     it("should generate from context properties", function(){
         var gen = g({}
             ,{
-                f(obj){
+                r(obj){
                     return this.prop;
                 }
             },{
@@ -46,7 +46,7 @@ describe("operationality", function () {
         var gen = g({
                 inc:1
             },{
-                f(obj, args){
+                r(obj, args){
                     this.prop += obj.inc;
                     return this.prop;
                 }
@@ -66,7 +66,7 @@ describe("operationality", function () {
     it("should generate from arg set context properties", function(){
         var gen = g({
         },{
-            f(obj, arg){
+            r(obj, arg){
 
                 if(arg == undefined){
                     return this.prop
@@ -127,7 +127,7 @@ describe("recursability",function(){
     it('should not allow sharing between distinct trees',function(){
         var subg = g({
         },{
-            f(obj, arg){
+            r(obj, arg){
                 this.prop.inner+=1;
                 return this.prop.inner;
             }

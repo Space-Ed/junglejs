@@ -16,13 +16,13 @@ describe("input-output", function(){
                     i(input){
                         this.saved = input
                     },
-                    f(){
+                    r(){
                         return this.saved
                     },
                     o(out){
                         return `I have saved ${out}`
                     },
-                    t:function(inp){
+                    t(inp){
                         return inp
                     }
                 },{
@@ -36,7 +36,7 @@ describe("input-output", function(){
                     i(inp){
                         this.buffer.push(inp)
                     },
-                    f(obj, arg){
+                    r(obj, arg){
                         return this.buffer.pop() || obj
                     }
                 },{
@@ -173,7 +173,7 @@ describe("input-output", function(){
                 i2:I('i2'),
                 i3:I('i1')
             },{
-                f(obj, arg){
+                r(obj, arg){
                     return obj.i1 + obj.i2 + obj.i3;
                 },
                 o:Gentyl.Util.identity
@@ -195,10 +195,10 @@ describe("input-output", function(){
 
             //g2.resolve("hello");
 
-            expect(g2.node.i1.form.inputFunction).toBe(Gentyl.Inventory.placeInput)
+            expect(g2.crown.i1.form.inputFunction).toBe(Gentyl.Inventory.placeInput)
 
-            expect(g2.node.i1.ctx._placed).toBe('ice')
-            expect(g2.node.i2.ctx._placed).toBe(' breaks ')
+            expect(g2.crown.i1.ctx._placed).toBe('ice')
+            expect(g2.crown.i2.ctx._placed).toBe(' breaks ')
 
             expect(shell.outs._.dispatch).toHaveBeenCalledWith('ice breaks ice', '_');
         })
@@ -235,6 +235,37 @@ describe("input-output", function(){
             shell.ins._(0);
             expect(shell.outs.out.dispatch).not.toHaveBeenCalled()
         })
+
+    })
+
+    describe('callback methodologies', function(){
+        var testctx
+
+        beforeEach(function(){
+            this.deposit = undefined;
+            testctx = this;
+        })
+
+        it('should allow a callback without context',function(){
+            pending('fixes to io system');
+
+            // Gentyl.IO.setDefaultDispatchFunction(function(output, label){
+            //     testctx.deposit = `output: ${output} from ${label}`;
+            // })
+
+            var g = G("thing",{t:'_'}).prepare();
+
+            g.shell()
+
+            g.ioShell.ins._();
+            expect(testctx.deposit).toBe('output: thing from _')
+        })
+
+        it('should allow a callback factory',function(){
+
+        })
+
+        it('should allow an object context with method name')
 
     })
 

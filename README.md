@@ -1,12 +1,9 @@
 ![](res/title.png)
 
 [![npm version](https://badge.fury.io/js/gentyl.svg)](https://badge.fury.io/js/gentyl) [![Build Status](https://travis-ci.org/Space-Ed/gentyl.png?branch=master)](https://travis-ci.org/Space-Ed/gentyl)
-
-#### [Discussion](https://gitter.im/gentyl/Lobby "Gitter Room")
+[![Join the chat at https://gitter.im/gentyl/Lobby](https://badges.gitter.im/gentyl/Lobby.svg)](https://gitter.im/gentyl/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ## What is Structural Synthesis and what is it for?
-
-[![Join the chat at https://gitter.im/gentyl/Lobby](https://badges.gitter.im/gentyl/Lobby.svg)](https://gitter.im/gentyl/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 The purpose of this tool is to provide a means of synthesizing and channeling structured data using a hierarchical state system. The system supports reactive IO and serialization of its dynamic generator objects.
 
@@ -45,7 +42,7 @@ a G-node represents a generator object that can be resolved to produce objects.
 
 G-nodes have 3 parts:
 
-- Component: |   the compositional structure of what is generated.
+- Crown:     |   the compositional tree structure of what is generated.
 - Form:      |   a description of how the node behaves, through Tractors and other properties.
 - Context:   |   the items of state modified by and informing the results of Tractors. Appears as _this_.
 
@@ -61,7 +58,7 @@ var catGen = G({
     ferocity:10,
     name:G({},
         {
-            f:function(obj, args){
+            r:function(obj, args){
                 return this.names.pop() || "puss"
             }
         },{
@@ -69,7 +66,7 @@ var catGen = G({
         }
     )
     },{
-    f:function(obj, args){
+    r:function(obj, args){
         return `a size ${obj.size} cat with ${obj.ferocity} ferocity called ${obj.name}`
     }
 }).prepare();
@@ -99,7 +96,7 @@ function randIntRng(obj){
 
 var NamePicker = G({},
     {
-        f:function(obj, args){
+        r:function(obj, args){
             return this.names.pop() || "puss" // This B
         }
     },{
@@ -107,22 +104,22 @@ var NamePicker = G({},
 })
 
 var catGen = G({
-    size:G({m:2, c:10}, {f:Linear, m:"=+"}),
+    size:G({m:2, c:10}, {r:Linear, m:"=+"}),
     ferocity:G({
             m:2,
             c:G({
                 min:5,
                 max:10,
             },{
-                f:randIntRng
+                r:randIntRng
             })
         },{
-            f:Linear,  //this A within
+            r:Linear,  //this A within
             m:"=_"
         }),
     name:NamePicker
     },{
-        f:function(obj, args){
+        r:function(obj, args){
             this.intensity += 1; //This A
             return `a size ${obj.size} cat with ${obj.ferocity} ferocity called ${obj.name}`
         }
@@ -200,13 +197,13 @@ At the heart of the execution model, doing all the heavy lifting, are Tractors. 
         </tr>
         <tr>
             <td>Resolver</td>
-            <td style="text-align:center">f</td>
+            <td style="text-align:center">r</td>
             <td>1: The resolved component object, 2:the value passed to resolve this node</td>
             <td>value passed back to the parent</td>
             <td>composition, interpretation, filtering data.</td>
         </tr>
         <tr>
-            <td>Injector</td>
+            <td>Injector(input)</td>
             <td style="text-align:center">i</td>
             <td>1:the input argument</td>
             <td>if is root, the value passed to the root resolve for the input event. otherwise unused </td>

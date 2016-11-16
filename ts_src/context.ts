@@ -5,20 +5,20 @@ namespace Gentyl {
         TRACK
     }
     export interface ContextLayer {
-        source:ResolutionContext;
+        source:GContext;
         mode:ASSOCMODE;
     }
 
     /**
      * The state manager for a resolution node. Handles the association of contexts and modification therin
      */
-    export class ResolutionContext {
+    export class GContext {
         ownProperties:any;
         propertyLayerMap:any;
         closed:boolean;
 
 
-        constructor(private host:ResolutionNode, hostContext:any, private mode:string){
+        constructor(private host:GNode, hostContext:any, private mode:string){
             //parse modes
 
             Object.defineProperties(this,{
@@ -180,7 +180,7 @@ namespace Gentyl {
         /**
          * get the actual source of the desired property. use to set/getItems
          */
-        getItemSource(key):ResolutionContext{
+        getItemSource(key):GContext{
             if(key in this.propertyLayerMap){
                 return this.propertyLayerMap[key].source;
             }else{
@@ -190,7 +190,7 @@ namespace Gentyl {
         /**
          * add all the properties of the target layer to the ownPropertiesMap.
          */
-        addInherentLayer(layerctx:ResolutionContext){
+        addInherentLayer(layerctx:GContext){
             for (let prop in layerctx.ownProperties) {
 
                 // TODO: Maybe not just target layerctxs own properties.

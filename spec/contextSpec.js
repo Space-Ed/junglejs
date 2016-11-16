@@ -5,7 +5,7 @@ describe("A context labelled node",function(){
 
     it('should allow designation by context',function(){
         var gme = G(null,
-            { m:"&testcontext", f(r,a){
+            { m:"&testcontext", r(r,a){
                 return this.dice;
             }})
 
@@ -20,7 +20,7 @@ describe("A context labelled node",function(){
         expect(function(){gentyl.Util.deeplyEquals(g.resolve())}).not.toThrowError()
     })
 
-    it('will alway choose the closest to the tip possible',function(){
-
+    it('will always choose the closest to the tip possible',function(){
+        
     })
 })

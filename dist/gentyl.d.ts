@@ -1,9 +1,9 @@
 /// <reference path="../typings/index.d.ts" />
 declare namespace Gentyl {
-    function G(components: Object, form: any, state: any): ResolutionNode;
-    function F(func: any, components: any, state: any): ResolutionNode;
-    function I(label: any, target: any[], inputFunction: typeof Inventory.placeInput, resolveFunction: typeof Inventory.pickupInput, state: any): ResolutionNode;
-    function O(label: any, outputFunction: any): ResolutionNode;
+    function G(components: Object, form: any, state: any): GNode;
+    function F(func: any, components: any, state: any): GNode;
+    function I(label: any, target: any[], inputFunction: typeof Inventory.placeInput, resolveFunction: typeof Inventory.pickupInput, state: any): GNode;
+    function O(label: any, outputFunction: any): GNode;
     function R(reconstructionBundle: any): Reconstruction;
     function T(type: any): Terminal;
 }
@@ -14,24 +14,24 @@ declare namespace Gentyl {
         TRACK = 2,
     }
     interface ContextLayer {
-        source: ResolutionContext;
+        source: GContext;
         mode: ASSOCMODE;
     }
-    class ResolutionContext {
+    class GContext {
         private host;
         private mode;
         ownProperties: any;
         propertyLayerMap: any;
         closed: boolean;
-        constructor(host: ResolutionNode, hostContext: any, mode: string);
+        constructor(host: GNode, hostContext: any, mode: string);
         prepare(): void;
         extract(): any;
         parseMode(modestr: string): ContextLayer[];
         addOwnProperty(name: string, defaultValue: any): void;
         setItem(key: any, data: any): void;
         getItem(key: any): any;
-        getItemSource(key: any): ResolutionContext;
-        addInherentLayer(layerctx: ResolutionContext): void;
+        getItemSource(key: any): GContext;
+        addInherentLayer(layerctx: GContext): void;
         addSourceLayer(layer: ContextLayer): void;
     }
 }
@@ -62,18 +62,18 @@ declare namespace Gentyl {
     }
 }
 declare namespace Gentyl {
-    interface SignalShell {
+    interface IOShell {
         ins: any;
         outs: any;
     }
-    class ResolutionNode {
-        ctx: ResolutionContext;
-        node: any;
-        parent: ResolutionNode;
+    class GNode {
+        ctx: GContext;
+        crown: any;
+        parent: GNode;
         depth: number;
         derefChain: (string | number)[];
         isRoot: boolean;
-        root: ResolutionNode;
+        root: GNode;
         prepared: boolean;
         form: GForm;
         inputNodes: any;
@@ -82,20 +82,20 @@ declare namespace Gentyl {
         outputContext: any;
         outputCallback: string;
         targeted: boolean;
-        ancestor: ResolutionNode;
+        ancestor: GNode;
         isAncestor: boolean;
         constructor(components: any, form?: FormSpec, state?: any);
         private inductComponent(component);
-        prepare(prepargs?: any): ResolutionNode;
+        prepare(prepargs?: any): GNode;
         private prepareChild(prepargs, child);
         private prepareIO();
-        replicate(): ResolutionNode;
+        replicate(): GNode;
         bundle(): Bundle;
         getTargets(input: any, root: any): {};
-        shell(): SignalShell;
-        getParent(toDepth?: number): ResolutionNode;
-        getRoot(): ResolutionNode;
-        getNominal(label: any): ResolutionNode;
+        shell(): IOShell;
+        getParent(toDepth?: number): GNode;
+        getRoot(): GNode;
+        getNominal(label: any): GNode;
         private setParent(parentNode);
         private resolveArray(array, resolveArgs, selection);
         private resolveObject(node, resolveArgs, selection);
@@ -110,7 +110,7 @@ declare namespace Gentyl {
 }
 declare namespace Gentyl {
     interface FormSpec {
-        f?: (obj, args?) => any;
+        r?: (obj, args?) => any;
         c?: (args?) => any;
         s?: (keys, arg?) => any;
         p?: (arg) => void;
@@ -162,9 +162,9 @@ declare namespace Gentyl {
         state: any;
     }
     function isBundle(object: any): boolean;
-    function deformulate(fromNode: ResolutionNode): any;
+    function deformulate(fromNode: GNode): any;
     function reformulate(formRef: FormRef): FormSpec;
-    class Reconstruction extends ResolutionNode {
+    class Reconstruction extends GNode {
         constructor(bundle: Bundle);
     }
 }

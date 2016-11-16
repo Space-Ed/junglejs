@@ -12,7 +12,7 @@ describe("node replication", function(){
                 0,1,2
             ]
         },{
-            f(resolved, args){
+            r(resolved, args){
                 this.fearless += 1
                 return `peace for ${this.fearless}`
             }

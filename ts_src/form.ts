@@ -1,7 +1,7 @@
 namespace Gentyl {
 
     export interface FormSpec {
-        f?:(obj, args?)=>any;
+        r?:(obj, args?)=>any;
         c?:(args?)=>any;
         s?:(keys, arg?)=>any;
         p?:(arg)=>void;
@@ -39,7 +39,7 @@ namespace Gentyl {
          constructor(formObj:FormSpec){
              this.ctxmode =  formObj.m || "";
              this.carrier = formObj.c || Gentyl.Util.identity;
-             this.resolver = formObj.f || Gentyl.Util.identity;
+             this.resolver = formObj.r || Gentyl.Util.identity;
              this.selector = formObj.s || function(keys, carg){return true}
              this.preparator = formObj.p || function(x){}
              this.inputLabel = formObj.il;
@@ -52,7 +52,7 @@ namespace Gentyl {
 
         extract():FormSpec{
             return {
-                f:this.resolver,
+                r:this.resolver,
                 c:this.carrier ,
                 m:this.ctxmode ,
                 p:this.preparator,
@@ -61,7 +61,8 @@ namespace Gentyl {
                 i:this.inputFunction,
                 o:this.outputFunction,
                 t:this.targeting,
-                s:this.selector
+                s:this.selector,
+                cl:this.contextLabel
             }
         }
      }

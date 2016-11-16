@@ -55,7 +55,7 @@ describe("context construction mode validity", function(){
                     {},
                     {
                         m:'&+',
-                        f(){
+                        r(){
                             return this.propx
                         }
                     }
@@ -64,7 +64,7 @@ describe("context construction mode validity", function(){
                 c(r){
                     this.propx = r
                 },
-                f(n, r){
+                r(n, r){
                     return n.a
                 m:"!"
                 }
@@ -83,7 +83,7 @@ describe("context construction",function(){
                     {},
                     {
                         m:'=+',
-                        f(){
+                        r(){
                             return this.propx
                         }
                     }
@@ -92,7 +92,7 @@ describe("context construction",function(){
                 c(r){
                     this.propx = r
                 },
-                f(n, r){
+                r(n, r){
                     return n.a
                 }
             },{
@@ -100,7 +100,7 @@ describe("context construction",function(){
             }
         ).prepare();
 
-        expect(gen.node.a.ctx.propertyLayerMap['propx'].source).toBe(gen.ctx)
+        expect(gen.crown.a.ctx.propertyLayerMap['propx'].source).toBe(gen.ctx)
         expect(gen.ctx.propertyLayerMap["propx"].source).toBe(gen.ctx)
 
         expect(gen.resolve("a")).toBe("a");
@@ -113,7 +113,7 @@ describe("context construction",function(){
                     {},
                     {
                         m:'&+',
-                        f(){
+                        r(){
                             this.propy += 1;
                             return this.propy
                         }
@@ -121,7 +121,7 @@ describe("context construction",function(){
 
                 )
             },{
-                f(n, r){
+                r(n, r){
                     return this.propy
                 }
             },{
@@ -140,7 +140,7 @@ describe("context construction",function(){
                     {},
                     {
                         m:'=_',
-                        f(){
+                        r(){
                             return this.propy
                         }
                     }
@@ -150,7 +150,7 @@ describe("context construction",function(){
                 c(r){
                     this.propy += 1;
                 },
-                f(n, r){
+                r(n, r){
                     return n.a
                 }
             },{
@@ -158,7 +158,7 @@ describe("context construction",function(){
             }
         )
         .prepare();
-        expect(gen.node.a.ctx.propertyLayerMap["propy"].mode).toBe(2)
+        expect(gen.crown.a.ctx.propertyLayerMap["propy"].mode).toBe(2)
         expect(gen.resolve()).toBe(1)
         expect(gen.resolve()).toBe(2)
     });
@@ -169,7 +169,7 @@ describe("context construction",function(){
                     {},
                     {
                         m:'&_',
-                        f(){
+                        r(){
                             this.propy += 1;
                             return this.propy
                         }
@@ -177,7 +177,7 @@ describe("context construction",function(){
 
                 )
             },{
-                f(n, r){
+                r(n, r){
                     return this.propy
                 }
             },{
@@ -200,17 +200,17 @@ describe("context construction",function(){
                 a:g({},
                     {
                         m:'|+',
-                        f:inc_ret_y
+                        r:inc_ret_y
                     }
                 ),
                 b:g({},
                     {
                         m:'|+',
-                        f:inc_ret_y
+                        r:inc_ret_y
                     }
                 )
             },{
-                f(n, r){
+                r(n, r){
                     return n.a + n.b + this.propy
                 }
             },{
@@ -250,13 +250,13 @@ describe("context construction",function(){
                 a:g({},
                     {
                         m:'=+',
-                        f(){
+                        r(){
                             this.propy = 1;
                         }
                     }
                 )
             },{
-                f(n, r){
+                r(n, r){
                     return this.propy
                 }
             },{
@@ -265,7 +265,7 @@ describe("context construction",function(){
         )
         .prepare();
 
-        expect(gen.node.a.ctx.propertyLayerMap["propy"].mode).toBe(2)
+        expect(gen.crown.a.ctx.propertyLayerMap["propy"].mode).toBe(2)
 
         expect(function(){
             gen.resolve()

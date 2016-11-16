@@ -3,22 +3,21 @@
 
 namespace Gentyl {
 
-    export interface SignalShell {
+    export interface IOShell {
         ins:any //that is a mapping from names to infunctions
-        outs:any //that is a mapping from names to signal objects
+        outs:any //that is a mapping from names to callback context objects
     }
 
+    export class GNode {
+        ctx:GContext;
+        crown:any;
 
-    export class ResolutionNode {
-        ctx:ResolutionContext;
-        node:any;
-
-        parent:ResolutionNode;
+        parent:GNode;
         depth:number;
         derefChain:(string|number)[]
 
         isRoot:boolean;
-        root:ResolutionNode;
+        root:GNode;
         prepared:boolean;
 
         form:GForm;
@@ -32,7 +31,7 @@ namespace Gentyl {
         targeted:boolean;
 
         //internal
-        ancestor:ResolutionNode;
+        ancestor:GNode;
         isAncestor:boolean;
 
         constructor(components:any, form:FormSpec = {}, state:any = {}){
@@ -44,20 +43,20 @@ namespace Gentyl {
             this.form = new GForm(form);
 
             var context = Util.deepCopy(state);
-            this.ctx = new ResolutionContext(this, context, this.form.ctxmode);
+            this.ctx = new GContext(this, context, this.form.ctxmode);
 
             var inductor = this.inductComponent.bind(this);
-            this.node = Util.typeCaseSplitF(inductor, inductor, null)(components)
+            this.crown = Util.typeCaseSplitF(inductor, inductor, null)(components)
 
         }
 
         private inductComponent(component):any{
             var c
-            if (component instanceof ResolutionNode){
+            if (component instanceof GNode){
                 c = component
                 //c.setParent(this);
             }else if (component instanceof Object){
-                c = new ResolutionNode(component)
+                c = new GNode(component)
                 //c.setParent(this);
             }else {
                 c = component
@@ -69,7 +68,7 @@ namespace Gentyl {
         /**
          * setup the state tree, recursively preparing the contexts
          */
-        public prepare(prepargs=null):ResolutionNode{
+        public prepare(prepargs=null):GNode{
 
             if(this.isAncestor){
                 throw Error("Ancestors cannot be prepared for resolution")
@@ -93,7 +92,7 @@ namespace Gentyl {
                 this.prepareIO();
 
                 //prepare children, object, array, primative
-                this.node = Util.typeCaseSplitF(this.prepareChild.bind(this, prepargs))(this.node);
+                this.crown = Util.typeCaseSplitF(this.prepareChild.bind(this, prepargs))(this.crown);
             } else {
                 this.ancestor = this.replicate();
                 this.ancestor.isAncestor = true;
@@ -104,8 +103,8 @@ namespace Gentyl {
 
 
 
-        private prepareChild(prepargs, child):ResolutionNode{
-            if(child instanceof ResolutionNode){
+        private prepareChild(prepargs, child):GNode{
+            if(child instanceof GNode){
                 var replica = child.replicate();
 
                 replica.setParent(this);
@@ -134,14 +133,14 @@ namespace Gentyl {
         }
 
 
-        replicate():ResolutionNode{
+        replicate():GNode{
             if(this.prepared){
                 //this node is prepared so we will be creating a new based off the ancestor;
                 return this.ancestor.replicate()
             }else{
 
                 //this is a raw node, either an ancestor
-                var repl = new ResolutionNode(this.node, this.form.extract(), this.ctx.extract())
+                var repl = new GNode(this.crown, this.form.extract(), this.ctx.extract())
 
                 //in the case of the ancestor it comes from prepared
                 if(this.isAncestor){
@@ -153,7 +152,7 @@ namespace Gentyl {
 
         bundle():Bundle{
             function bundler(node){
-                if(node instanceof ResolutionNode){
+                if(node instanceof GNode){
                     var product = node.bundle()
                     return product
                 }else{
@@ -161,7 +160,7 @@ namespace Gentyl {
                 }
             }
 
-            var recurrentNodeBundle = Util.typeCaseSplitF(bundler, bundler, null)(this.node)
+            var recurrentNodeBundle = Util.typeCaseSplitF(bundler, bundler, null)(this.crown)
 
             var product = {
                 node:recurrentNodeBundle,
@@ -201,7 +200,7 @@ namespace Gentyl {
             }
         }
 
-        shell():SignalShell{
+        shell():IOShell{
 
             if(!this.prepared){
                 throw new Error("unable to shell unprepared node")
@@ -254,7 +253,7 @@ namespace Gentyl {
                     var rootInput;
 
                     for (let i = 0; i < this.inps.length; i++){
-                        var inode = <ResolutionNode>this.inps[i];
+                        var inode = <GNode>this.inps[i];
                         var iresult = inode.form.inputFunction.call(inode.ctx, data);
                         if(inode == this.root){rootInput = iresult}
                         var targets = inode.getTargets(data, this.root); //Quandry: should it be input function result
@@ -282,7 +281,7 @@ namespace Gentyl {
 
 
 
-        public getParent(toDepth = 1):ResolutionNode{
+        public getParent(toDepth = 1):GNode{
             if (this.parent == undefined){
                 throw new Error("parent not set, or exceeding getParent depth")
             }else if (toDepth  == 1 ){
@@ -292,11 +291,11 @@ namespace Gentyl {
             }
         }
 
-        public getRoot():ResolutionNode{
+        public getRoot():GNode{
             return this.isRoot ? this : this.getParent().getRoot();
         }
 
-        public getNominal(label):ResolutionNode{
+        public getNominal(label):GNode{
             if(this.form.contextLabel === label){
                 return this;
             }else{
@@ -310,7 +309,7 @@ namespace Gentyl {
 
         }
 
-        private setParent(parentNode:ResolutionNode){
+        private setParent(parentNode:GNode){
             this.parent = parentNode;
             this.isRoot = false;
             this.depth = this.parent.depth + 1;
@@ -355,10 +354,10 @@ namespace Gentyl {
             Util.typeCaseSplitF(function(thing, dereferent){
                 if(thing instanceof Terminal){
                     collection.push({node:locale, term:thing, deref:dereferent})
-                }else if(recursive && thing instanceof ResolutionNode){
+                }else if(recursive && thing instanceof GNode){
                     thing.terminalScan(true, collection, locale=thing)
                 }//else primitives and non recursion ignored
-            })(this.node);
+            })(this.crown);
 
             return collection
         }
@@ -372,10 +371,10 @@ namespace Gentyl {
             Util.typeCaseSplitF(function(thing){
                 if(thing instanceof Terminal){
                     result = false;  //falsify result when terminal found
-                }else if(recursive && thing instanceof ResolutionNode){
+                }else if(recursive && thing instanceof GNode){
                     thing.checkComplete(true)
                 }//else primitives and non recursion ignored
-            })(this.node);
+            })(this.crown);
 
             return result;
         }
@@ -392,22 +391,22 @@ namespace Gentyl {
             if(!(al === 1 || al === 2)){
                 throw Error("Requires 1 or 2 arguments")
             }else if(al === 1){
-                if (this.node instanceof Array){
-                    ins = this.node.length;
-                    this.node.push(val)
-                }else if(Util.isVanillaObject(this.node)){
+                if (this.crown instanceof Array){
+                    ins = this.crown.length;
+                    this.crown.push(val)
+                }else if(Util.isVanillaObject(this.crown)){
                     throw Error("Requires key and value to add to object crown")
-                }else if(this.node instanceof Terminal){
-                    if(this.node.check(val)){
-                        this.node = val;
+                }else if(this.crown instanceof Terminal){
+                    if(this.crown.check(val)){
+                        this.crown = val;
                     }
                 }else{
                     throw Error("Unable to clobber existing value")
                 }
             }else {
-                if(Util.isVanillaObject(this.node)){
+                if(Util.isVanillaObject(this.crown)){
                     ins = keyOrVal;
-                    this.node[keyOrVal] = val;
+                    this.crown[keyOrVal] = val;
                 }else{
                     throw Error("Requires single arg for non object crown")
                 }
@@ -415,7 +414,7 @@ namespace Gentyl {
 
             //when the structure is prepared as must be the child added.
             if(this.prepared){
-                this.node[ins] = this.prepareChild(null, this.node[ins])
+                this.crown[ins] = this.prepareChild(null, this.crown[ins])
             }
 
         }
@@ -447,7 +446,7 @@ namespace Gentyl {
                 return cut ? [] : this.resolveArray(node, resolveArgs, selection)
             }
             else if (typeof(node) === "object"){
-                if(node instanceof ResolutionNode){
+                if(node instanceof GNode){
                     return  cut ? null : node.resolve(resolveArgs)
                 }else{
                     return cut ? {} : this.resolveObject(node, resolveArgs, selection)
@@ -459,7 +458,7 @@ namespace Gentyl {
             }
         }
 
-        private resolveUnderscore(resolver:ResolutionNode, resolveArgs){
+        private resolveUnderscore(resolver:GNode, resolveArgs){
             //now this is the parent context
 
             var result = resolver.resolve(resolveArgs)
@@ -479,11 +478,11 @@ namespace Gentyl {
             var carried = this.form.carrier.call(this.ctx, resolveArgs)
 
             var resolvedNode
-            if(this.node != undefined){
+            if(this.crown != undefined){
                 //form the selection for this node
-                var selection =  this.form.selector.call(this.ctx, Object.keys(this.node), resolveArgs);
+                var selection =  this.form.selector.call(this.ctx, Object.keys(this.crown), resolveArgs);
                 //recurse on the contained node
-                resolvedNode = this.resolveNode(this.node, carried, selection)
+                resolvedNode = this.resolveNode(this.crown, carried, selection)
             }
 
             //modifies the resolved context and returns the processed result
