@@ -23,6 +23,7 @@ declare namespace Gentyl {
         ownProperties: any;
         propertyLayerMap: any;
         closed: boolean;
+        label: string;
         constructor(host: GNode, hostContext: any, mode: string);
         prepare(): void;
         extract(): any;
@@ -49,8 +50,9 @@ declare namespace Gentyl {
         function softAssoc(from: any, onto: any): void;
         function parassoc(from: any, onto: any): void;
         function assoc(from: any, onto: any): void;
-        function deepCopy(thing: any): any;
+        function deepCopy<T>(thing: T): T;
         function applyMixins(derivedCtor: any, baseCtors: any[]): void;
+        function objectArrayTranspose(objArr: any, key: string): void;
         function isPrimative(thing: any): boolean;
         function isVanillaObject(thing: any): boolean;
         function isVanillaArray(thing: any): boolean;
@@ -62,10 +64,6 @@ declare namespace Gentyl {
     }
 }
 declare namespace Gentyl {
-    interface IOShell {
-        ins: any;
-        outs: any;
-    }
     class GNode {
         ctx: GContext;
         crown: any;
@@ -76,23 +74,15 @@ declare namespace Gentyl {
         root: GNode;
         prepared: boolean;
         form: GForm;
-        inputNodes: any;
-        outputNodes: any;
-        ioShell: any;
-        outputContext: any;
-        outputCallback: string;
-        targeted: boolean;
+        io: IO.Component;
         ancestor: GNode;
         isAncestor: boolean;
         constructor(components: any, form?: FormSpec, state?: any);
         private inductComponent(component);
         prepare(prepargs?: any): GNode;
         private prepareChild(prepargs, child);
-        private prepareIO();
         replicate(): GNode;
         bundle(): Bundle;
-        getTargets(input: any, root: any): {};
-        shell(): IOShell;
         getParent(toDepth?: number): GNode;
         getRoot(): GNode;
         getNominal(label: any): GNode;
@@ -104,7 +94,6 @@ declare namespace Gentyl {
         add(keyOrVal: any, val: any): void;
         seal(typespec: any): void;
         private resolveNode(node, resolveArgs, selection);
-        private resolveUnderscore(resolver, resolveArgs);
         resolve(resolveArgs: any): any;
     }
 }
@@ -115,26 +104,19 @@ declare namespace Gentyl {
         s?: (keys, arg?) => any;
         p?: (arg) => void;
         m?: string;
-        i?: (arg) => any;
-        o?: (arg) => any;
-        il?: string;
-        ol?: string;
-        t?: any;
-        cl?: string;
     }
     class GForm {
+        private host;
         ctxmode: string;
         carrier: (arg) => any;
         resolver: (obj, arg) => any;
         selector: (keys, arg) => any;
         preparator: (arg) => void;
-        targeting: any;
-        inputLabel: string;
-        outputLabel: string;
-        inputFunction: (arg) => any;
-        outputFunction: (arg) => any;
-        contextLabel: string;
-        constructor(formObj: FormSpec);
+        depreparator: (arg) => void;
+        constructor(host: GNode);
+        parse(formObj: FormSpec): {
+            hooks: IO.Hook[];
+        };
         extract(): FormSpec;
     }
 }
@@ -145,6 +127,82 @@ declare namespace Gentyl.Inventory {
 }
 declare namespace Gentyl.Inventory {
     function selectNone(): any[];
+}
+declare namespace Gentyl {
+    namespace IO {
+        const HALT: {};
+        enum Orientation {
+            INPUT = 0,
+            OUTPUT = 1,
+            NEUTRAL = 2,
+            MIXED = 3,
+        }
+        interface Hook {
+            host: GNode;
+            label: string;
+            tractor: Function;
+            orientation: Orientation;
+        }
+        class Port {
+            label: any;
+            callbackContext: any;
+            callback: (output, ...args) => any;
+            shells: Shell[];
+            constructor(label: any);
+            addShell(shell: Shell): void;
+            handle(input: any): void;
+        }
+        class ResolveInputPort extends Port {
+            shells: HookShell[];
+            constructor(label: any, ...shells: HookShell[]);
+            handleInput(input: any): void;
+        }
+        class ResolveOutputPort extends Port {
+            constructor(label: string, outputCallback: any, outputContext: any);
+            prepareContext(outputContext: any): any;
+        }
+        class Component {
+            host: GNode;
+            hooks: Hook[];
+            orientation: Orientation;
+            isShellBase: boolean;
+            base: Component;
+            specialInput: Hook;
+            specialOutput: Hook;
+            specialGate: boolean;
+            inputs: any;
+            outputs: any;
+            inputHooks: any;
+            outputHooks: any;
+            shell: HookShell;
+            constructor(host: GNode, initHooks: Hook[]);
+            prepare(): void;
+            extract(): {};
+            initialiseHooks(hooks: Hook[]): void;
+            addHook(hook: Hook): void;
+            enshell(opcallback: any, opcontext?: any): void;
+            reorient(): void;
+            collect(opcallback: any, opcontext?: any): {
+                hooks: Hook[];
+                shells: Shell[];
+            };
+            dispatchResult(result: any): any;
+        }
+        interface Shell {
+            sinks: any;
+            sources: any;
+        }
+        class HookShell implements Shell {
+            base: Component;
+            inputHooks: any;
+            outputHooks: any;
+            sinks: any;
+            sources: any;
+            constructor(base: Component, midrantHooks: Hook[], subshells: Shell[], opcallback: any, opcontext?: any);
+            addMidrantHook(hook: Hook): void;
+            addShell(shell: Shell): void;
+        }
+    }
 }
 declare namespace Gentyl {
     interface FormRef {
@@ -173,16 +231,5 @@ declare namespace Gentyl {
         private type;
         constructor(type: any);
         check(obj: any): boolean;
-    }
-}
-declare namespace Gentyl {
-    namespace IO {
-        var ioShellDefault: {
-            setup: any;
-            dispatch: any;
-        };
-        function setDefaultShell(shellConstructor: (label) => (output: any, label: string) => void | void): void;
-        function setDefaultDispatchFunction(dispatchF: (output: any, label: string) => void): void;
-        function setDefaultDispatchObject(object: Object | Function, method: string | ((output: any, label: string) => void)): void;
     }
 }

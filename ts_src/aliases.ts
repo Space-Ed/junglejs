@@ -19,14 +19,18 @@ namespace Gentyl {
      * Create an input leaf node, defaulting to a passive point storage
      */
     export function I(label, target=[], inputFunction=Inventory.placeInput, resolveFunction=Inventory.pickupInput, state){
-        return new GNode({},{i:inputFunction, t:target, il:label, r:resolveFunction}, state || {_placed:null})
+        var form = {t:target, r:resolveFunction};
+        form['_'+label] = inputFunction;
+        return new GNode({},<FormSpec>form, state || {_placed:null})
     }
 
     /**
      * Create an output leaf node, a node that passes
      */
     export function O(label, outputFunction){
-        return new GNode({},{ol:label, o:outputFunction, r:Inventory.retract},{})
+        var form = {r:Inventory.retract};
+        form[label+'_'] = outputFunction;
+        return new GNode({},form,{})
     }
 
     export function R(reconstructionBundle){

@@ -2,39 +2,29 @@ var Gentyl = require('../dist/gentyl.js');
 var signals = require('signals')
 var G = Gentyl.G, I = Gentyl.I, O = Gentyl.O;
 
-Gentyl.IO.setDefaultDispatchObject(signals.Signal, 'dispatch')
-
 describe("input-output", function(){
     var g1;
 
     beforeEach(function(){
         g1 = G({
-            arc:G({
-
-                },{
-                    il:'arc',
-                    i(input){
+            arc:G(null,{
+                    _arc(input){
                         this.saved = input
                     },
                     r(){
                         return this.saved
                     },
-                    o(out){
+                    arc_(out){
                         return `I have saved ${out}`
-                    },
-                    t(inp){
-                        return inp
                     }
                 },{
                     saved:null
                 }),
-            beam:G(
-                0
+            beam:G(null
                 ,{
-                    il:'beamin',
-                    ol:'beamout',
-                    i(inp){
+                    _beamin(inp){
                         this.buffer.push(inp)
+                        return Gentyl.IO.HALT; //dont trigger.
                     },
                     r(obj, arg){
                         return this.buffer.pop() || obj
@@ -43,44 +33,38 @@ describe("input-output", function(){
                     buffer:[]
                 }),
             crux:G(
-                0
+                null
                 ,{
-                    ol:'crux',
-                    i(inp){
-                        this.storage = inp
-                    },
-                    o(obj, arg){
-                        return this.storage
+                    _trigger(input){
+                        if(input <= 5){
+                            return Gentyl.IO.HALT
+                        }
                     }
-                },{
-                    storage:null
                 })
-
         },{
-            t:['beamout', '_']
-        },{
-
+            beamout_(obj, arg){
+                return obj.beam
+            }
         })
     })
 
     it('should throw error when shelling unprepared', function(){
         expect(function(){
-            g1.shell()
+            g1.io.enshell()
         }).toThrowError("unable to shell unprepared node")
 
     })
 
     it('should shell up', function(){
         g1.prepare()
-        g1.shell()
-
+        g1.io.enshell()
     })
 
     describe("prepared shell",function(){
 
         beforeEach(function(){
             g1.prepare()
-            g1.shell()
+            g1.io.enshell()
 
             //spyOn(this, 'outcatch')
 
@@ -88,42 +72,53 @@ describe("input-output", function(){
 
 
         it("should allow me to call input label",function(){
-            g1.ioShell.ins['beamin']("fallacies")
+            console.log(g1.io)
+            g1.io.inputs.beamin("fallacies")
         });
 
         it('should modify state using input function',function(){
-            g1.ioShell.ins.arc("hello?")
+            g1.io.inputs.arc("hello?")
 
-            expect(g1.resolve().arc).toBe("hello?")
+            expect(g1.crown.arc.ctx.saved).toBe("hello?")
+
+        })
+    })
+
+    describe('signal shelling',function(){
+
+        beforeEach(function(){
+            g1.prepare()
+            g1.io.enshell(signals.Signal.prototype.dispatch, signals.Signal)
+
+            //spyOn(this, 'outcatch')
 
         })
 
         it('should have a signal instance on outputs', function(){
-            expect(g1.ioShell.outs._ instanceof signals.Signal).toBe(true)
-            expect(g1.ioShell.outs.beamout instanceof signals.Signal).toBe(true)
-            expect(g1.ioShell.outs.crux instanceof signals.Signal).toBe(true)
+            expect(g1.io.outputs.arc.callbackContext instanceof signals.Signal).toBe(true)
+            expect(g1.io.outputs.beamout.callbackContext instanceof signals.Signal).toBe(true)
         })
 
         describe('with output detectors',function(){
 
             beforeEach(function(){
                 this.outcatch = function(out){
-                    console.log('depositing')
+                    console.log('depositing:', out)
                     this.deposit = out
-                }.bind(this);
+                };
                 this.deposit = undefined
-                g1.ioShell.outs["beamout"].add(this.outcatch, this)
-                g1.ioShell.outs["crux"].add(this.outcatch, this)
-                g1.ioShell.outs["_"].add(this.outcatch, this)
+
+                g1.io.outputs["beamout"].callbackContext.add(this.outcatch, this);
             })
 
-
-
             it('should allow signal subscription', function(){
-                var s = g1.ioShell;
+                var s = g1.io;
                 //console.log(s)
-                s.ins.beamin("Buckets")
-                s.ins.arc("beamout");
+                s.inputs.beamin("Buckets")
+                expect(this.deposit).toBeUndefined();
+                s.inputs.trigger(2);
+                expect(this.deposit).toBeUndefined();
+                s.inputs.trigger(6);
                 expect(this.deposit).toBe("Buckets")
 
                 //spyOn(s.outs.beamout, "dispatch")
@@ -131,10 +126,10 @@ describe("input-output", function(){
             })
 
         })
-
     })
 
     it('should do root io', function(){
+        pending("IO reconfiguration")
         var g2 = G({
             x:0
         },{
@@ -165,6 +160,7 @@ describe("input-output", function(){
     })
 
     describe('multiple inputs', function(){
+        pending("IO reconfiguration")
         var g2, shell
 
         beforeEach(function(){
@@ -205,7 +201,7 @@ describe("input-output", function(){
     })
 
     describe('filter select', function(){
-
+        pending("IO reconfiguration")
         var g2, shell
 
         beforeEach(function(){
@@ -237,36 +233,4 @@ describe("input-output", function(){
         })
 
     })
-
-    describe('callback methodologies', function(){
-        var testctx
-
-        beforeEach(function(){
-            this.deposit = undefined;
-            testctx = this;
-        })
-
-        it('should allow a callback without context',function(){
-            pending('fixes to io system');
-
-            // Gentyl.IO.setDefaultDispatchFunction(function(output, label){
-            //     testctx.deposit = `output: ${output} from ${label}`;
-            // })
-
-            var g = G("thing",{t:'_'}).prepare();
-
-            g.shell()
-
-            g.ioShell.ins._();
-            expect(testctx.deposit).toBe('output: thing from _')
-        })
-
-        it('should allow a callback factory',function(){
-
-        })
-
-        it('should allow an object context with method name')
-
-    })
-
 })

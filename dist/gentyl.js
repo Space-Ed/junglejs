@@ -17,11 +17,15 @@ var Gentyl;
         if (target === void 0) { target = []; }
         if (inputFunction === void 0) { inputFunction = Gentyl.Inventory.placeInput; }
         if (resolveFunction === void 0) { resolveFunction = Gentyl.Inventory.pickupInput; }
-        return new Gentyl.GNode({}, { i: inputFunction, t: target, il: label, r: resolveFunction }, state || { _placed: null });
+        var form = { t: target, r: resolveFunction };
+        form['_' + label] = inputFunction;
+        return new Gentyl.GNode({}, form, state || { _placed: null });
     }
     Gentyl.I = I;
     function O(label, outputFunction) {
-        return new Gentyl.GNode({}, { ol: label, o: outputFunction, r: Gentyl.Inventory.retract }, {});
+        var form = { r: Gentyl.Inventory.retract };
+        form[label + '_'] = outputFunction;
+        return new Gentyl.GNode({}, form, {});
     }
     Gentyl.O = O;
     function R(reconstructionBundle) {
@@ -426,6 +430,30 @@ var Gentyl;
             });
         }
         Util.applyMixins = applyMixins;
+        function objectArrayTranspose(objArr, key) {
+            var invert;
+            if (typeof (key) !== 'string') {
+                throw new Error("Value error: key must be string literal");
+            }
+            if (isVanillaArray(objArr)) {
+                invert = {};
+                objArr.forEach(function (value, index) {
+                    invert[value[key]] = value;
+                });
+            }
+            else if (isVanillaObject(objArr)) {
+                invert = [];
+                for (var k in objArr) {
+                    var obj = objArr[k];
+                    obj[key] = k;
+                    invert.push(obj);
+                }
+            }
+            else {
+                throw new Error("Value error: can only transpose object and array literals");
+            }
+        }
+        Util.objectArrayTranspose = objectArrayTranspose;
         function isPrimative(thing) {
             return typeof (thing) !== 'object';
         }
@@ -481,7 +509,7 @@ var Gentyl;
                 if (initial === void 0) { initial = null; }
                 if (reductor === void 0) { reductor = function (a, b, k) { }; }
                 var result = initial;
-                if (inThing instanceof Array) {
+                if (isVanillaArray(inThing)) {
                     for (var i = 0; i < inThing.length; i++) {
                         var subBundle = inThing[i];
                         result = reductor(result, afunc(subBundle, i), i);
@@ -514,7 +542,7 @@ var Gentyl;
             }
             return function (inThing) {
                 var outThing;
-                if (inThing instanceof Array) {
+                if (isVanillaArray(inThing)) {
                     outThing = [];
                     outThing.length = inThing.length;
                     for (var i = 0; i < inThing.length; i++) {
@@ -549,7 +577,7 @@ var Gentyl;
                 pfunc = primativeFunc || identity;
             }
             return function (inThing) {
-                if (inThing instanceof Array) {
+                if (isVanillaArray(inThing)) {
                     for (var i = 0; i < inThing.length; i++) {
                         var subBundle = inThing[i];
                         inThing[i] = afunc(subBundle, i);
@@ -578,8 +606,9 @@ var Gentyl;
             this.depth = 0;
             this.isRoot = true;
             this.prepared = false;
-            this.targeted = false;
-            this.form = new Gentyl.GForm(form);
+            this.form = new Gentyl.GForm(this);
+            var hooks = this.form.parse(form).hooks;
+            this.io = new Gentyl.IO.Component(this, hooks);
             var context = Gentyl.Util.deepCopy(state);
             this.ctx = new Gentyl.GContext(this, context, this.form.ctxmode);
             var inductor = this.inductComponent.bind(this);
@@ -609,7 +638,7 @@ var Gentyl;
                 this.prepared = true;
                 this.ctx.prepare();
                 this.form.preparator.call(this.ctx, prepargs);
-                this.prepareIO();
+                this.io.prepare();
                 this.crown = Gentyl.Util.typeCaseSplitF(this.prepareChild.bind(this, prepargs))(this.crown);
             }
             else {
@@ -623,22 +652,10 @@ var Gentyl;
                 var replica = child.replicate();
                 replica.setParent(this);
                 replica.prepare(prepargs);
-                Gentyl.Util.parassoc(replica.inputNodes, this.inputNodes);
-                Gentyl.Util.assoc(replica.outputNodes, this.outputNodes);
                 return replica;
             }
             else {
                 return child;
-            }
-        };
-        GNode.prototype.prepareIO = function () {
-            this.inputNodes = {};
-            if (typeof (this.form.inputLabel) == 'string') {
-                this.inputNodes[this.form.inputLabel] = [this];
-            }
-            this.outputNodes = {};
-            if (typeof (this.form.outputLabel) == 'string') {
-                this.outputNodes[this.form.outputLabel] = this;
             }
         };
         GNode.prototype.replicate = function () {
@@ -646,7 +663,7 @@ var Gentyl;
                 return this.ancestor.replicate();
             }
             else {
-                var repl = new GNode(this.crown, this.form.extract(), this.ctx.extract());
+                var repl = new GNode(this.crown, Gentyl.Util.melder(this.form.extract(), this.io.extract()), this.ctx.extract());
                 if (this.isAncestor) {
                     repl.ancestor = this;
                 }
@@ -671,92 +688,6 @@ var Gentyl;
             };
             return product;
         };
-        GNode.prototype.getTargets = function (input, root) {
-            function strtargs(targs, input, root) {
-                var targets = {};
-                if (targs == undefined) {
-                }
-                else if (targs instanceof Array) {
-                    for (var i = 0; i < targs.length; i++) {
-                        var val = targs[i];
-                        if (val in root.outputNodes) {
-                            targets[val] = root.outputNodes[val];
-                        }
-                    }
-                }
-                else {
-                    if (targs in root.outputNodes) {
-                        targets[targs] = root.outputNodes[targs];
-                    }
-                }
-                return targets;
-            }
-            if (typeof (this.form.targeting) == 'function') {
-                return strtargs(this.form.targeting(input), input, root);
-            }
-            else {
-                return strtargs(this.form.targeting, input, root);
-            }
-        };
-        GNode.prototype.shell = function () {
-            if (!this.prepared) {
-                throw new Error("unable to shell unprepared node");
-            }
-            var root = this.getRoot();
-            root.form.inputLabel = root.form.inputLabel || "_";
-            root.form.outputLabel = root.form.outputLabel || "_";
-            root.outputNodes["_"] = root;
-            root.inputNodes["_"] = [root];
-            var inpnodesmap = root.inputNodes;
-            var outnodemap = root.outputNodes;
-            var shell = {
-                ins: {},
-                outs: {}
-            };
-            for (var k in outnodemap) {
-                if (Gentyl.IO.ioShellDefault.dispatch === undefined) {
-                    shell.outs[k] = outnodemap[k].outputCallback = Gentyl.IO.ioShellDefault.setup(k);
-                    outnodemap[k].outputContext = undefined;
-                }
-                else if (Gentyl.IO.ioShellDefault.setup === undefined) {
-                    shell.outs[k] = outnodemap[k].outputCallback = Gentyl.IO.ioShellDefault.dispatch;
-                    outnodemap[k].outputContext = undefined;
-                }
-                else {
-                    var ctx = new Gentyl.IO.ioShellDefault.setup(k);
-                    outnodemap[k].outputContext = shell.outs[k] = ctx;
-                    outnodemap[k].outputCallback = Gentyl.IO.ioShellDefault.dispatch;
-                }
-            }
-            for (var k in inpnodesmap) {
-                var v = { inps: inpnodesmap[k], root: root };
-                shell.ins[k] = function (data) {
-                    var allTargets = {};
-                    var rootInput;
-                    for (var i = 0; i < this.inps.length; i++) {
-                        var inode = this.inps[i];
-                        var iresult = inode.form.inputFunction.call(inode.ctx, data);
-                        if (inode == this.root) {
-                            rootInput = iresult;
-                        }
-                        var targets = inode.getTargets(data, this.root);
-                        Gentyl.Util.assoc(targets, allTargets);
-                    }
-                    if (Object.keys(allTargets).length == 0) {
-                        return;
-                    }
-                    for (var key in allTargets) {
-                        allTargets[key].targeted = true;
-                    }
-                    this.root.resolve(data);
-                    for (var key in allTargets) {
-                        allTargets[key].targeted = false;
-                    }
-                }.bind(v);
-            }
-            root.ioShell = shell;
-            return shell;
-        };
         GNode.prototype.getParent = function (toDepth) {
             if (toDepth === void 0) { toDepth = 1; }
             if (this.parent == undefined) {
@@ -773,7 +704,7 @@ var Gentyl;
             return this.isRoot ? this : this.getParent().getRoot();
         };
         GNode.prototype.getNominal = function (label) {
-            if (this.form.contextLabel === label) {
+            if (this.ctx.label == label) {
                 return this;
             }
             else {
@@ -905,27 +836,34 @@ var Gentyl;
                 return cut ? null : node;
             }
         };
-        GNode.prototype.resolveUnderscore = function (resolver, resolveArgs) {
-            var result = resolver.resolve(resolveArgs);
-            return result;
-        };
         GNode.prototype.resolve = function (resolveArgs) {
             if (!this.prepared) {
                 this.prepare();
             }
-            Object.freeze(resolveArgs);
-            var carried = this.form.carrier.call(this.ctx, resolveArgs);
-            var resolvedNode;
-            if (this.crown != undefined) {
-                var selection = this.form.selector.call(this.ctx, Object.keys(this.crown), resolveArgs);
-                resolvedNode = this.resolveNode(this.crown, carried, selection);
+            var result;
+            if (this.io.isShellBase && !this.io.specialGate) {
+                var sInpHook = this.io.specialInput;
+                var sInpResult = sInpHook.tractor.call(this.ctx, resolveArgs);
+                var sResult;
+                if (sInpResult != Gentyl.IO.HALT) {
+                    this.io.specialGate = true;
+                    sResult = this.resolve(sInpResult);
+                    this.io.specialGate = false;
+                }
+                var sOutHook = this.io.specialOutput;
+                var sOutResult = sOutHook.tractor.call(this.ctx, sResult);
+                result = sOutResult;
             }
-            var result = this.form.resolver.call(this.ctx, resolvedNode, resolveArgs);
-            if (this.targeted) {
-                var outresult = this.form.outputFunction.call(this.ctx, result);
-                console.log("Output call back called on output", this.form.outputLabel);
-                this.outputContext[this.outputCallback](outresult, this.form.outputLabel);
-                this.targeted = false;
+            else {
+                Object.freeze(resolveArgs);
+                var carried = this.form.carrier.call(this.ctx, resolveArgs);
+                var resolvedNode;
+                if (this.crown != undefined) {
+                    var selection = this.form.selector.call(this.ctx, Object.keys(this.crown), resolveArgs);
+                    resolvedNode = this.resolveNode(this.crown, carried, selection);
+                }
+                result = this.form.resolver.call(this.ctx, resolvedNode, resolveArgs);
+                this.io.dispatchResult(result);
             }
             return result;
         };
@@ -936,32 +874,35 @@ var Gentyl;
 var Gentyl;
 (function (Gentyl) {
     var GForm = (function () {
-        function GForm(formObj) {
+        function GForm(host) {
+            this.host = host;
+        }
+        GForm.prototype.parse = function (formObj) {
             this.ctxmode = formObj.m || "";
             this.carrier = formObj.c || Gentyl.Util.identity;
             this.resolver = formObj.r || Gentyl.Util.identity;
             this.selector = formObj.s || function (keys, carg) { return true; };
             this.preparator = formObj.p || function (x) { };
-            this.inputLabel = formObj.il;
-            this.outputLabel = formObj.ol;
-            this.inputFunction = formObj.i || Gentyl.Util.identity;
-            this.outputFunction = formObj.o || Gentyl.Util.identity;
-            this.targeting = formObj.t;
-            this.contextLabel = formObj.cl;
-        }
+            var ioRegex = /^_([a-zA-Z_]*[a-zA-Z]+|\$)$|([a-zA-Z]+|\$)_$/;
+            var hooks = [];
+            for (var k in formObj) {
+                var res = k.match(ioRegex);
+                if (res && formObj[k] instanceof Function) {
+                    var inp = res[1], out = res[2];
+                    var labelOrientation = inp != undefined ? Gentyl.IO.Orientation.INPUT : Gentyl.IO.Orientation.OUTPUT;
+                    var label = inp || out;
+                    hooks.push({ label: label, tractor: formObj[k], orientation: labelOrientation, host: this.host });
+                }
+            }
+            return { hooks: hooks };
+        };
         GForm.prototype.extract = function () {
             return {
                 r: this.resolver,
                 c: this.carrier,
                 m: this.ctxmode,
                 p: this.preparator,
-                il: this.inputLabel,
-                ol: this.outputLabel,
-                i: this.inputFunction,
-                o: this.outputFunction,
-                t: this.targeting,
                 s: this.selector,
-                cl: this.contextLabel
             };
         };
         return GForm;
@@ -995,6 +936,332 @@ var Gentyl;
         }
         Inventory.selectNone = selectNone;
     })(Inventory = Gentyl.Inventory || (Gentyl.Inventory = {}));
+})(Gentyl || (Gentyl = {}));
+var Gentyl;
+(function (Gentyl) {
+    var IO;
+    (function (IO) {
+        IO.HALT = {};
+        Object.freeze(IO.HALT);
+        function halting(arg) {
+            return IO.HALT;
+        }
+        function passing(arg) {
+            return arg;
+        }
+        function defined(arg) {
+            return arg === undefined ? IO.HALT : arg;
+        }
+        function always(arg) {
+            return true;
+        }
+        function nothing(arg) {
+            return undefined;
+        }
+        function host(arg) {
+            return this.host;
+        }
+        (function (Orientation) {
+            Orientation[Orientation["INPUT"] = 0] = "INPUT";
+            Orientation[Orientation["OUTPUT"] = 1] = "OUTPUT";
+            Orientation[Orientation["NEUTRAL"] = 2] = "NEUTRAL";
+            Orientation[Orientation["MIXED"] = 3] = "MIXED";
+        })(IO.Orientation || (IO.Orientation = {}));
+        var Orientation = IO.Orientation;
+        var Port = (function () {
+            function Port(label) {
+                this.label = label;
+                this.shells = [];
+            }
+            Port.prototype.addShell = function (shell) {
+                this.shells.push(shell);
+            };
+            Port.prototype.handle = function (input) {
+                if (this.callback) {
+                    if (this.callbackContext) {
+                        this.callback.call(this.callbackContext, input);
+                    }
+                    else {
+                        this.callback.call(this, input);
+                    }
+                }
+            };
+            return Port;
+        }());
+        IO.Port = Port;
+        var ResolveInputPort = (function (_super) {
+            __extends(ResolveInputPort, _super);
+            function ResolveInputPort(label) {
+                var shells = [];
+                for (var _i = 1; _i < arguments.length; _i++) {
+                    shells[_i - 1] = arguments[_i];
+                }
+                _super.call(this, label);
+                this.callback = this.handleInput;
+                this.callbackContext = this;
+                for (var _a = 0, shells_1 = shells; _a < shells_1.length; _a++) {
+                    var shell = shells_1[_a];
+                    this.addShell(shell);
+                }
+            }
+            ResolveInputPort.prototype.handleInput = function (input) {
+                for (var _i = 0, _a = this.shells; _i < _a.length; _i++) {
+                    var shell = _a[_i];
+                    var inputGate = false;
+                    var baseInput = [];
+                    var hooks = [].concat(shell.inputHooks[this.label] || []);
+                    for (var _b = 0, hooks_1 = hooks; _b < hooks_1.length; _b++) {
+                        var hook = hooks_1[_b];
+                        var host = hook.host;
+                        var iresult = hook.tractor.call(host.ctx, input);
+                        inputGate = inputGate || iresult != IO.HALT;
+                        baseInput = baseInput.concat(iresult);
+                        console.log("[input handle hook %s] Handle input: %s", hook.label, iresult);
+                    }
+                    if (inputGate) {
+                        console.log("[base trigger resolve ] Handle input: ", baseInput);
+                        shell.base.host.io.specialGate = true;
+                        shell.base.host.resolve(baseInput);
+                        shell.base.host.io.specialGate = false;
+                    }
+                }
+            };
+            return ResolveInputPort;
+        }(Port));
+        IO.ResolveInputPort = ResolveInputPort;
+        var ResolveOutputPort = (function (_super) {
+            __extends(ResolveOutputPort, _super);
+            function ResolveOutputPort(label, outputCallback, outputContext) {
+                _super.call(this, label);
+                this.callback = outputCallback;
+                this.callbackContext = this.prepareContext(outputContext);
+            }
+            ResolveOutputPort.prototype.prepareContext = function (outputContext) {
+                if (typeof (outputContext) == 'function') {
+                    return new outputContext(this);
+                }
+                else if (typeof (outputContext) == 'object') {
+                    return outputContext;
+                }
+                else {
+                    return this;
+                }
+            };
+            return ResolveOutputPort;
+        }(Port));
+        IO.ResolveOutputPort = ResolveOutputPort;
+        function orientationChange(child, node) {
+            if (child === Orientation.OUTPUT && node === Orientation.INPUT) {
+                return Orientation.INPUT;
+            }
+            else if (child === Orientation.INPUT && node === Orientation.OUTPUT) {
+                return Orientation.OUTPUT;
+            }
+            else if (node === Orientation.MIXED) { }
+        }
+        function orientationConflict(child1, child2) {
+            return (child1 === Orientation.OUTPUT && child2 === Orientation.INPUT)
+                || (child1 === Orientation.INPUT && child2 === Orientation.OUTPUT);
+        }
+        var Component = (function () {
+            function Component(host, initHooks) {
+                this.host = host;
+                this.isShellBase = false;
+                this.specialGate = false;
+                this.orientation = Orientation.NEUTRAL;
+                this.inputs = {};
+                this.outputs = {};
+                this.initialiseHooks(initHooks);
+            }
+            Component.prototype.prepare = function () {
+            };
+            Component.prototype.extract = function () {
+                var ext = {};
+                for (var _i = 0, _a = this.hooks; _i < _a.length; _i++) {
+                    var tractor = _a[_i].tractor;
+                    ext[tractor.name] = tractor;
+                }
+                return ext;
+            };
+            Component.prototype.initialiseHooks = function (hooks) {
+                this.hooks = [];
+                this.specialInput = { tractor: halting, label: '$', host: this.host, orientation: Orientation.INPUT };
+                this.specialOutput = { tractor: halting, label: '$', host: this.host, orientation: Orientation.OUTPUT };
+                this.inputHooks = {};
+                this.outputHooks = {};
+                for (var _i = 0, hooks_2 = hooks; _i < hooks_2.length; _i++) {
+                    var hook = hooks_2[_i];
+                    this.addHook(hook);
+                }
+            };
+            Component.prototype.addHook = function (hook) {
+                var label = hook.label, tractor = hook.tractor, orientation = hook.orientation;
+                if (this.orientation == Orientation.NEUTRAL) {
+                    this.orientation = orientation;
+                }
+                else if (orientation != this.orientation) {
+                    this.orientation = Orientation.MIXED;
+                }
+                var label = label;
+                if (orientation == Orientation.INPUT) {
+                    this.inputHooks[label] = hook;
+                }
+                else if (orientation == Orientation.OUTPUT) {
+                    this.outputHooks[label] = hook;
+                }
+                this.hooks.push(hook);
+            };
+            Component.prototype.enshell = function (opcallback, opcontext) {
+                if (!this.host.prepared) {
+                    throw new Error("unable to shell unprepared node");
+                }
+                this.reorient();
+                this.isShellBase = true;
+                this.collect(opcallback, opcontext);
+            };
+            Component.prototype.reorient = function () {
+                var inverted = false;
+                var upperOrientation;
+                for (var _i = 0, _a = this.host.crown; _i < _a.length; _i++) {
+                    var child = _a[_i];
+                    if (child instanceof Gentyl.GNode) {
+                        child.io.reorient();
+                        var upo = child.io.orientation;
+                        if (child.io.isShellBase && upo != Orientation.NEUTRAL) {
+                            continue;
+                        }
+                        else if (!upperOrientation || !orientationConflict(upperOrientation, upo)) {
+                            upperOrientation = upo;
+                        }
+                        else {
+                            throw new Error("Cannot have siblings with dissimilar io orientation");
+                        }
+                    }
+                }
+                if (orientationConflict(upperOrientation, this.orientation)) {
+                    this.isShellBase = true;
+                }
+                if (this.orientation === Orientation.MIXED) {
+                    this.isShellBase = true;
+                }
+                if (this.orientation == Orientation.NEUTRAL) {
+                    this.orientation = upperOrientation;
+                    this.isShellBase = false;
+                }
+            };
+            Component.prototype.collect = function (opcallback, opcontext) {
+                var accumulatedHooks = [].concat(this.hooks);
+                var accumulatedShells = [];
+                for (var k in this.host.crown) {
+                    var child = this.host.crown[k];
+                    if (child.io != undefined) {
+                        var _a = child.io.collect(opcallback, opcontext), hooks = _a.hooks, shells = _a.shells;
+                        accumulatedHooks = accumulatedHooks.concat(hooks);
+                        accumulatedShells = accumulatedShells.concat(shells);
+                    }
+                }
+                if (this.isShellBase) {
+                    this.shell = new HookShell(this, accumulatedHooks, accumulatedShells, opcallback, opcontext);
+                    var _loop_1 = function(k_1) {
+                        this_1.inputs[k_1] = (function (input) {
+                            console.log("[input closure] Handle input: ", input);
+                            this.shell.sinks[k_1].handle(input);
+                        }).bind(this_1);
+                    };
+                    var this_1 = this;
+                    for (var k_1 in this.shell.sinks) {
+                        _loop_1(k_1);
+                    }
+                    for (var k_2 in this.shell.sources) {
+                        this.outputs[k_2] = this.shell.sources[k_2];
+                    }
+                    return { shells: [this.shell], hooks: [] };
+                }
+                else {
+                    return { hooks: accumulatedHooks, shells: accumulatedShells };
+                }
+            };
+            Component.prototype.dispatchResult = function (result) {
+                var baseresult;
+                for (var k in this.outputHooks) {
+                    console.log("[dispatch result] Handle result: %s , to hook ", result);
+                    console.log(this.outputHooks[k]);
+                    var oresult = this.outputHooks[k].tractor.call(this.host.ctx, result);
+                    if (oresult != IO.HALT) {
+                        var port = this.base.shell.sources[k];
+                        port.handle(oresult);
+                    }
+                }
+                return baseresult;
+            };
+            return Component;
+        }());
+        IO.Component = Component;
+        var HookShell = (function () {
+            function HookShell(base, midrantHooks, subshells, opcallback, opcontext) {
+                this.base = base;
+                this.sources = {};
+                this.sinks = {};
+                this.inputHooks = {};
+                this.outputHooks = {};
+                for (var _i = 0, midrantHooks_1 = midrantHooks; _i < midrantHooks_1.length; _i++) {
+                    var hook = midrantHooks_1[_i];
+                    this.addMidrantHook(hook);
+                }
+                for (var label in this.inputHooks) {
+                    this.sinks[label] = new ResolveInputPort(label, this);
+                }
+                for (var label in this.outputHooks) {
+                    this.sources[label] = new ResolveOutputPort(label, opcallback, opcontext);
+                }
+                for (var _a = 0, subshells_1 = subshells; _a < subshells_1.length; _a++) {
+                    var shell = subshells_1[_a];
+                    this.addShell(shell);
+                }
+            }
+            HookShell.prototype.addMidrantHook = function (hook) {
+                hook.host.io.base = this.base;
+                if (hook.orientation === Orientation.INPUT) {
+                    this.inputHooks[hook.label] = (this.inputHooks[hook.label] || []).concat(hook);
+                }
+                else if (hook.orientation === Orientation.OUTPUT) {
+                    this.outputHooks[hook.label] = (this.outputHooks[hook.label] || []).concat(hook);
+                }
+            };
+            HookShell.prototype.addShell = function (shell) {
+                for (var _i = 0, _a = shell.sinks; _i < _a.length; _i++) {
+                    var sink = _a[_i];
+                    if (sink.label in this.sinks) {
+                        var outerSink = this.sinks[sink.label];
+                        outerSink.addShell(this);
+                        for (var _b = 0, _c = sink.shells; _b < _c.length; _b++) {
+                            var shell_1 = _c[_b];
+                            shell_1.sinks[sink.label] = outerSink;
+                        }
+                    }
+                    else {
+                        this.sinks[sink.label] = sink;
+                    }
+                }
+                for (var _d = 0, _e = shell.sources; _d < _e.length; _d++) {
+                    var source = _e[_d];
+                    if (source.label in this.sources) {
+                        var outerSource = this.sources[source.label];
+                        outerSource.addShell(this);
+                        for (var _f = 0, _g = source.shells; _f < _g.length; _f++) {
+                            var shell_2 = _g[_f];
+                            shell_2.sources[source.label] = outerSource;
+                        }
+                    }
+                    else {
+                        this.sources[source.label] = source;
+                    }
+                }
+            };
+            return HookShell;
+        }());
+        IO.HookShell = HookShell;
+    })(IO = Gentyl.IO || (Gentyl.IO = {}));
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {
@@ -1076,54 +1343,6 @@ var Gentyl;
         return Terminal;
     }());
     Gentyl.Terminal = Terminal;
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
-    var IO;
-    (function (IO) {
-        IO.ioShellDefault = {
-            setup: function (label) {
-            },
-            dispatch: function (output, label) {
-            }
-        };
-        function setDefaultShell(shellConstructor) {
-            Gentyl.IO.ioShellDefault = {
-                setup: shellConstructor,
-                dispatch: undefined
-            };
-        }
-        IO.setDefaultShell = setDefaultShell;
-        function setDefaultDispatchFunction(dispatchF) {
-            Gentyl.IO.ioShellDefault = {
-                setup: function (label) { return dispatchF; },
-                dispatch: undefined
-            };
-        }
-        IO.setDefaultDispatchFunction = setDefaultDispatchFunction;
-        function setDefaultDispatchObject(object, method) {
-            var ctxconstructor;
-            var cb;
-            var error;
-            if (object instanceof Function) {
-                ctxconstructor = object;
-            }
-            else if (object instanceof Object) {
-                ctxconstructor = function () { return object; };
-            }
-            else {
-                error = 'object must be Object or Function';
-            }
-            if (error) {
-                throw new Error(error);
-            }
-            Gentyl.IO.ioShellDefault = {
-                setup: ctxconstructor,
-                dispatch: method
-            };
-        }
-        IO.setDefaultDispatchObject = setDefaultDispatchObject;
-    })(IO = Gentyl.IO || (Gentyl.IO = {}));
 })(Gentyl || (Gentyl = {}));
 (function () {
     var root = this;

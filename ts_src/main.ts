@@ -5,6 +5,7 @@
 /// <reference path="util.ts"/>
 /// <reference path="form.ts"/>
 /// <reference path="core.ts"/>
+/// <reference path="io.ts"/>
 /// <reference path="reconstruction.ts"/>
 /// <reference path="terminal.ts"/>
 
@@ -12,7 +13,6 @@
 /// <reference path="inventory/select.ts"/>
 /// <reference path="inventory/resolver.ts"/>
 
-/// <reference path="module.ts"/>
 /// <reference path="aliases.ts"/>
 
 

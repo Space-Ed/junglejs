@@ -3,10 +3,6 @@
 
 namespace Gentyl {
 
-    export interface IOShell {
-        ins:any //that is a mapping from names to infunctions
-        outs:any //that is a mapping from names to callback context objects
-    }
 
     export class GNode {
         ctx:GContext;
@@ -23,12 +19,7 @@ namespace Gentyl {
         form:GForm;
 
         //internal io
-        inputNodes:any;
-        outputNodes:any;
-        ioShell:any;
-        outputContext:any;
-        outputCallback:string;
-        targeted:boolean;
+        io:IO.Component;
 
         //internal
         ancestor:GNode;
@@ -38,9 +29,11 @@ namespace Gentyl {
             this.depth = 0;
             this.isRoot = true;
             this.prepared = false;
-            this.targeted = false;
 
-            this.form = new GForm(form);
+            this.form = new GForm(this);
+
+            var {hooks} = this.form.parse(form);
+            this.io = new IO.Component(this, hooks);
 
             var context = Util.deepCopy(state);
             this.ctx = new GContext(this, context, this.form.ctxmode);
@@ -88,8 +81,7 @@ namespace Gentyl {
                 this.ctx.prepare();
                 this.form.preparator.call(this.ctx, prepargs);
 
-                //create io facilities for node.
-                this.prepareIO();
+                this.io.prepare();
 
                 //prepare children, object, array, primative
                 this.crown = Util.typeCaseSplitF(this.prepareChild.bind(this, prepargs))(this.crown);
@@ -110,27 +102,12 @@ namespace Gentyl {
                 replica.setParent(this);
                 replica.prepare(prepargs);
 
-                //collect nodes from children allowing parallel input not out
-                Util.parassoc(replica.inputNodes, this.inputNodes);
-                Util.assoc(replica.outputNodes, this.outputNodes);
-
                 return replica;
             }else{
                 return child;
             }
         }
 
-        private prepareIO(){
-            this.inputNodes  = {}
-            if (typeof(this.form.inputLabel)  == 'string'){
-                this.inputNodes[this.form.inputLabel] = [this]
-            }
-
-            this.outputNodes  = {}
-            if (typeof(this.form.outputLabel)  == 'string'){
-                this.outputNodes[this.form.outputLabel] = this
-            }
-        }
 
 
         replicate():GNode{
@@ -140,7 +117,7 @@ namespace Gentyl {
             }else{
 
                 //this is a raw node, either an ancestor
-                var repl = new GNode(this.crown, this.form.extract(), this.ctx.extract())
+                var repl = new GNode(this.crown, Util.melder(this.form.extract(), this.io.extract()), this.ctx.extract())
 
                 //in the case of the ancestor it comes from prepared
                 if(this.isAncestor){
@@ -171,115 +148,6 @@ namespace Gentyl {
         }
 
 
-        getTargets(input, root){
-            //create submap of the output nodes being only those activted by the current node targeting
-            function strtargs(targs, input, root){
-                var targets = {};
-                if(targs == undefined){
-                    //no targets on node
-                }else if(targs instanceof Array){
-                    for (let i = 0; i < targs.length; i++) {
-                        let val = targs[i];
-                        if(val in root.outputNodes){
-                            targets[val] = root.outputNodes[val]
-                        }
-                    }
-                }else{
-                    if(targs in root.outputNodes){
-                        targets[targs] = root.outputNodes[targs]
-                    }
-                }
-                //console.log("returned targets:", targets)
-                return targets
-            }
-
-            if(typeof(this.form.targeting) == 'function'){
-                return strtargs(this.form.targeting(input), input, root)
-            }else{
-                return strtargs(this.form.targeting, input, root)
-            }
-        }
-
-        shell():IOShell{
-
-            if(!this.prepared){
-                throw new Error("unable to shell unprepared node")
-            }
-
-            //implicit root labelling;
-            var root = this.getRoot();
-
-            //only operate on root
-            root.form.inputLabel = root.form.inputLabel || "_";
-            root.form.outputLabel = root.form.outputLabel || "_";
-            root.outputNodes["_"] = root
-            root.inputNodes["_"] = [root]
-            var inpnodesmap = root.inputNodes;
-            var outnodemap = root.outputNodes;
-
-
-            var shell = {
-                ins:{},
-                outs:{}
-            }
-
-            //create the output signals.
-            for(let k in outnodemap){
-                if(Gentyl.IO.ioShellDefault.dispatch === undefined){
-                    //case for a contextless higher order function system
-                    shell.outs[k] = outnodemap[k].outputCallback = Gentyl.IO.ioShellDefault.setup(k);
-                    outnodemap[k].outputContext = undefined;
-                }else if(Gentyl.IO.ioShellDefault.setup === undefined){
-                    //case fot a contextless direct function
-                    shell.outs[k] = outnodemap[k].outputCallback = Gentyl.IO.ioShellDefault.dispatch;
-                    outnodemap[k].outputContext = undefined;
-                }else{
-                    //case for contextual callback system
-                    var ctx = new Gentyl.IO.ioShellDefault.setup(k);
-                    outnodemap[k].outputContext = shell.outs[k] = ctx
-                    outnodemap[k].outputCallback = Gentyl.IO.ioShellDefault.dispatch;
-                }
-
-            }
-
-            //create input functions
-            for(let k in inpnodesmap){
-                var v = {inps:inpnodesmap[k], root:root}
-
-                shell.ins[k] = function(data){
-
-                    //construct a map of olabel:Onode that will be activated this time
-                    var allTargets = {};
-                    var rootInput;
-
-                    for (let i = 0; i < this.inps.length; i++){
-                        var inode = <GNode>this.inps[i];
-                        var iresult = inode.form.inputFunction.call(inode.ctx, data);
-                        if(inode == this.root){rootInput = iresult}
-                        var targets = inode.getTargets(data, this.root); //Quandry: should it be input function result
-                        Util.assoc(targets, allTargets);
-                    }
-
-                    if(Object.keys(allTargets).length == 0){return;} //no resolution if no targets
-
-                    for (let key in allTargets) {
-                        //console.log("target %s set targets", key, allTargets[key])
-                        allTargets[key].targeted = true;  //set allTargets
-                    }
-
-                    this.root.resolve(data);           //trigger root resolution. Quandry: should it be input function result
-
-                    for (let key in allTargets) {
-                        allTargets[key].targeted = false;  //clear targets
-                    }
-                }.bind(v)
-            }
-            root.ioShell = shell;
-            return shell
-        }
-
-
-
 
         public getParent(toDepth = 1):GNode{
             if (this.parent == undefined){
@@ -296,7 +164,7 @@ namespace Gentyl {
         }
 
         public getNominal(label):GNode{
-            if(this.form.contextLabel === label){
+            if(this.ctx.label == label){
                 return this;
             }else{
                 if (this.parent == undefined){
@@ -458,15 +326,6 @@ namespace Gentyl {
             }
         }
 
-        private resolveUnderscore(resolver:GNode, resolveArgs){
-            //now this is the parent context
-
-            var result = resolver.resolve(resolveArgs)
-
-            return result
-
-        }
-
         resolve(resolveArgs){
 
             if (!this.prepared){
@@ -474,32 +333,51 @@ namespace Gentyl {
                 //throw  Error("Node with state is not prepared, unable to resolve")
             }
 
-            Object.freeze(resolveArgs)
-            var carried = this.form.carrier.call(this.ctx, resolveArgs)
+            // if this is an
 
-            var resolvedNode
-            if(this.crown != undefined){
-                //form the selection for this node
-                var selection =  this.form.selector.call(this.ctx, Object.keys(this.crown), resolveArgs);
-                //recurse on the contained node
-                resolvedNode = this.resolveNode(this.crown, carried, selection)
+            var result
+
+            if (this.io.isShellBase && !this.io.specialGate){
+                //resolve external
+                var sInpHook = this.io.specialInput
+                var sInpResult = sInpHook.tractor.call(this.ctx, resolveArgs);
+
+                var sResult;
+                if(sInpResult != IO.HALT){
+                    this.io.specialGate = true;
+                    sResult = this.resolve(sInpResult)
+                    this.io.specialGate = false;
+                }
+
+                var sOutHook = this.io.specialOutput
+                var sOutResult = sOutHook.tractor.call(this.ctx, sResult);
+
+                // if(sOutResult != IO.HALT){
+                //     this.io.dispatchResult(resolveArgs)
+                // }
+
+                result = sOutResult;
+
+            }else{
+                Object.freeze(resolveArgs)
+
+                var carried = this.form.carrier.call(this.ctx, resolveArgs)
+
+                var resolvedNode
+                if(this.crown != undefined){
+                    //form the selection for this node
+                    var selection =  this.form.selector.call(this.ctx, Object.keys(this.crown), resolveArgs);
+                    //recurse on the contained node
+                    resolvedNode = this.resolveNode(this.crown, carried, selection)
+                }
+
+                //modifies the resolved context and returns the processed result
+                result = this.form.resolver.call(this.ctx, resolvedNode,  resolveArgs)
+                
+                this.io.dispatchResult(result)
+
             }
-
-            //modifies the resolved context and returns the processed result
-            var result = this.form.resolver.call(this.ctx, resolvedNode,  resolveArgs)
-
-            //dispatch if marked
-            //console.log(`check Output stage with olabel ${this.outputLabel} reached targeted? , `,this.targeted)
-            if(this.targeted){
-                var outresult = this.form.outputFunction.call(this.ctx, result)
-                console.log("Output call back called on output", this.form.outputLabel)
-
-                //when there is a context call upon it otherwise without
-                this.outputContext[this.outputCallback](outresult, this.form.outputLabel)
-
-                this.targeted = false;
-            }
-
+            //the dispatch process will decide what this node returns
             return result
         }
     }

@@ -6,12 +6,6 @@ namespace Gentyl {
         s?:(keys, arg?)=>any;
         p?:(arg)=>void;
         m?:string;
-        i?:(arg)=>any;
-        o?:(arg)=>any;
-        il?:string;
-        ol?:string;
-        t?:any;
-        cl?:string;
     }
 
     /**
@@ -26,28 +20,36 @@ namespace Gentyl {
          resolver:(obj, arg)=>any;
          selector:(keys, arg)=>any;
          preparator:(arg)=>void;
+         depreparator:(arg)=>void;
 
-         //form io
-         targeting:any;
-         inputLabel:string;
-         outputLabel:string;
-        inputFunction:(arg)=>any;
-         outputFunction:(arg)=>any;
 
-         contextLabel:string
 
-         constructor(formObj:FormSpec){
+         constructor(private host:GNode){}
+
+         parse(formObj:FormSpec):{hooks:IO.Hook[]} {
+
              this.ctxmode =  formObj.m || "";
              this.carrier = formObj.c || Gentyl.Util.identity;
              this.resolver = formObj.r || Gentyl.Util.identity;
              this.selector = formObj.s || function(keys, carg){return true}
-             this.preparator = formObj.p || function(x){}
-             this.inputLabel = formObj.il;
-             this.outputLabel = formObj.ol;
-             this.inputFunction = formObj.i || Gentyl.Util.identity;
-             this.outputFunction = formObj.o || Gentyl.Util.identity;
-             this.targeting = formObj.t;
-             this.contextLabel = formObj.cl;
+             this.preparator = formObj.p || function(x){};
+
+            var ioRegex = /^_([a-zA-Z_]*[a-zA-Z]+|\$)$|([a-zA-Z]+|\$)_$/;
+
+            // parse for io functions ignoring uncompliant names and non functions
+            var hooks = [];
+
+            for (var k in formObj){
+                var res = k.match(ioRegex);
+                if (res && formObj[k] instanceof Function){
+                   var inp = res[1], out = res[2];
+                   var labelOrientation = inp != undefined ? IO.Orientation.INPUT : IO.Orientation.OUTPUT;
+                   var label = inp || out;
+                   hooks.push({label:label, tractor:formObj[k], orientation:labelOrientation, host:this.host})
+               }
+            }
+
+            return {hooks:hooks};
          }
 
         extract():FormSpec{
@@ -56,13 +58,7 @@ namespace Gentyl {
                 c:this.carrier ,
                 m:this.ctxmode ,
                 p:this.preparator,
-                il:this.inputLabel,
-                ol:this.outputLabel,
-                i:this.inputFunction,
-                o:this.outputFunction,
-                t:this.targeting,
                 s:this.selector,
-                cl:this.contextLabel
             }
         }
      }

@@ -16,6 +16,7 @@ namespace Gentyl {
         ownProperties:any;
         propertyLayerMap:any;
         closed:boolean;
+        label:string;
 
 
         constructor(private host:GNode, hostContext:any, private mode:string){

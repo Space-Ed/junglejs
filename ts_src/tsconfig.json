@@ -38,8 +38,8 @@
         "./inventory/io.ts",
         "./inventory/resolver.ts",
         "./inventory/select.ts",
+        "./io.ts",
         "./main.ts",
-        "./module.ts",
         "./reconstruction.ts",
         "./terminal.ts",
         "./util.ts"

@@ -226,7 +226,7 @@ namespace Gentyl{
             }
         }
 
-        export function deepCopy(thing){
+        export function deepCopy<T>(thing:T):T{
             return typeCaseSplitF(deepCopy, deepCopy)(thing)
         }
 
@@ -236,6 +236,30 @@ namespace Gentyl{
                     derivedCtor.prototype[name] = baseCtor.prototype[name];
                 });
             });
+        }
+
+        export function objectArrayTranspose(objArr:any, key:string){
+            var invert;
+
+            if(typeof(key) !== 'string'){
+                throw new Error("Value error: key must be string literal")
+            }
+
+            if(isVanillaArray(objArr)){
+                invert = {};
+                (<Array<any>>objArr).forEach(function(value, index){
+                    invert[<string>value[key]] = value;
+                })
+            }else if(isVanillaObject(objArr)){
+                invert = [];
+                for (var k in objArr){
+                    var obj = objArr[k];
+                    obj[key] = k;
+                    invert.push(obj);
+                }
+            }else{
+                throw new Error("Value error: can only transpose object and array literals")
+            }
         }
 
         export function isPrimative(thing){
@@ -291,7 +315,7 @@ namespace Gentyl{
 
             return function(inThing, initial=null, reductor=function(a,b,k){}){
                 var result = initial;
-                if(inThing instanceof Array){
+                if(isVanillaArray(inThing)){
                     for (var i = 0; i < inThing.length; i++){
                         var subBundle = inThing[i];
                         result = reductor(result, afunc(subBundle, i), i)
@@ -324,7 +348,7 @@ namespace Gentyl{
 
             return function(inThing){
                 var outThing;
-                if(inThing instanceof Array){
+                if(isVanillaArray(inThing)){
                     outThing = [];
                     outThing.length = inThing.length;
                     for (var i = 0; i < inThing.length; i++){
@@ -360,7 +384,7 @@ namespace Gentyl{
             }
 
             return function(inThing){
-                if(inThing instanceof Array){
+                if(isVanillaArray(inThing)){
                     for (var i = 0; i < inThing.length; i++){
                         var subBundle = inThing[i];
                         inThing[i] = afunc(subBundle, i)
