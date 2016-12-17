@@ -128,34 +128,80 @@ describe("input-output", function(){
         })
     })
 
-    it('should do root io', function(){
-        pending("IO reconfiguration")
-        var g2 = G({
-            x:0
-        },{
-            i(input){
-                this.store = input;
-                this.stack.push(input)
-            },
-            o(output){
-                return `store: ${this.store} stack: ${this.stack[0]}`
-            },
-            t:"_"
-        },{
-            store:"dead",
-            stack:[]
-        }).prepare()
+    describe("special base io", function(){
 
-        var s = g2.shell()
-        spyOn(s.outs._, "dispatch")
-        s.outs._.add(function(op){
-            console.log(op)
-        });
+        var trigate, entrigate, entrigater, trigater, g2;
 
-        s.ins._("stagnation")
-        s.ins._("calamity")
+        beforeEach(function(){
+            trigate = G({isolated:0},{
+                _$(input){},
+                $_(output){}
+            }).prepare().enshell(pass, {});
 
-        expect(s.outs._.dispatch).toHaveBeenCalled()
+            entrigate = G({open:0},{
+                __$(input){},
+                $_(output){return output}
+            }).prepare().enshell(pass, {});
+
+            entrigater = G({},{
+                __$(input){},
+                $__(output){}
+            }).prepare().enshell(pass, {});
+
+            trigater = G({},{
+                __$(input){},
+                $_(output){}
+            }).prepare().enshell(pass, {});
+
+            entrigater = G({})
+
+            g2 = G(null,{
+                __$(input){
+                    this.store = input;
+                },
+                $__(output){
+                    return `store: ${this.store}`
+                }
+            },{
+                store:"dead",
+            }).prepare();
+        })
+
+        fit('should do root io', function(){
+
+
+            g2.io.enshell(function(x){
+                console.log(`output: ${x}`);
+            }, {});
+
+            var s = g2.io;
+
+            s.inputs.$("stagnation")
+            spyOn(s.outputs.$, "callback")
+            s.inputs.$("stagnation")
+
+            expect(s.outputs.$.callback).toHaveBeenCalled()
+
+        })
+
+        fit('resolve approach',function(){
+            g2.io.enshell();
+            expect(g2.resolve("alive")).toBe("store: alive");
+
+            var source = trigate.io.shell.sources.$;
+            spyOn(source, 'callback')
+
+            expect(trigate.resolve()).toBeUndefined()
+            expect(source.callback).not.toHaveBeenCalled();
+
+
+        })
+
+        it('should throw exceptions in failcases',function(){
+            expect(function(){
+
+            }).toThrowError()
+        })
 
     })
 

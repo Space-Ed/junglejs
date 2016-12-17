@@ -32,8 +32,8 @@ namespace Gentyl {
 
             this.form = new GForm(this);
 
-            var {hooks} = this.form.parse(form);
-            this.io = new IO.Component(this, hooks);
+            var {hooks, context, specialIn, specialOut} = this.form.parse(form);
+            this.io = new IO.Component(this, hooks, specialIn, specialOut);
 
             var context = Util.deepCopy(state);
             this.ctx = new GContext(this, context, this.form.ctxmode);
@@ -294,6 +294,12 @@ namespace Gentyl {
 
         }
 
+        enshell(callback, context_factory?:any){
+            this.io.enshell(callback, context_factory);
+
+            return this;
+        }
+
         //main recursion
         private  resolveNode(node, resolveArgs, selection):any{
             //log("node to resolve: ", node)
@@ -333,9 +339,7 @@ namespace Gentyl {
                 //throw  Error("Node with state is not prepared, unable to resolve")
             }
 
-            // if this is an
 
-            var result
 
             if (this.io.isShellBase && !this.io.specialGate){
                 //resolve external
@@ -343,21 +347,16 @@ namespace Gentyl {
                 var sInpResult = sInpHook.tractor.call(this.ctx, resolveArgs);
 
                 var sResult;
-                if(sInpResult != IO.HALT){
+                if(sInpResult != IO.HALT && (sInpHook.eager || sInpResult !== undefined)){
                     this.io.specialGate = true;
                     sResult = this.resolve(sInpResult)
                     this.io.specialGate = false;
+                    return sResult
+                }else{
+                    //the input has failed to trigger resolution our output hook
+                    //will provide the return value on potentially undefined input
+                    return undefined //this.io.specialOutput.tractor.call(this.ctx, sInpResult);
                 }
-
-                var sOutHook = this.io.specialOutput
-                var sOutResult = sOutHook.tractor.call(this.ctx, sResult);
-
-                // if(sOutResult != IO.HALT){
-                //     this.io.dispatchResult(resolveArgs)
-                // }
-
-                result = sOutResult;
-
             }else{
                 Object.freeze(resolveArgs)
 
@@ -372,13 +371,10 @@ namespace Gentyl {
                 }
 
                 //modifies the resolved context and returns the processed result
-                result = this.form.resolver.call(this.ctx, resolvedNode,  resolveArgs)
-                
-                this.io.dispatchResult(result)
+                var result = this.form.resolver.call(this.ctx, resolvedNode,  resolveArgs)
 
+                return this.io.dispatchResult(result)
             }
-            //the dispatch process will decide what this node returns
-            return result
         }
     }
 

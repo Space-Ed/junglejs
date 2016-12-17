@@ -98,6 +98,17 @@ declare namespace Gentyl {
     }
 }
 declare namespace Gentyl {
+    enum LabelTypes {
+        PASSIVE = 0,
+        TRIG = 1,
+        ENTRIG = 2,
+        GATE = 3,
+        GATER = 4,
+        TRIGATE = 5,
+        TRIGATER = 6,
+        ENTRIGATE = 7,
+        ENTRIGATER = 8,
+    }
     interface FormSpec {
         r?: (obj, args?) => any;
         c?: (args?) => any;
@@ -116,6 +127,9 @@ declare namespace Gentyl {
         constructor(host: GNode);
         parse(formObj: FormSpec): {
             hooks: IO.Hook[];
+            context: any;
+            specialIn: IO.Hook;
+            specialOut: IO.Hook;
         };
         extract(): FormSpec;
     }
@@ -142,6 +156,7 @@ declare namespace Gentyl {
             label: string;
             tractor: Function;
             orientation: Orientation;
+            eager: boolean;
         }
         class Port {
             label: any;
@@ -155,6 +170,11 @@ declare namespace Gentyl {
         class ResolveInputPort extends Port {
             shells: HookShell[];
             constructor(label: any, ...shells: HookShell[]);
+            handleInput(input: any): void;
+        }
+        class SpecialInputPort extends ResolveInputPort {
+            private base;
+            constructor(base: Component);
             handleInput(input: any): void;
         }
         class ResolveOutputPort extends Port {
@@ -175,12 +195,12 @@ declare namespace Gentyl {
             inputHooks: any;
             outputHooks: any;
             shell: HookShell;
-            constructor(host: GNode, initHooks: Hook[]);
+            constructor(host: GNode, initHooks: Hook[], specialIn: Hook, specialOut: Hook);
             prepare(): void;
             extract(): {};
-            initialiseHooks(hooks: Hook[]): void;
+            initialiseHooks(hooks: Hook[], specialIn: Hook, specialOut: Hook): void;
             addHook(hook: Hook): void;
-            enshell(opcallback: any, opcontext?: any): void;
+            enshell(opcallback: any, opcontext?: any): HookShell;
             reorient(): void;
             collect(opcallback: any, opcontext?: any): {
                 hooks: Hook[];

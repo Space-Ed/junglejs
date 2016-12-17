@@ -38,7 +38,8 @@ namespace Gentyl {
             host:GNode,
             label:string,
             tractor:Function,
-            orientation:Orientation
+            orientation:Orientation,
+            eager:boolean
         }
 
         export class Port{
@@ -102,7 +103,8 @@ namespace Gentyl {
                     for (var hook of hooks){
                         var host = hook.host;
                         var iresult = hook.tractor.call(host.ctx, input);
-                        inputGate = inputGate || iresult != HALT;
+
+                        inputGate = inputGate || (iresult != IO.HALT && (hook.eager || iresult !== undefined));
                         baseInput = baseInput.concat(iresult)
 
                         console.log("[input handle hook %s] Handle input: %s", hook.label, iresult)
@@ -120,6 +122,27 @@ namespace Gentyl {
                 }
             }
 
+        }
+
+        export class SpecialInputPort extends ResolveInputPort {
+            constructor(private base:Component){
+                super('$');
+            }
+
+            handleInput(input){
+
+                console.log("[SpecialInputPort::handleInput]")
+                var hook = this.base.specialInput;
+                var iresult = hook.tractor.call(this.base.host.ctx, input);
+
+                var inputGate = iresult != IO.HALT && (hook.eager || iresult !== undefined);
+
+                if(inputGate){
+                    this.base.specialGate = true;
+                    this.base.host.resolve(iresult);
+                    this.base.specialGate = false;
+                }
+            }
         }
 
         export class ResolveOutputPort extends Port {
@@ -179,7 +202,7 @@ namespace Gentyl {
             //the conformant array of ports
             shell:HookShell;
 
-            constructor(public host:GNode, initHooks:Hook[]){
+            constructor(public host:GNode, initHooks:Hook[], specialIn:Hook, specialOut:Hook){
 
                 this.isShellBase = false;
                 this.specialGate = false;
@@ -188,7 +211,7 @@ namespace Gentyl {
                 this.inputs = {};
                 this.outputs = {};
 
-                this.initialiseHooks(initHooks);
+                this.initialiseHooks(initHooks, specialIn, specialOut);
 
             }
 
@@ -208,10 +231,12 @@ namespace Gentyl {
             }
 
 
-            initialiseHooks(hooks:Hook[]){
+            initialiseHooks(hooks:Hook[], specialIn:Hook, specialOut:Hook){
                 this.hooks = [];
-                this.specialInput = {tractor:halting, label:'$', host:this.host, orientation:Orientation.INPUT};
-                this.specialOutput = {tractor:halting, label:'$', host:this.host, orientation:Orientation.OUTPUT};
+
+                this.specialInput = specialIn
+                this.specialOutput = specialOut
+
                 this.inputHooks = {};
                 this.outputHooks = {};
 
@@ -246,20 +271,7 @@ namespace Gentyl {
                 }
 
                 this.hooks.push(hook)
-                //
-                // if(label = '$'){
-                //     if(orientation == Orientation.INPUT){
-                //         //input
-                //         this.specialInput = hook;
-                //     }else if(orientation == Orientation.OUTPUT){
-                //         //output
-                //         this.specialOutput = hook;
-                //     }
-                // }else{
-                //
-                //
-                //
-                // }
+
             }
 
             enshell(opcallback, opcontext?){
@@ -276,6 +288,8 @@ namespace Gentyl {
 
                 this.collect(opcallback, opcontext);
 
+                return this.shell;
+
             }
 
             /**
@@ -289,24 +303,29 @@ namespace Gentyl {
                 var upperOrientation
 
                 //only valid for composite crown.
-                for (var child of this.host.crown){
-                    if (child instanceof GNode){
-                        child.io.reorient();
 
-                        var upo = child.io.orientation;
+                if(!Util.isPrimative(child)){
+                    for (var child of this.host.crown){
+                        if (child instanceof GNode){
+                            child.io.reorient();
 
-                        if(child.io.isShellBase && upo != Orientation.NEUTRAL){
-                            //child has moot orientation
-                            continue;
-                        }
-                        else if(!upperOrientation || !orientationConflict(upperOrientation, upo)){
-                            //child has similar or is first
-                            upperOrientation = upo;
-                        }else{
-                            //child has different to the others, lateral conflict
-                            throw new Error("Cannot have siblings with dissimilar io orientation");
+                            var upo = child.io.orientation;
+
+                            if(child.io.isShellBase && upo != Orientation.NEUTRAL){
+                                //child has moot orientation
+                                continue;
+                            }
+                            else if(!upperOrientation || !orientationConflict(upperOrientation, upo)){
+                                //child has similar or is first
+                                upperOrientation = upo;
+                            }else{
+                                //child has different to the others, lateral conflict
+                                throw new Error("Cannot have siblings with dissimilar io orientation");
+                            }
                         }
                     }
+                }else{
+                    upperOrientation = Orientation.NEUTRAL;
                 }
 
                 if(orientationConflict(upperOrientation, this.orientation)){
@@ -343,9 +362,12 @@ namespace Gentyl {
                 }
 
                 if(this.isShellBase){
-                    //compress the accumulated hooks into a new base
 
+                    //special hooks are needed at this point, by default they will not trigger or pass anything.
+                    this.specialInput  = this.specialInput || {tractor:nothing, label:'$', host:this.host, orientation:Orientation.INPUT, eager:false};
+                    this.specialOutput = this.specialOutput|| {tractor:nothing, label:'$', host:this.host, orientation:Orientation.OUTPUT, eager:false};
 
+                    //compile the accumulated hooks into a single shell
                     this.shell = new HookShell(this, accumulatedHooks, accumulatedShells, opcallback, opcontext);
 
                     //aliased input function by binding the outward facing port to the host
@@ -364,30 +386,33 @@ namespace Gentyl {
                 }else{
                     return {hooks: accumulatedHooks, shells:accumulatedShells};
                 }
-
-
             }
 
 
 
             dispatchResult(result:any){
-                var baseresult
+                var baseResult
 
                 for (let k in this.outputHooks){
+                    let hook = <Hook>this.outputHooks[k]
+                    let oresult = hook.tractor.call(this.host.ctx, result)
 
-                    console.log("[dispatch result] Handle result: %s , to hook ", result)
-                    console.log(this.outputHooks[k])
-
-
-                    var oresult = (<Hook>this.outputHooks[k]).tractor.call(this.host.ctx, result)
-
-                    if(oresult != HALT){
+                    if((oresult != HALT && (hook.eager || oresult != undefined))){
                         let port:ResolveOutputPort = this.base.shell.sources[k]; //the base has collected one for each label
                         port.handle(oresult);
                     }
                 }
 
-                return baseresult
+                if(this.isShellBase){
+                    baseResult = this.specialOutput.tractor.call(this.specialOutput.host.ctx, result);
+
+                    if((baseResult != HALT && (this.specialOutput.eager || baseResult != undefined))){
+                        let port:ResolveOutputPort = this.shell.sources.$; //the base has collected one for each label
+                        port.handle(baseResult);
+                    }
+                }
+
+                return baseResult
 
             }
         }
@@ -434,6 +459,11 @@ namespace Gentyl {
                         //add output ports of other bases to this one
                         this.addShell(shell);
                     }
+
+                    //create the special IO Ports
+                    this.sinks['$'] = new SpecialInputPort(this.base);
+                    this.sources['$'] = new ResolveOutputPort('$', opcallback, opcontext);
+
 
                 }
 

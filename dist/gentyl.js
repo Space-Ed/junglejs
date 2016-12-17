@@ -607,8 +607,8 @@ var Gentyl;
             this.isRoot = true;
             this.prepared = false;
             this.form = new Gentyl.GForm(this);
-            var hooks = this.form.parse(form).hooks;
-            this.io = new Gentyl.IO.Component(this, hooks);
+            var _a = this.form.parse(form), hooks = _a.hooks, context = _a.context, specialIn = _a.specialIn, specialOut = _a.specialOut;
+            this.io = new Gentyl.IO.Component(this, hooks, specialIn, specialOut);
             var context = Gentyl.Util.deepCopy(state);
             this.ctx = new Gentyl.GContext(this, context, this.form.ctxmode);
             var inductor = this.inductComponent.bind(this);
@@ -840,19 +840,19 @@ var Gentyl;
             if (!this.prepared) {
                 this.prepare();
             }
-            var result;
             if (this.io.isShellBase && !this.io.specialGate) {
                 var sInpHook = this.io.specialInput;
                 var sInpResult = sInpHook.tractor.call(this.ctx, resolveArgs);
                 var sResult;
-                if (sInpResult != Gentyl.IO.HALT) {
+                if (sInpResult != Gentyl.IO.HALT && (sInpHook.eager || sInpResult !== undefined)) {
                     this.io.specialGate = true;
                     sResult = this.resolve(sInpResult);
                     this.io.specialGate = false;
+                    return sResult;
                 }
-                var sOutHook = this.io.specialOutput;
-                var sOutResult = sOutHook.tractor.call(this.ctx, sResult);
-                result = sOutResult;
+                else {
+                    return undefined;
+                }
             }
             else {
                 Object.freeze(resolveArgs);
@@ -862,10 +862,9 @@ var Gentyl;
                     var selection = this.form.selector.call(this.ctx, Object.keys(this.crown), resolveArgs);
                     resolvedNode = this.resolveNode(this.crown, carried, selection);
                 }
-                result = this.form.resolver.call(this.ctx, resolvedNode, resolveArgs);
-                this.io.dispatchResult(result);
+                var result = this.form.resolver.call(this.ctx, resolvedNode, resolveArgs);
+                return this.io.dispatchResult(result);
             }
-            return result;
         };
         return GNode;
     }());
@@ -873,6 +872,35 @@ var Gentyl;
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {
+    (function (LabelTypes) {
+        LabelTypes[LabelTypes["PASSIVE"] = 0] = "PASSIVE";
+        LabelTypes[LabelTypes["TRIG"] = 1] = "TRIG";
+        LabelTypes[LabelTypes["ENTRIG"] = 2] = "ENTRIG";
+        LabelTypes[LabelTypes["GATE"] = 3] = "GATE";
+        LabelTypes[LabelTypes["GATER"] = 4] = "GATER";
+        LabelTypes[LabelTypes["TRIGATE"] = 5] = "TRIGATE";
+        LabelTypes[LabelTypes["TRIGATER"] = 6] = "TRIGATER";
+        LabelTypes[LabelTypes["ENTRIGATE"] = 7] = "ENTRIGATE";
+        LabelTypes[LabelTypes["ENTRIGATER"] = 8] = "ENTRIGATER";
+    })(Gentyl.LabelTypes || (Gentyl.LabelTypes = {}));
+    var LabelTypes = Gentyl.LabelTypes;
+    var TrigateLabelTypesMap = {
+        '': { '': LabelTypes.PASSIVE, '_': LabelTypes.GATE, '__': LabelTypes.GATER },
+        '_': { '': LabelTypes.TRIG, '_': LabelTypes.TRIGATE, '__': LabelTypes.TRIGATER },
+        '__': { '': LabelTypes.ENTRIG, '_': LabelTypes.ENTRIGATE, '__': LabelTypes.ENTRIGATER }
+    };
+    var labelTypeCompatibility = {
+        0: {},
+        1: { 3: true, 4: true },
+        2: { 3: true, 4: true },
+        3: { 1: true, 2: true },
+        4: { 1: true, 2: true },
+        5: {},
+        6: {},
+        7: {},
+        8: {},
+        9: {}
+    };
     var GForm = (function () {
         function GForm(host) {
             this.host = host;
@@ -883,18 +911,165 @@ var Gentyl;
             this.resolver = formObj.r || Gentyl.Util.identity;
             this.selector = formObj.s || function (keys, carg) { return true; };
             this.preparator = formObj.p || function (x) { };
-            var ioRegex = /^_([a-zA-Z_]*[a-zA-Z]+|\$)$|([a-zA-Z]+|\$)_$/;
+            var ioRegex = /^(_{0,2})([a-zA-Z](?:\w*[a-zA-Z])?|\$)(_{0,2})$/;
             var hooks = [];
+            var context = {};
+            var specialInHook;
+            var specialOutHook;
+            var labels = {};
             for (var k in formObj) {
                 var res = k.match(ioRegex);
-                if (res && formObj[k] instanceof Function) {
-                    var inp = res[1], out = res[2];
-                    var labelOrientation = inp != undefined ? Gentyl.IO.Orientation.INPUT : Gentyl.IO.Orientation.OUTPUT;
-                    var label = inp || out;
-                    hooks.push({ label: label, tractor: formObj[k], orientation: labelOrientation, host: this.host });
+                if (res) {
+                    var inp = res[1], label = res[2], out = res[3], formVal = formObj[k];
+                    var labelType = TrigateLabelTypesMap[inp][out];
+                    if (label in labels) {
+                        if (labelTypeCompatibility[labelType][labels[label]]) {
+                            labels[label] = LabelTypes.PASSIVE;
+                        }
+                        else {
+                            throw new Error("Duplicate incompatible label " + label + " in form parsing, labelType1:" + labelType + ", labelType2:" + labels[label]);
+                        }
+                    }
+                    else {
+                        labels[label] = labelType;
+                    }
+                    if (label === '$') {
+                        var hook = { label: label, tractor: formObj[k], orientation: undefined, host: this.host, eager: undefined };
+                        if (labelType === LabelTypes.TRIG) {
+                            hook.orientation = Gentyl.IO.Orientation.INPUT;
+                            hook.eager = false;
+                            specialInHook = hook;
+                        }
+                        else if (labelType === LabelTypes.ENTRIG) {
+                            hook.orientation = Gentyl.IO.Orientation.INPUT;
+                            hook.eager = true;
+                            specialInHook = hook;
+                        }
+                        else if (labelType === LabelTypes.GATE) {
+                            hook.orientation = Gentyl.IO.Orientation.OUTPUT;
+                            hook.eager = false;
+                            specialOutHook = hook;
+                        }
+                        else if (labelType === LabelTypes.GATER) {
+                            hook.orientation = Gentyl.IO.Orientation.OUTPUT;
+                            hook.eager = true;
+                            specialOutHook = hook;
+                        }
+                        else {
+                            throw new Error("Special label must be input or output, not mixed");
+                        }
+                    }
+                    else if (formVal instanceof Function) {
+                        var hook = { label: label, tractor: formObj[k], orientation: undefined, host: this.host, eager: undefined };
+                        if (labelType === LabelTypes.PASSIVE) {
+                            context[label] = formVal;
+                            continue;
+                        }
+                        else if (labelType === LabelTypes.TRIG) {
+                            hook.orientation = Gentyl.IO.Orientation.INPUT, hook.eager = false;
+                        }
+                        else if (labelType === LabelTypes.ENTRIG) {
+                            hook.orientation = Gentyl.IO.Orientation.INPUT, hook.eager = true;
+                        }
+                        else if (labelType === LabelTypes.GATE) {
+                            hook.orientation = Gentyl.IO.Orientation.OUTPUT, hook.eager = false;
+                        }
+                        else if (labelType === LabelTypes.GATER) {
+                            hook.orientation = Gentyl.IO.Orientation.OUTPUT, hook.eager = true;
+                        }
+                        else if (labelType === LabelTypes.TRIGATE) {
+                            hook.orientation = Gentyl.IO.Orientation.MIXED, hook.eager = false;
+                        }
+                        else if (labelType === LabelTypes.TRIGATER) {
+                            console.warn("This label configuration doesn't make sense for functions");
+                        }
+                        else if (labelType === LabelTypes.ENTRIGATE) {
+                            console.warn("This label configuration doesn't make sense for functions");
+                        }
+                        else if (labelType === LabelTypes.ENTRIGATER) {
+                            hook.orientation = Gentyl.IO.Orientation.MIXED, hook.eager = true;
+                        }
+                        hooks.push(hook);
+                    }
+                    else if (Gentyl.Util.isPrimative(formVal)) {
+                        var changeCheckValueReturn = function (input) {
+                            if (this[label] === this.cache[label]) {
+                                return Gentyl.IO.HALT;
+                            }
+                            return this[label];
+                        };
+                        var hookI = { label: label, tractor: function (input) { this[label] = input; }, orientation: Gentyl.IO.Orientation.INPUT, host: this.host, eager: undefined };
+                        var hookO = { label: label, tractor: function (input) { return this.label; }, orientation: Gentyl.IO.Orientation.OUTPUT, host: this.host, eager: true };
+                        var I_1 = false;
+                        var O_1 = false;
+                        if (labelType === LabelTypes.PASSIVE) {
+                            context[label] = formVal;
+                            continue;
+                        }
+                        else if (labelType === LabelTypes.TRIG) {
+                            context[label] = formVal;
+                            hookI.eager = false;
+                            I_1 = true;
+                        }
+                        else if (labelType === LabelTypes.ENTRIG) {
+                            context[label] = formVal;
+                            hookI.eager = true;
+                            I_1 = true;
+                        }
+                        else if (labelType === LabelTypes.GATE) {
+                            context[label] = formVal;
+                            O_1 = true;
+                            hookO.tractor = changeCheckValueReturn;
+                        }
+                        else if (labelType === LabelTypes.GATER) {
+                            context[label] = formVal;
+                            O_1 = true;
+                        }
+                        else if (labelType === LabelTypes.TRIGATE) {
+                            context[label] = formVal;
+                            hookI.eager = false;
+                            O_1 = true;
+                            I_1 = true;
+                            hookO.tractor = changeCheckValueReturn;
+                        }
+                        else if (labelType === LabelTypes.TRIGATER) {
+                            context[label] = formVal;
+                            hookI.eager = false;
+                            O_1 = true;
+                            I_1 = true;
+                        }
+                        else if (labelType === LabelTypes.ENTRIGATE) {
+                            context[label] = formVal;
+                            hookI.eager = true;
+                            O_1 = true;
+                            I_1 = true;
+                            hookO.tractor = changeCheckValueReturn;
+                        }
+                        else if (labelType === LabelTypes.ENTRIGATER) {
+                            context[label] = formVal;
+                            hookI.eager = true;
+                            O_1 = true;
+                            I_1 = true;
+                        }
+                        if (I_1) {
+                            hooks.push(hookI);
+                        }
+                        ;
+                        if (O_1) {
+                            hooks.push(hookO);
+                        }
+                        ;
+                        labels[label] = LabelTypes.PASSIVE;
+                    }
+                    else {
+                        throw new Error("Unsupported form value type");
+                    }
+                }
+                else {
+                    throw new Error("Invalid label format, must have up to two leading and trailing underscores");
                 }
             }
-            return { hooks: hooks };
+            return { hooks: hooks, context: context, specialIn: specialInHook, specialOut: specialOutHook };
         };
         GForm.prototype.extract = function () {
             return {
@@ -1014,7 +1189,7 @@ var Gentyl;
                         var hook = hooks_1[_b];
                         var host = hook.host;
                         var iresult = hook.tractor.call(host.ctx, input);
-                        inputGate = inputGate || iresult != IO.HALT;
+                        inputGate = inputGate || (iresult != IO.HALT && (hook.eager || iresult !== undefined));
                         baseInput = baseInput.concat(iresult);
                         console.log("[input handle hook %s] Handle input: %s", hook.label, iresult);
                     }
@@ -1029,6 +1204,26 @@ var Gentyl;
             return ResolveInputPort;
         }(Port));
         IO.ResolveInputPort = ResolveInputPort;
+        var SpecialInputPort = (function (_super) {
+            __extends(SpecialInputPort, _super);
+            function SpecialInputPort(base) {
+                _super.call(this, '$');
+                this.base = base;
+            }
+            SpecialInputPort.prototype.handleInput = function (input) {
+                console.log("[SpecialInputPort::handleInput]");
+                var hook = this.base.specialInput;
+                var iresult = hook.tractor.call(this.base.host.ctx, input);
+                var inputGate = iresult != IO.HALT && (hook.eager || iresult !== undefined);
+                if (inputGate) {
+                    this.base.specialGate = true;
+                    this.base.host.resolve(iresult);
+                    this.base.specialGate = false;
+                }
+            };
+            return SpecialInputPort;
+        }(ResolveInputPort));
+        IO.SpecialInputPort = SpecialInputPort;
         var ResolveOutputPort = (function (_super) {
             __extends(ResolveOutputPort, _super);
             function ResolveOutputPort(label, outputCallback, outputContext) {
@@ -1064,14 +1259,14 @@ var Gentyl;
                 || (child1 === Orientation.INPUT && child2 === Orientation.OUTPUT);
         }
         var Component = (function () {
-            function Component(host, initHooks) {
+            function Component(host, initHooks, specialIn, specialOut) {
                 this.host = host;
                 this.isShellBase = false;
                 this.specialGate = false;
                 this.orientation = Orientation.NEUTRAL;
                 this.inputs = {};
                 this.outputs = {};
-                this.initialiseHooks(initHooks);
+                this.initialiseHooks(initHooks, specialIn, specialOut);
             }
             Component.prototype.prepare = function () {
             };
@@ -1083,10 +1278,10 @@ var Gentyl;
                 }
                 return ext;
             };
-            Component.prototype.initialiseHooks = function (hooks) {
+            Component.prototype.initialiseHooks = function (hooks, specialIn, specialOut) {
                 this.hooks = [];
-                this.specialInput = { tractor: halting, label: '$', host: this.host, orientation: Orientation.INPUT };
-                this.specialOutput = { tractor: halting, label: '$', host: this.host, orientation: Orientation.OUTPUT };
+                this.specialInput = specialIn;
+                this.specialOutput = specialOut;
                 this.inputHooks = {};
                 this.outputHooks = {};
                 for (var _i = 0, hooks_2 = hooks; _i < hooks_2.length; _i++) {
@@ -1118,25 +1313,31 @@ var Gentyl;
                 this.reorient();
                 this.isShellBase = true;
                 this.collect(opcallback, opcontext);
+                return this.shell;
             };
             Component.prototype.reorient = function () {
                 var inverted = false;
                 var upperOrientation;
-                for (var _i = 0, _a = this.host.crown; _i < _a.length; _i++) {
-                    var child = _a[_i];
-                    if (child instanceof Gentyl.GNode) {
-                        child.io.reorient();
-                        var upo = child.io.orientation;
-                        if (child.io.isShellBase && upo != Orientation.NEUTRAL) {
-                            continue;
-                        }
-                        else if (!upperOrientation || !orientationConflict(upperOrientation, upo)) {
-                            upperOrientation = upo;
-                        }
-                        else {
-                            throw new Error("Cannot have siblings with dissimilar io orientation");
+                if (!Gentyl.Util.isPrimative(child)) {
+                    for (var _i = 0, _a = this.host.crown; _i < _a.length; _i++) {
+                        var child = _a[_i];
+                        if (child instanceof Gentyl.GNode) {
+                            child.io.reorient();
+                            var upo = child.io.orientation;
+                            if (child.io.isShellBase && upo != Orientation.NEUTRAL) {
+                                continue;
+                            }
+                            else if (!upperOrientation || !orientationConflict(upperOrientation, upo)) {
+                                upperOrientation = upo;
+                            }
+                            else {
+                                throw new Error("Cannot have siblings with dissimilar io orientation");
+                            }
                         }
                     }
+                }
+                else {
+                    upperOrientation = Orientation.NEUTRAL;
                 }
                 if (orientationConflict(upperOrientation, this.orientation)) {
                     this.isShellBase = true;
@@ -1161,6 +1362,8 @@ var Gentyl;
                     }
                 }
                 if (this.isShellBase) {
+                    this.specialInput = this.specialInput || { tractor: nothing, label: '$', host: this.host, orientation: Orientation.INPUT, eager: false };
+                    this.specialOutput = this.specialOutput || { tractor: nothing, label: '$', host: this.host, orientation: Orientation.OUTPUT, eager: false };
                     this.shell = new HookShell(this, accumulatedHooks, accumulatedShells, opcallback, opcontext);
                     var _loop_1 = function(k_1) {
                         this_1.inputs[k_1] = (function (input) {
@@ -1182,17 +1385,23 @@ var Gentyl;
                 }
             };
             Component.prototype.dispatchResult = function (result) {
-                var baseresult;
+                var baseResult;
                 for (var k in this.outputHooks) {
-                    console.log("[dispatch result] Handle result: %s , to hook ", result);
-                    console.log(this.outputHooks[k]);
-                    var oresult = this.outputHooks[k].tractor.call(this.host.ctx, result);
-                    if (oresult != IO.HALT) {
+                    var hook = this.outputHooks[k];
+                    var oresult = hook.tractor.call(this.host.ctx, result);
+                    if ((oresult != IO.HALT && (hook.eager || oresult != undefined))) {
                         var port = this.base.shell.sources[k];
                         port.handle(oresult);
                     }
                 }
-                return baseresult;
+                if (this.isShellBase) {
+                    baseResult = this.specialOutput.tractor.call(this.specialOutput.host.ctx, result);
+                    if ((baseResult != IO.HALT && (this.specialOutput.eager || baseResult != undefined))) {
+                        var port = this.shell.sources.$;
+                        port.handle(baseResult);
+                    }
+                }
+                return baseResult;
             };
             return Component;
         }());
@@ -1218,6 +1427,8 @@ var Gentyl;
                     var shell = subshells_1[_a];
                     this.addShell(shell);
                 }
+                this.sinks['$'] = new SpecialInputPort(this.base);
+                this.sources['$'] = new ResolveOutputPort('$', opcallback, opcontext);
             }
             HookShell.prototype.addMidrantHook = function (hook) {
                 hook.host.io.base = this.base;
