@@ -3,7 +3,6 @@
 
 namespace Gentyl {
 
-
     export class GNode {
         ctx:GContext;
         crown:any;
@@ -284,7 +283,6 @@ namespace Gentyl {
             if(this.prepared){
                 this.crown[ins] = this.prepareChild(null, this.crown[ins])
             }
-
         }
 
         /**
@@ -334,14 +332,15 @@ namespace Gentyl {
 
         resolve(resolveArgs){
 
+            Object.freeze(resolveArgs)
+
             if (!this.prepared){
                 this.prepare();
                 //throw  Error("Node with state is not prepared, unable to resolve")
             }
 
-
-
             if (this.io.isShellBase && !this.io.specialGate){
+
                 //resolve external
                 var sInpHook = this.io.specialInput
                 var sInpResult = sInpHook.tractor.call(this.ctx, resolveArgs);
@@ -355,10 +354,9 @@ namespace Gentyl {
                 }else{
                     //the input has failed to trigger resolution our output hook
                     //will provide the return value on potentially undefined input
-                    return undefined //this.io.specialOutput.tractor.call(this.ctx, sInpResult);
+                    return this.io.specialOutput.tractor.call(this.ctx, sInpResult);
                 }
             }else{
-                Object.freeze(resolveArgs)
 
                 var carried = this.form.carrier.call(this.ctx, resolveArgs)
 
@@ -371,7 +369,7 @@ namespace Gentyl {
                 }
 
                 //modifies the resolved context and returns the processed result
-                var result = this.form.resolver.call(this.ctx, resolvedNode,  resolveArgs)
+                var result = this.form.resolver.call(this.ctx, resolvedNode,  resolveArgs, carried)
 
                 return this.io.dispatchResult(result)
             }

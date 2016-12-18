@@ -1,5 +1,5 @@
 
-namespace Gentyl.Inventory {
+namespace Gentyl.Inv {
 
     export function selectNone (){
         return []

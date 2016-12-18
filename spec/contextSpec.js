@@ -21,6 +21,6 @@ describe("A context labelled node",function(){
     })
 
     it('will always choose the closest to the tip possible',function(){
-        
+
     })
 })

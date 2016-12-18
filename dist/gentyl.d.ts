@@ -2,8 +2,6 @@
 declare namespace Gentyl {
     function G(components: Object, form: any, state: any): GNode;
     function F(func: any, components: any, state: any): GNode;
-    function I(label: any, target: any[], inputFunction: typeof Inventory.placeInput, resolveFunction: typeof Inventory.pickupInput, state: any): GNode;
-    function O(label: any, outputFunction: any): GNode;
     function R(reconstructionBundle: any): Reconstruction;
     function T(type: any): Terminal;
 }
@@ -93,6 +91,7 @@ declare namespace Gentyl {
         checkComplete(recursive?: boolean): boolean;
         add(keyOrVal: any, val: any): void;
         seal(typespec: any): void;
+        enshell(callback: any, context_factory?: any): this;
         private resolveNode(node, resolveArgs, selection);
         resolve(resolveArgs: any): any;
     }
@@ -134,13 +133,17 @@ declare namespace Gentyl {
         extract(): FormSpec;
     }
 }
-declare namespace Gentyl.Inventory {
-    function placeInput(input: any): void;
-    function pickupInput(obj: any, arg: any): any;
+declare namespace Gentyl.Inv {
+}
+declare namespace Gentyl.Inv {
     function retract(obj: any, arg: any): any;
 }
-declare namespace Gentyl.Inventory {
+declare namespace Gentyl.Inv {
     function selectNone(): any[];
+}
+declare namespace Gentyl.Inv {
+    function pass(x: any): any;
+    function abstain(x: any): void;
 }
 declare namespace Gentyl {
     namespace IO {

@@ -13,21 +13,6 @@ var Gentyl;
         return new Gentyl.GNode(components, { r: func }, state);
     }
     Gentyl.F = F;
-    function I(label, target, inputFunction, resolveFunction, state) {
-        if (target === void 0) { target = []; }
-        if (inputFunction === void 0) { inputFunction = Gentyl.Inventory.placeInput; }
-        if (resolveFunction === void 0) { resolveFunction = Gentyl.Inventory.pickupInput; }
-        var form = { t: target, r: resolveFunction };
-        form['_' + label] = inputFunction;
-        return new Gentyl.GNode({}, form, state || { _placed: null });
-    }
-    Gentyl.I = I;
-    function O(label, outputFunction) {
-        var form = { r: Gentyl.Inventory.retract };
-        form[label + '_'] = outputFunction;
-        return new Gentyl.GNode({}, form, {});
-    }
-    Gentyl.O = O;
     function R(reconstructionBundle) {
         return new Gentyl.Reconstruction(reconstructionBundle);
     }
@@ -813,6 +798,10 @@ var Gentyl;
         };
         GNode.prototype.seal = function (typespec) {
         };
+        GNode.prototype.enshell = function (callback, context_factory) {
+            this.io.enshell(callback, context_factory);
+            return this;
+        };
         GNode.prototype.resolveNode = function (node, resolveArgs, selection) {
             var cut = false;
             if (!selection) {
@@ -837,6 +826,7 @@ var Gentyl;
             }
         };
         GNode.prototype.resolve = function (resolveArgs) {
+            Object.freeze(resolveArgs);
             if (!this.prepared) {
                 this.prepare();
             }
@@ -851,18 +841,17 @@ var Gentyl;
                     return sResult;
                 }
                 else {
-                    return undefined;
+                    return this.io.specialOutput.tractor.call(this.ctx, sInpResult);
                 }
             }
             else {
-                Object.freeze(resolveArgs);
                 var carried = this.form.carrier.call(this.ctx, resolveArgs);
                 var resolvedNode;
                 if (this.crown != undefined) {
                     var selection = this.form.selector.call(this.ctx, Object.keys(this.crown), resolveArgs);
                     resolvedNode = this.resolveNode(this.crown, carried, selection);
                 }
-                var result = this.form.resolver.call(this.ctx, resolvedNode, resolveArgs);
+                var result = this.form.resolver.call(this.ctx, resolvedNode, resolveArgs, carried);
                 return this.io.dispatchResult(result);
             }
         };
@@ -1000,8 +989,8 @@ var Gentyl;
                         };
                         var hookI = { label: label, tractor: function (input) { this[label] = input; }, orientation: Gentyl.IO.Orientation.INPUT, host: this.host, eager: undefined };
                         var hookO = { label: label, tractor: function (input) { return this.label; }, orientation: Gentyl.IO.Orientation.OUTPUT, host: this.host, eager: true };
-                        var I_1 = false;
-                        var O_1 = false;
+                        var I = false;
+                        var O = false;
                         if (labelType === LabelTypes.PASSIVE) {
                             context[label] = formVal;
                             continue;
@@ -1009,53 +998,53 @@ var Gentyl;
                         else if (labelType === LabelTypes.TRIG) {
                             context[label] = formVal;
                             hookI.eager = false;
-                            I_1 = true;
+                            I = true;
                         }
                         else if (labelType === LabelTypes.ENTRIG) {
                             context[label] = formVal;
                             hookI.eager = true;
-                            I_1 = true;
+                            I = true;
                         }
                         else if (labelType === LabelTypes.GATE) {
                             context[label] = formVal;
-                            O_1 = true;
+                            O = true;
                             hookO.tractor = changeCheckValueReturn;
                         }
                         else if (labelType === LabelTypes.GATER) {
                             context[label] = formVal;
-                            O_1 = true;
+                            O = true;
                         }
                         else if (labelType === LabelTypes.TRIGATE) {
                             context[label] = formVal;
                             hookI.eager = false;
-                            O_1 = true;
-                            I_1 = true;
+                            O = true;
+                            I = true;
                             hookO.tractor = changeCheckValueReturn;
                         }
                         else if (labelType === LabelTypes.TRIGATER) {
                             context[label] = formVal;
                             hookI.eager = false;
-                            O_1 = true;
-                            I_1 = true;
+                            O = true;
+                            I = true;
                         }
                         else if (labelType === LabelTypes.ENTRIGATE) {
                             context[label] = formVal;
                             hookI.eager = true;
-                            O_1 = true;
-                            I_1 = true;
+                            O = true;
+                            I = true;
                             hookO.tractor = changeCheckValueReturn;
                         }
                         else if (labelType === LabelTypes.ENTRIGATER) {
                             context[label] = formVal;
                             hookI.eager = true;
-                            O_1 = true;
-                            I_1 = true;
+                            O = true;
+                            I = true;
                         }
-                        if (I_1) {
+                        if (I) {
                             hooks.push(hookI);
                         }
                         ;
-                        if (O_1) {
+                        if (O) {
                             hooks.push(hookO);
                         }
                         ;
@@ -1086,31 +1075,36 @@ var Gentyl;
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {
-    var Inventory;
-    (function (Inventory) {
-        function placeInput(input) {
-            this._placed = input;
-        }
-        Inventory.placeInput = placeInput;
-        function pickupInput(obj, arg) {
-            return this._placed;
-        }
-        Inventory.pickupInput = pickupInput;
+    var Inv;
+    (function (Inv) {
         function retract(obj, arg) {
             return arg;
         }
-        Inventory.retract = retract;
-    })(Inventory = Gentyl.Inventory || (Gentyl.Inventory = {}));
+        Inv.retract = retract;
+    })(Inv = Gentyl.Inv || (Gentyl.Inv = {}));
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {
-    var Inventory;
-    (function (Inventory) {
+    var Inv;
+    (function (Inv) {
         function selectNone() {
             return [];
         }
-        Inventory.selectNone = selectNone;
-    })(Inventory = Gentyl.Inventory || (Gentyl.Inventory = {}));
+        Inv.selectNone = selectNone;
+    })(Inv = Gentyl.Inv || (Gentyl.Inv = {}));
+})(Gentyl || (Gentyl = {}));
+var Gentyl;
+(function (Gentyl) {
+    var Inv;
+    (function (Inv) {
+        function pass(x) {
+            return x;
+        }
+        Inv.pass = pass;
+        function abstain(x) {
+        }
+        Inv.abstain = abstain;
+    })(Inv = Gentyl.Inv || (Gentyl.Inv = {}));
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {
@@ -1400,6 +1394,9 @@ var Gentyl;
                         var port = this.shell.sources.$;
                         port.handle(baseResult);
                     }
+                }
+                else {
+                    baseResult = result;
                 }
                 return baseResult;
             };

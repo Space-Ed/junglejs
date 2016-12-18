@@ -410,6 +410,8 @@ namespace Gentyl {
                         let port:ResolveOutputPort = this.shell.sources.$; //the base has collected one for each label
                         port.handle(baseResult);
                     }
+                }else{
+                    baseResult = result;
                 }
 
                 return baseResult

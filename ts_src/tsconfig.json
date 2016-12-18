@@ -38,6 +38,7 @@
         "./inventory/io.ts",
         "./inventory/resolver.ts",
         "./inventory/select.ts",
+        "./inventory/standards.ts",
         "./io.ts",
         "./main.ts",
         "./reconstruction.ts",

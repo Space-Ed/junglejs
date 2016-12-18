@@ -23,8 +23,7 @@ describe("input-output", function(){
             beam:G(null
                 ,{
                     _beamin(inp){
-                        this.buffer.push(inp)
-                        return Gentyl.IO.HALT; //dont trigger.
+                        this.buffer.push(inp);
                     },
                     r(obj, arg){
                         return this.buffer.pop() || obj
@@ -35,7 +34,7 @@ describe("input-output", function(){
             crux:G(
                 null
                 ,{
-                    _trigger(input){
+                    __trigger(input){
                         if(input <= 5){
                             return Gentyl.IO.HALT
                         }
@@ -130,30 +129,40 @@ describe("input-output", function(){
 
     describe("special base io", function(){
 
-        var trigate, entrigate, entrigater, trigater, g2;
+        var trigate, entrigate, entrigater, trigater, g2, types, results, calls, inputs;
 
         beforeEach(function(){
             trigate = G({isolated:0},{
                 _$(input){},
                 $_(output){}
-            }).prepare().enshell(pass, {});
+            }).prepare().enshell(Gentyl.Inv.pass, {});
 
-            entrigate = G({open:0},{
-                __$(input){},
+            entrigate = G({open:1},{
+                __$(input){return input},
+                c(arg){
+                    return arg + 1;
+                },
+                r(obj, arg, carg){
+                    return obj.open + carg;
+                },
                 $_(output){return output}
-            }).prepare().enshell(pass, {});
+            }).prepare().enshell(Gentyl.Inv.pass, {});
 
             entrigater = G({},{
                 __$(input){},
-                $__(output){}
-            }).prepare().enshell(pass, {});
+                $__(output){return Gentyl.IO.HALT},
+            }).prepare().enshell(Gentyl.Inv.pass, {});
 
             trigater = G({},{
-                __$(input){},
-                $_(output){}
-            }).prepare().enshell(pass, {});
+                _$(input){this.supreme = input;},
+                r(x, o){this.supreme = 'false'},
+                $__(output){return this.supreme},
+            },{supreme:"ruler"}).prepare().enshell(Gentyl.Inv.pass, {});
 
-            entrigater = G({})
+            versions = [trigate,     entrigate,   entrigater,    trigater];
+            inputs =   [undefined,   1,           undefined,     'chancellor']
+            results =  [undefined,   3,           Gentyl.IO.HALT,'chancellor']
+            calls =    [false,       true,        false,         false]
 
             g2 = G(null,{
                 __$(input){
@@ -167,8 +176,7 @@ describe("input-output", function(){
             }).prepare();
         })
 
-        fit('should do root io', function(){
-
+        it('should do root io', function(){
 
             g2.io.enshell(function(x){
                 console.log(`output: ${x}`);
@@ -184,22 +192,29 @@ describe("input-output", function(){
 
         })
 
-        fit('resolve approach',function(){
+        it('resolve should work for all io types',function(){
             g2.io.enshell();
             expect(g2.resolve("alive")).toBe("store: alive");
 
-            var source = trigate.io.shell.sources.$;
-            spyOn(source, 'callback')
+            for (var i = 0; i < versions.length; i++) {
+                var g = versions[i]
+                var source = g.io.shell.sources.$;
+                spyOn(source, 'callback')
 
-            expect(trigate.resolve()).toBeUndefined()
-            expect(source.callback).not.toHaveBeenCalled();
+                //routing through special io
+                expect(g.resolve(inputs[i])).toBe(results[i]);
 
-
+                if(calls[i]){
+                    expect(source.callback).toHaveBeenCalled();
+                }else{
+                    expect(source.callback).not.toHaveBeenCalled();
+                }
+            }
         })
 
         it('should throw exceptions in failcases',function(){
             expect(function(){
-
+                G(null, {_$(){}, __$(){}})
             }).toThrowError()
         })
 
@@ -237,7 +252,7 @@ describe("input-output", function(){
 
             //g2.resolve("hello");
 
-            expect(g2.crown.i1.form.inputFunction).toBe(Gentyl.Inventory.placeInput)
+            expect(g2.crown.i1.form.inputFunction).toBe(Gentyl.Inv.placeInput)
 
             expect(g2.crown.i1.ctx._placed).toBe('ice')
             expect(g2.crown.i2.ctx._placed).toBe(' breaks ')
