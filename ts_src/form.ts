@@ -8,6 +8,9 @@ namespace Gentyl {
         '_':{'':LabelTypes.TRIG,'_':LabelTypes.TRIGATE, '__':LabelTypes.TRIGATER},
         '__':{'':LabelTypes.ENTRIG,'_':LabelTypes.ENTRIGATE, '__':LabelTypes.ENTRIGATER}
     }
+
+    const RFormProps = ["x", "p", "d", "c", "r", "s", "prepare", "destroy", "carry", "resolve", "select"]
+
     var labelTypeCompatibility = {
         0:{},
         1:{3:true,4:true},
@@ -26,7 +29,7 @@ namespace Gentyl {
         c?:(args?)=>any;
         s?:(keys, arg?)=>any;
         p?:(arg)=>void;
-        m?:string;
+        x?:string;
     }
 
     /**
@@ -47,13 +50,13 @@ namespace Gentyl {
 
          parse(formObj:FormSpec):{hooks:IO.Hook[], context:any, specialIn:IO.Hook, specialOut:IO.Hook} {
 
-             this.ctxmode =  formObj.m || "";
+             this.ctxmode =  formObj.x || "";
              this.carrier = formObj.c || Gentyl.Util.identity;
              this.resolver = formObj.r || Gentyl.Util.identity;
              this.selector = formObj.s || function(keys, carg){return true}
              this.preparator = formObj.p || function(x){};
 
-            var ioRegex = /^(_{0,2})([a-zA-Z](?:\w*[a-zA-Z])?|\$)(_{0,2})$/;
+            const ioRegex = /^(_{0,2})([a-zA-Z](?:\w*[a-zA-Z])?|\$)(_{0,2})$/;
 
             // parse for io functions ignoring uncompliant names and non functions
             var hooks = [];
@@ -69,6 +72,7 @@ namespace Gentyl {
                 if(res){
                     var inp = res[1], label = res[2], out = res[3], formVal = formObj[k];
                     var labelType:LabelTypes = TrigateLabelTypesMap[inp][out]
+                    if(RFormProps.indexOf(label) >= 0){continue}
 
                     if(label in labels){
                         //check compatibility of exi
@@ -138,6 +142,7 @@ namespace Gentyl {
                        //only one value hook pair per label is possible
                        labels[label] = LabelTypes.PASSIVE;
                    }else{
+                       if(labelType === LabelTypes.PASSIVE){context[label]=formVal;continue}
                        throw new Error("Unsupported form value type")
                    }
                 }
@@ -154,7 +159,7 @@ namespace Gentyl {
             return {
                 r:this.resolver,
                 c:this.carrier ,
-                m:this.ctxmode ,
+                x:this.ctxmode ,
                 p:this.preparator,
                 s:this.selector,
             }

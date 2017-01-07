@@ -9,15 +9,13 @@ describe("preparation",function(){
         g = G(
             G(
                 G(0,{
-                    m:"&_",
+                    x:"use _",
                     p(parg){this.anteling = parg},
                     r(){ return this.anteling}
                 }),{
-                m:"|+",
+                x:"use _",
                 p(parg){this.apparation = parg},
                 r(obj){return  this.apparation + obj}
-            },{
-
             }
         ),{
             p(prepargs){
@@ -25,8 +23,8 @@ describe("preparation",function(){
             },
             r(obj, arg){
                 return this.creature + obj
-            }
-        },{
+            },
+            x:'_',
             creature:"unsummoned",
             apparation:"faint",
             anteling:"under"

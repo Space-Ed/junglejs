@@ -16,8 +16,7 @@ describe("input-output", function(){
                     },
                     arc_(out){
                         return `I have saved ${out}`
-                    }
-                },{
+                    },
                     saved:null
                 }),
             beam:G(null
@@ -27,8 +26,7 @@ describe("input-output", function(){
                     },
                     r(obj, arg){
                         return this.buffer.pop() || obj
-                    }
-                },{
+                    },
                     buffer:[]
                 }),
             crux:G(

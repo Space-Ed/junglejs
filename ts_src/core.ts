@@ -24,7 +24,7 @@ namespace Gentyl {
         ancestor:GNode;
         isAncestor:boolean;
 
-        constructor(components:any, form:FormSpec = {}, state:any = {}){
+        constructor(components:any, form:FormSpec = {}){
             this.depth = 0;
             this.isRoot = true;
             this.prepared = false;
@@ -34,7 +34,6 @@ namespace Gentyl {
             var {hooks, context, specialIn, specialOut} = this.form.parse(form);
             this.io = new IO.Component(this, hooks, specialIn, specialOut);
 
-            var context = Util.deepCopy(state);
             this.ctx = new GContext(this, context, this.form.ctxmode);
 
             var inductor = this.inductComponent.bind(this);
@@ -116,7 +115,7 @@ namespace Gentyl {
             }else{
 
                 //this is a raw node, either an ancestor
-                var repl = new GNode(this.crown, Util.melder(this.form.extract(), this.io.extract()), this.ctx.extract())
+                var repl = new GNode(this.crown, Util.melder(this.ctx.extract(), Util.melder(this.form.extract(), this.io.extract())))
 
                 //in the case of the ancestor it comes from prepared
                 if(this.isAncestor){
@@ -167,7 +166,7 @@ namespace Gentyl {
                 return this;
             }else{
                 if (this.parent == undefined){
-                    throw new Error("Required context label is not found")
+                    throw new Error(`Required context label ${label} is not found`)
                 }else{
                     return this.parent.getNominal(label)
                 }

@@ -4,15 +4,15 @@ namespace Gentyl {
      * Crete a G-Node in a Generic way
      * @param:component
      */
-    export function G(components:Object, form, state){
-        return new GNode(components, form, state)
+    export function G(components:Object, form){
+        return new GNode(components, form)
     }
 
     /**
      * Alias to create a functional G-node,
      */
-    export function F(func, components, state){
-        return new GNode(components, {r:func}, state)
+    export function F(func, components){
+        return new GNode(components, {r:func})
     }
 
     export function R(reconstructionBundle){

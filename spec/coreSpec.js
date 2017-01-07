@@ -32,8 +32,7 @@ describe("operationality", function () {
             ,{
                 r(obj){
                     return this.prop;
-                }
-            },{
+                },
                 prop:"value"
             }
         )
@@ -49,9 +48,7 @@ describe("operationality", function () {
                 r(obj, args){
                     this.prop += obj.inc;
                     return this.prop;
-                }
-            },
-            {
+                },
                 prop:0
             }
         )
@@ -74,8 +71,7 @@ describe("operationality", function () {
                     this.prop = arg;
                     return "set"
                 }
-            }
-        },{
+            },
             prop:0
         }).prepare();
 
@@ -130,8 +126,7 @@ describe("recursability",function(){
             r(obj, arg){
                 this.prop.inner+=1;
                 return this.prop.inner;
-            }
-        },{
+            },
             prop:{
                 inner:0
             }

@@ -13,17 +13,18 @@ namespace Gentyl {
      * The state manager for a resolution node. Handles the association of contexts and modification therin
      */
     export class GContext {
-        ownProperties:any;
+        label:string;
+        nominal:boolean;
+
+        internalProperties:any;
         propertyLayerMap:any;
         closed:boolean;
-        label:string;
-
 
         constructor(private host:GNode, hostContext:any, private mode:string){
             //parse modes
 
             Object.defineProperties(this,{
-                ownProperties:{
+                internalProperties:{
                     value:{},
                     writable:false,
                     enumerable:false,
@@ -42,6 +43,19 @@ namespace Gentyl {
                     writable:true,
                     enumerable:false,
                     configurable:false,
+                },
+
+                label:{
+                    value:"",
+                    writable:true,
+                    enumerable:false,
+                    configurable:false
+                },
+                nominal:{
+                    value:false,
+                    writable:true,
+                    enumerable:false,
+                    configurable:false
                 }
             });
 
@@ -62,14 +76,6 @@ namespace Gentyl {
                         this.addInherentLayer(layer.source)
                         break;
                     }
-                    // if sharing needs extra setup
-                    // case (ASSOCMODE.SHARE):{
-                    //     break;
-                    // }
-                    // case (ASSOCMODE.TRACK):{
-                    //     this.addTrackedLayer()
-                    //     break;
-                    // }
                     default:{
                         this.addSourceLayer(layer)
                         break
@@ -82,7 +88,7 @@ namespace Gentyl {
         }
 
         extract(){
-            return Util.deepCopy(this.ownProperties)
+            return Util.deepCopy(this.internalProperties)
         }
 
         /**
@@ -90,41 +96,51 @@ namespace Gentyl {
          */
         parseMode(modestr:string):ContextLayer[] {
             var layers:ContextLayer[] = []
-            var splitexp = modestr.split(/\s/);
-            const validmode = /^[&|=]$/;
-            const validsource = /^[+_]|[a-zA-Z]+$/;
-            const validwhole = /^([&|=])([+_]|[a-zA-Z]+)$/
 
-            let i = 0
-            if (splitexp[0] === '!'){
-                this.closed = true;
-                i = 1;
-            }
+            // header, inheritance
 
-            if (splitexp[i] === '' || splitexp[i] == undefined){
-                return layers
-            }
+            var usesplit = modestr.split(/use/);
 
-            for (; i < splitexp.length; i += 1) {
-                var layer:ContextLayer = {mode:null, source:null}
-
-                var typeSourceKey = splitexp[i]
-                var match = typeSourceKey.match(validwhole)
-
-                if(!match){
-                    throw Error("Invalid source mode expression " + typeSourceKey +" must fit /^([&\|=])([\+_])$/ ")
+            var header, usage
+            if(usesplit.length > 2){
+                //
+                throw new Error("inappropriate appearance of keyword 'use'")
+            }else if(usesplit.length == 2){
+                if(usesplit[1] == ''){
+                    throw new Error("expected at lease one context label after use")
+                }else{
+                    [header, usage] = usesplit;
                 }
+            }else{ // length is 1
 
-                var tKey = match[1];
-                var sKey = match[2]; //will be parsed to give depth control;
+                header = usesplit[0];
+            }
 
-                //console.log("tkey: %s , sKey: %s",tKey, sKey)
+            var headerexp = /^\s*(\w*)\s*$/;
+            var headermatch = header.match(headerexp)
 
-                layer.mode =  {"&":ASSOCMODE.SHARE, "|":ASSOCMODE.INHERIT, "=":ASSOCMODE.TRACK}[tKey]
+            if (headermatch === undefined) {
+                throw new Error("only one label before the header is allowed")
+            }
 
-                layer.source = (sKey == "+" ? this.host.getParent(1) : sKey == "_" ? this.host.getRoot() : this.host.getNominal(sKey)).ctx
+            this.label = headermatch[1];
+            if(this.label !== ''){
+                this.nominal = true;
+            }
 
-                layers.push(layer)
+            if (usage){
+
+                var uses = usage.split(/\s/).filter(function(a){return a !== ''});
+
+                for (let i = 0; i < uses.length; i += 1) {
+                    var layer:ContextLayer = {mode:ASSOCMODE.SHARE, source:null}
+
+
+                    var sourceKey = uses[i];
+
+                    layer.source = this.host.getNominal(sourceKey).ctx;
+                    layers.push(layer);
+                }
             }
 
             return layers
@@ -137,7 +153,7 @@ namespace Gentyl {
             //console.log("addOwnProperty(name:%s, defaultValue:%s)", name, defaultValue)
 
             // TODO: Handle own property derivation conflict
-            this.ownProperties[name] = defaultValue;
+            this.internalProperties[name] = defaultValue;
             this.propertyLayerMap[name] = {source:this, mode:ASSOCMODE.SHARE};
 
             Object.defineProperty(this, name, {
@@ -164,14 +180,14 @@ namespace Gentyl {
             if(layer.mode == ASSOCMODE.TRACK){
                 throw new Error("Unable to modify key whose source is tracking only");
             } else{
-                layer.source.ownProperties[key] = data;
+                layer.source.internalProperties[key] = data;
             }
         }
 
 
         getItem(key):any{
             let layer:ContextLayer = this.propertyLayerMap[key];
-            let result = layer.source.ownProperties[key];
+            let result = layer.source.internalProperties[key];
 
             //console.log("getItem %s resulting in:", key , result);
             return result;
@@ -189,13 +205,13 @@ namespace Gentyl {
             }
         }
         /**
-         * add all the properties of the target layer to the ownPropertiesMap.
+         * add all the properties of the target layer to the internalPropertiesMap.
          */
         addInherentLayer(layerctx:GContext){
-            for (let prop in layerctx.ownProperties) {
+            for (let prop in layerctx.internalProperties) {
 
                 // TODO: Maybe not just target layerctxs own properties.
-                var propVal = layerctx.ownProperties[prop];
+                var propVal = layerctx.internalProperties[prop];
                 this.addOwnProperty(prop, propVal)
 
             }

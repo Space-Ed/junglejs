@@ -5,12 +5,12 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var Gentyl;
 (function (Gentyl) {
-    function G(components, form, state) {
-        return new Gentyl.GNode(components, form, state);
+    function G(components, form) {
+        return new Gentyl.GNode(components, form);
     }
     Gentyl.G = G;
-    function F(func, components, state) {
-        return new Gentyl.GNode(components, { r: func }, state);
+    function F(func, components) {
+        return new Gentyl.GNode(components, { r: func });
     }
     Gentyl.F = F;
     function R(reconstructionBundle) {
@@ -35,7 +35,7 @@ var Gentyl;
             this.host = host;
             this.mode = mode;
             Object.defineProperties(this, {
-                ownProperties: {
+                internalProperties: {
                     value: {},
                     writable: false,
                     enumerable: false,
@@ -52,6 +52,18 @@ var Gentyl;
                     writable: true,
                     enumerable: false,
                     configurable: false,
+                },
+                label: {
+                    value: "",
+                    writable: true,
+                    enumerable: false,
+                    configurable: false
+                },
+                nominal: {
+                    value: false,
+                    writable: true,
+                    enumerable: false,
+                    configurable: false
                 }
             });
             for (var k in hostContext) {
@@ -75,39 +87,49 @@ var Gentyl;
             }
         };
         GContext.prototype.extract = function () {
-            return Gentyl.Util.deepCopy(this.ownProperties);
+            return Gentyl.Util.deepCopy(this.internalProperties);
         };
         GContext.prototype.parseMode = function (modestr) {
             var layers = [];
-            var splitexp = modestr.split(/\s/);
-            var validmode = /^[&|=]$/;
-            var validsource = /^[+_]|[a-zA-Z]+$/;
-            var validwhole = /^([&|=])([+_]|[a-zA-Z]+)$/;
-            var i = 0;
-            if (splitexp[0] === '!') {
-                this.closed = true;
-                i = 1;
+            var usesplit = modestr.split(/use/);
+            var header, usage;
+            if (usesplit.length > 2) {
+                throw new Error("inappropriate appearance of keyword 'use'");
             }
-            if (splitexp[i] === '' || splitexp[i] == undefined) {
-                return layers;
-            }
-            for (; i < splitexp.length; i += 1) {
-                var layer = { mode: null, source: null };
-                var typeSourceKey = splitexp[i];
-                var match = typeSourceKey.match(validwhole);
-                if (!match) {
-                    throw Error("Invalid source mode expression " + typeSourceKey + " must fit /^([&\|=])([\+_])$/ ");
+            else if (usesplit.length == 2) {
+                if (usesplit[1] == '') {
+                    throw new Error("expected at lease one context label after use");
                 }
-                var tKey = match[1];
-                var sKey = match[2];
-                layer.mode = { "&": ASSOCMODE.SHARE, "|": ASSOCMODE.INHERIT, "=": ASSOCMODE.TRACK }[tKey];
-                layer.source = (sKey == "+" ? this.host.getParent(1) : sKey == "_" ? this.host.getRoot() : this.host.getNominal(sKey)).ctx;
-                layers.push(layer);
+                else {
+                    header = usesplit[0], usage = usesplit[1];
+                }
+            }
+            else {
+                header = usesplit[0];
+            }
+            var headerexp = /^\s*(\w*)\s*$/;
+            var headermatch = header.match(headerexp);
+            if (headermatch === undefined) {
+                throw new Error("only one label before the header is allowed");
+            }
+            this.label = headermatch[1];
+            if (this.label !== '') {
+                this.nominal = true;
+            }
+            if (usage) {
+                var uses = usage.split(/\s/).filter(function (a) { return a !== ''; });
+                console.log("uses of contexts:", uses);
+                for (var i = 0; i < uses.length; i += 1) {
+                    var layer = { mode: ASSOCMODE.SHARE, source: null };
+                    var sourceKey = uses[i];
+                    layer.source = this.host.getNominal(sourceKey).ctx;
+                    layers.push(layer);
+                }
             }
             return layers;
         };
         GContext.prototype.addOwnProperty = function (name, defaultValue) {
-            this.ownProperties[name] = defaultValue;
+            this.internalProperties[name] = defaultValue;
             this.propertyLayerMap[name] = { source: this, mode: ASSOCMODE.SHARE };
             Object.defineProperty(this, name, {
                 set: this.setItem.bind(this, name),
@@ -122,12 +144,12 @@ var Gentyl;
                 throw new Error("Unable to modify key whose source is tracking only");
             }
             else {
-                layer.source.ownProperties[key] = data;
+                layer.source.internalProperties[key] = data;
             }
         };
         GContext.prototype.getItem = function (key) {
             var layer = this.propertyLayerMap[key];
-            var result = layer.source.ownProperties[key];
+            var result = layer.source.internalProperties[key];
             return result;
         };
         GContext.prototype.getItemSource = function (key) {
@@ -139,8 +161,8 @@ var Gentyl;
             }
         };
         GContext.prototype.addInherentLayer = function (layerctx) {
-            for (var prop in layerctx.ownProperties) {
-                var propVal = layerctx.ownProperties[prop];
+            for (var prop in layerctx.internalProperties) {
+                var propVal = layerctx.internalProperties[prop];
                 this.addOwnProperty(prop, propVal);
             }
         };
@@ -585,16 +607,15 @@ var Gentyl;
 var Gentyl;
 (function (Gentyl) {
     var GNode = (function () {
-        function GNode(components, form, state) {
+        function GNode(components, form) {
             if (form === void 0) { form = {}; }
-            if (state === void 0) { state = {}; }
             this.depth = 0;
             this.isRoot = true;
             this.prepared = false;
             this.form = new Gentyl.GForm(this);
             var _a = this.form.parse(form), hooks = _a.hooks, context = _a.context, specialIn = _a.specialIn, specialOut = _a.specialOut;
             this.io = new Gentyl.IO.Component(this, hooks, specialIn, specialOut);
-            var context = Gentyl.Util.deepCopy(state);
+            console.log("context from form parse: ", context);
             this.ctx = new Gentyl.GContext(this, context, this.form.ctxmode);
             var inductor = this.inductComponent.bind(this);
             this.crown = Gentyl.Util.typeCaseSplitF(inductor, inductor, null)(components);
@@ -648,7 +669,7 @@ var Gentyl;
                 return this.ancestor.replicate();
             }
             else {
-                var repl = new GNode(this.crown, Gentyl.Util.melder(this.form.extract(), this.io.extract()), this.ctx.extract());
+                var repl = new GNode(this.crown, Gentyl.Util.melder(this.ctx.extract(), Gentyl.Util.melder(this.form.extract(), this.io.extract())));
                 if (this.isAncestor) {
                     repl.ancestor = this;
                 }
@@ -694,7 +715,7 @@ var Gentyl;
             }
             else {
                 if (this.parent == undefined) {
-                    throw new Error("Required context label is not found");
+                    throw new Error("Required context label " + label + " is not found");
                 }
                 else {
                     return this.parent.getNominal(label);
@@ -878,6 +899,7 @@ var Gentyl;
         '_': { '': LabelTypes.TRIG, '_': LabelTypes.TRIGATE, '__': LabelTypes.TRIGATER },
         '__': { '': LabelTypes.ENTRIG, '_': LabelTypes.ENTRIGATE, '__': LabelTypes.ENTRIGATER }
     };
+    var RFormProps = ["x", "p", "d", "c", "r", "s", "prepare", "destroy", "carry", "resolve", "select"];
     var labelTypeCompatibility = {
         0: {},
         1: { 3: true, 4: true },
@@ -895,7 +917,7 @@ var Gentyl;
             this.host = host;
         }
         GForm.prototype.parse = function (formObj) {
-            this.ctxmode = formObj.m || "";
+            this.ctxmode = formObj.x || "";
             this.carrier = formObj.c || Gentyl.Util.identity;
             this.resolver = formObj.r || Gentyl.Util.identity;
             this.selector = formObj.s || function (keys, carg) { return true; };
@@ -911,6 +933,9 @@ var Gentyl;
                 if (res) {
                     var inp = res[1], label = res[2], out = res[3], formVal = formObj[k];
                     var labelType = TrigateLabelTypesMap[inp][out];
+                    if (RFormProps.indexOf(label) >= 0) {
+                        continue;
+                    }
                     if (label in labels) {
                         if (labelTypeCompatibility[labelType][labels[label]]) {
                             labels[label] = LabelTypes.PASSIVE;
@@ -1051,6 +1076,10 @@ var Gentyl;
                         labels[label] = LabelTypes.PASSIVE;
                     }
                     else {
+                        if (labelType === LabelTypes.PASSIVE) {
+                            context[label] = formVal;
+                            continue;
+                        }
                         throw new Error("Unsupported form value type");
                     }
                 }
@@ -1064,7 +1093,7 @@ var Gentyl;
             return {
                 r: this.resolver,
                 c: this.carrier,
-                m: this.ctxmode,
+                x: this.ctxmode,
                 p: this.preparator,
                 s: this.selector,
             };
@@ -1473,6 +1502,16 @@ var Gentyl;
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {
+    var LNode = (function (_super) {
+        __extends(LNode, _super);
+        function LNode(crown, formspec) {
+            _super.call(this, crown, formspec);
+        }
+        return LNode;
+    }(Gentyl.GNode));
+})(Gentyl || (Gentyl = {}));
+var Gentyl;
+(function (Gentyl) {
     function isBundle(object) {
         return object instanceof Object && "form" in object && "state" in object && "node" in object;
     }
@@ -1496,7 +1535,7 @@ var Gentyl;
         var preform = {
             r: fromNode.form.resolver,
             c: fromNode.form.carrier,
-            m: fromNode.form.ctxmode
+            x: fromNode.form.ctxmode
         };
         var exForm = {};
         for (var k in preform) {
@@ -1533,7 +1572,7 @@ var Gentyl;
             var node = Gentyl.Util.typeCaseSplitF(debundle)(bundle.node);
             var form = Gentyl.reformulate(bundle.form);
             var state = bundle.state;
-            _super.call(this, node, form, state);
+            _super.call(this, node, Gentyl.Util.melder(form, state));
         }
         return Reconstruction;
     }(Gentyl.GNode));

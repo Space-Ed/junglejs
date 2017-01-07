@@ -1,7 +1,7 @@
 /// <reference path="../typings/index.d.ts" />
 declare namespace Gentyl {
-    function G(components: Object, form: any, state: any): GNode;
-    function F(func: any, components: any, state: any): GNode;
+    function G(components: Object, form: any): GNode;
+    function F(func: any, components: any): GNode;
     function R(reconstructionBundle: any): Reconstruction;
     function T(type: any): Terminal;
 }
@@ -18,10 +18,11 @@ declare namespace Gentyl {
     class GContext {
         private host;
         private mode;
-        ownProperties: any;
+        label: string;
+        nominal: boolean;
+        internalProperties: any;
         propertyLayerMap: any;
         closed: boolean;
-        label: string;
         constructor(host: GNode, hostContext: any, mode: string);
         prepare(): void;
         extract(): any;
@@ -75,7 +76,7 @@ declare namespace Gentyl {
         io: IO.Component;
         ancestor: GNode;
         isAncestor: boolean;
-        constructor(components: any, form?: FormSpec, state?: any);
+        constructor(components: any, form?: FormSpec);
         private inductComponent(component);
         prepare(prepargs?: any): GNode;
         private prepareChild(prepargs, child);
@@ -113,7 +114,7 @@ declare namespace Gentyl {
         c?: (args?) => any;
         s?: (keys, arg?) => any;
         p?: (arg) => void;
-        m?: string;
+        x?: string;
     }
     class GForm {
         private host;
@@ -226,6 +227,8 @@ declare namespace Gentyl {
             addShell(shell: Shell): void;
         }
     }
+}
+declare module Gentyl {
 }
 declare namespace Gentyl {
     interface FormRef {

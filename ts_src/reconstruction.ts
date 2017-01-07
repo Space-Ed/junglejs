@@ -51,7 +51,7 @@ namespace Gentyl {
         var preform:FormSpec = {
             r:fromNode.form.resolver,
             c:fromNode.form.carrier,
-            m:fromNode.form.ctxmode
+            x:fromNode.form.ctxmode
         }
 
         var exForm = {};
@@ -103,7 +103,7 @@ namespace Gentyl {
             let form =  Gentyl.reformulate(bundle.form);
             let state = bundle.state;
 
-            super(node, form, state)
+            super(node, Util.melder(form, state))
 
         }
     }
