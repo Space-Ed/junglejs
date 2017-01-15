@@ -16,6 +16,9 @@ namespace Gentyl {
         label:string;
         nominal:boolean;
         declaration:string;
+        path:(string|number)[];
+
+        exposed:any;
 
         internalProperties:any;
         propertyLayerMap:any;
@@ -41,45 +44,31 @@ namespace Gentyl {
                     enumerable:false,
                     configurable:false
                 },
-
-                closed:{
-                    value:false,
-                    writable:true,
-                    enumerable:false,
-                    configurable:false,
-                },
-
-                label:{
-                    value:"",
-                    writable:true,
-                    enumerable:false,
-                    configurable:false
-                },
-                nominal:{
-                    value:false,
-                    writable:true,
-                    enumerable:false,
-                    configurable:false
-                }
             });
+
+            this.closed = false;
+            this.label = "";
+            this.nominal = false;
+            this.path = [];
+            this.exposed = {path:this.path};
 
             //create internally held properties.
             for(var k in properties){
-                this.addOwnProperty(k, properties[k])
+                this.addExposedProperty(k, properties[k])
             }
         }
 
         /**
             extract the context used by tractors, thereby safegaurding the reference to the core values, only exposing properties and special handles. .
         */
-        borrowTractorContext(){
+        borrowExposed(){
             return this;
         }
 
         /**
             return the context after the tractor call,
         */
-        returnTractorContext(returned:any){
+        restoreExposed(returned:any){
 
         }
 
@@ -167,24 +156,26 @@ namespace Gentyl {
         /**
          *
          */
-        addOwnProperty(name:string, defaultValue){
-            //console.log("addOwnProperty(name:%s, defaultValue:%s)", name, defaultValue)
+        addExposedProperty(name:string, defaultValue){
+            //console.log("addExposedProperty(name:%s, defaultValue:%s)", name, defaultValue)
 
             // TODO: Handle own property derivation conflict
             this.internalProperties[name] = defaultValue;
             this.propertyLayerMap[name] = {source:this, mode:ASSOCMODE.SHARE};
 
-            Object.defineProperty(this, name, {
+            Object.defineProperty(this.exposed, name, {
                 set: this.setItem.bind(this, name),
                 get: this.getItem.bind(this, name),
                 enumerable:true,
                 configurable:true
             });
-
         }
 
-
-
+        removeExposedProperty(name:string){
+            delete this.internalProperties[name];
+            delete this.propertyLayerMap[name];
+            delete this.exposed[name]
+        }
 
         /**
          * Access the property-source map and appropriately adjust the value.
@@ -230,7 +221,7 @@ namespace Gentyl {
 
                 // TODO: Maybe not just target layerctxs own properties.
                 var propVal = layerctx.internalProperties[prop];
-                this.addOwnProperty(prop, propVal)
+                this.addExposedProperty(prop, propVal)
 
             }
         }
@@ -251,7 +242,7 @@ namespace Gentyl {
 
                     //console.log("add source layer property prop:%s", prop)
 
-                    Object.defineProperty(this, prop, {
+                    Object.defineProperty(this.exposed, prop, {
                         set: this.setItem.bind(this, prop),
                         get:this.getItem.bind(this, prop),
                         enumerable:true,

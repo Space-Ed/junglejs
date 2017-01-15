@@ -95,33 +95,20 @@ var Gentyl;
                     enumerable: false,
                     configurable: false
                 },
-                closed: {
-                    value: false,
-                    writable: true,
-                    enumerable: false,
-                    configurable: false,
-                },
-                label: {
-                    value: "",
-                    writable: true,
-                    enumerable: false,
-                    configurable: false
-                },
-                nominal: {
-                    value: false,
-                    writable: true,
-                    enumerable: false,
-                    configurable: false
-                }
             });
+            this.closed = false;
+            this.label = "";
+            this.nominal = false;
+            this.path = [];
+            this.exposed = { path: this.path };
             for (var k in properties) {
-                this.addOwnProperty(k, properties[k]);
+                this.addExposedProperty(k, properties[k]);
             }
         }
-        GContext.prototype.borrowTractorContext = function () {
+        GContext.prototype.borrowExposed = function () {
             return this;
         };
-        GContext.prototype.returnTractorContext = function (returned) {
+        GContext.prototype.restoreExposed = function (returned) {
         };
         GContext.prototype.prepare = function () {
             var layers = this.parseMode(this.declaration);
@@ -181,15 +168,20 @@ var Gentyl;
             }
             return layers;
         };
-        GContext.prototype.addOwnProperty = function (name, defaultValue) {
+        GContext.prototype.addExposedProperty = function (name, defaultValue) {
             this.internalProperties[name] = defaultValue;
             this.propertyLayerMap[name] = { source: this, mode: ASSOCMODE.SHARE };
-            Object.defineProperty(this, name, {
+            Object.defineProperty(this.exposed, name, {
                 set: this.setItem.bind(this, name),
                 get: this.getItem.bind(this, name),
                 enumerable: true,
                 configurable: true
             });
+        };
+        GContext.prototype.removeExposedProperty = function (name) {
+            delete this.internalProperties[name];
+            delete this.propertyLayerMap[name];
+            delete this.exposed[name];
         };
         GContext.prototype.setItem = function (key, data) {
             var layer = this.propertyLayerMap[key];
@@ -216,7 +208,7 @@ var Gentyl;
         GContext.prototype.addInherentLayer = function (layerctx) {
             for (var prop in layerctx.internalProperties) {
                 var propVal = layerctx.internalProperties[prop];
-                this.addOwnProperty(prop, propVal);
+                this.addExposedProperty(prop, propVal);
             }
         };
         GContext.prototype.addSourceLayer = function (layer) {
@@ -227,7 +219,7 @@ var Gentyl;
                 }
                 else {
                     this.propertyLayerMap[prop] = { source: propVal.source, mode: layer.mode };
-                    Object.defineProperty(this, prop, {
+                    Object.defineProperty(this.exposed, prop, {
                         set: this.setItem.bind(this, prop),
                         get: this.getItem.bind(this, prop),
                         enumerable: true,
@@ -293,7 +285,7 @@ var Gentyl;
             this.ancestor.isAncestor = true;
             if (!this.prepared) {
                 this.ctx.prepare();
-                this.form.preparator.call(this.ctx, prepargs);
+                this.form.preparator.call(this.ctx.exposed, prepargs);
                 this.io.prepare(prepargs);
                 this.crown = Gentyl.Util.typeCaseSplitF(this.prepareChild.bind(this, prepargs))(this.crown);
                 this.prepared = true;
@@ -304,10 +296,10 @@ var Gentyl;
             }
             return this;
         };
-        BaseNode.prototype.prepareChild = function (prepargs, child) {
+        BaseNode.prototype.prepareChild = function (prepargs, child, k) {
             if (child instanceof BaseNode) {
                 var replica = child.replicate();
-                replica.setParent(this);
+                replica.setParent(this, k);
                 replica.prepare(prepargs);
                 return replica;
             }
@@ -315,7 +307,8 @@ var Gentyl;
                 return child;
             }
         };
-        BaseNode.prototype.setParent = function (parentNode) {
+        BaseNode.prototype.setParent = function (parentNode, dereferent) {
+            this.ctx.path = parentNode.ctx.path.concat(dereferent);
             this.parent = parentNode;
             this.isRoot = false;
             this.depth = this.parent.depth + 1;
@@ -757,8 +750,8 @@ var Gentyl;
         LinkNode.prototype.constructIO = function (iospec) {
             return new Gentyl.IO.LinkIO();
         };
-        LinkNode.prototype.prepareChild = function (prepargs, child) {
-            var pchild = _super.prototype.prepareChild.call(this, prepargs, child);
+        LinkNode.prototype.prepareChild = function (prepargs, child, k) {
+            var pchild = _super.prototype.prepareChild.call(this, prepargs, child, k);
             pchild.enshell();
             return pchild;
         };
@@ -941,7 +934,7 @@ var Gentyl;
             }
             if (this.io.isShellBase && !this.io.specialGate) {
                 var sInpHook = this.io.specialInput;
-                var sInpResult = sInpHook.tractor.call(this.ctx, resolveArgs);
+                var sInpResult = sInpHook.tractor.call(this.ctx.exposed, resolveArgs);
                 var sResult;
                 if (sInpResult != Gentyl.IO.HALT && (sInpHook.eager || sInpResult !== undefined)) {
                     this.io.specialGate = true;
@@ -950,17 +943,17 @@ var Gentyl;
                     return sResult;
                 }
                 else {
-                    return this.io.specialOutput.tractor.call(this.ctx, sInpResult);
+                    return this.io.specialOutput.tractor.call(this.ctx.exposed, sInpResult);
                 }
             }
             else {
-                var carried = this.form.carrier.call(this.ctx, resolveArgs);
+                var carried = this.form.carrier.call(this.ctx.exposed, resolveArgs);
                 var resolvedNode;
                 if (this.crown != undefined) {
-                    var selection = this.form.selector.call(this.ctx, Object.keys(this.crown), resolveArgs);
+                    var selection = this.form.selector.call(this.ctx.exposed, Object.keys(this.crown), resolveArgs);
                     resolvedNode = this.resolveNode(this.crown, carried, selection);
                 }
-                var result = this.form.resolver.call(this.ctx, resolvedNode, resolveArgs, carried);
+                var result = this.form.resolver.call(this.ctx.exposed, resolvedNode, resolveArgs, carried);
                 return this.io.dispatchResult(result);
             }
         };
@@ -996,7 +989,7 @@ var Gentyl;
                     for (var _b = 0, hooks_1 = hooks; _b < hooks_1.length; _b++) {
                         var hook = hooks_1[_b];
                         var host = hook.host;
-                        var iresult = hook.tractor.call(host.ctx, input);
+                        var iresult = hook.tractor.call(host.ctx.exposed, input);
                         inputGate = inputGate || (iresult != IO.HALT && (hook.eager || iresult !== undefined));
                         baseInput = baseInput.concat(iresult);
                         console.log("[input handle hook %s] Handle input: %s", hook.label, iresult);
@@ -1021,7 +1014,7 @@ var Gentyl;
             SpecialInputPort.prototype.handleInput = function (input) {
                 console.log("[SpecialInputPort::handleInput]");
                 var hook = this.base.specialInput;
-                var iresult = hook.tractor.call(this.base.host.ctx, input);
+                var iresult = hook.tractor.call(this.base.host.ctx.exposed, input);
                 var inputGate = iresult != IO.HALT && (hook.eager || iresult !== undefined);
                 if (inputGate) {
                     this.base.specialGate = true;
@@ -1210,14 +1203,14 @@ var Gentyl;
                 var baseResult;
                 for (var k in this.outputHooks) {
                     var hook = this.outputHooks[k];
-                    var oresult = hook.tractor.call(this.host.ctx, result);
+                    var oresult = hook.tractor.call(this.host.ctx.exposed, result);
                     if ((oresult != IO.HALT && (hook.eager || oresult != undefined))) {
                         var port = this.base.shell.sources[k];
                         port.handle(oresult);
                     }
                 }
                 if (this.isShellBase) {
-                    baseResult = this.specialOutput.tractor.call(this.specialOutput.host.ctx, result);
+                    baseResult = this.specialOutput.tractor.call(this.specialOutput.host.ctx.exposed, result);
                     if ((baseResult != IO.HALT && (this.specialOutput.eager || baseResult != undefined))) {
                         var port = this.shell.sources.$;
                         port.handle(baseResult);

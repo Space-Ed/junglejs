@@ -76,7 +76,7 @@ describe("input-output", function(){
         it('should modify state using input function',function(){
             g1.io.inputs.arc("hello?")
 
-            expect(g1.crown.arc.ctx.saved).toBe("hello?")
+            expect(g1.crown.arc.ctx.exposed.saved).toBe("hello?")
 
         })
     })

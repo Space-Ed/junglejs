@@ -37,7 +37,7 @@ namespace Gentyl {
 
                     for (var hook of hooks){
                         var host = hook.host;
-                        var iresult = hook.tractor.call(host.ctx, input);
+                        var iresult = hook.tractor.call(host.ctx.exposed, input);
 
                         inputGate = inputGate || (iresult != IO.HALT && (hook.eager || iresult !== undefined));
                         baseInput = baseInput.concat(iresult)
@@ -67,7 +67,7 @@ namespace Gentyl {
 
                 console.log("[SpecialInputPort::handleInput]")
                 var hook = this.base.specialInput;
-                var iresult = hook.tractor.call(this.base.host.ctx, input);
+                var iresult = hook.tractor.call(this.base.host.ctx.exposed, input);
 
                 var inputGate = iresult != IO.HALT && (hook.eager || iresult !== undefined);
 
@@ -347,7 +347,7 @@ namespace Gentyl {
 
                 for (let k in this.outputHooks){
                     let hook = <Hook>this.outputHooks[k]
-                    let oresult = hook.tractor.call(this.host.ctx, result)
+                    let oresult = hook.tractor.call(this.host.ctx.exposed, result)
 
                     if((oresult != HALT && (hook.eager || oresult != undefined))){
                         let port:ResolveOutputPort = this.base.shell.sources[k]; //the base has collected one for each label
@@ -356,7 +356,7 @@ namespace Gentyl {
                 }
 
                 if(this.isShellBase){
-                    baseResult = this.specialOutput.tractor.call(this.specialOutput.host.ctx, result);
+                    baseResult = this.specialOutput.tractor.call(this.specialOutput.host.ctx.exposed, result);
 
                     if((baseResult != HALT && (this.specialOutput.eager || baseResult != undefined))){
                         let port:ResolveOutputPort = this.shell.sources.$; //the base has collected one for each label

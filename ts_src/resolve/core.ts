@@ -91,7 +91,7 @@ namespace Gentyl {
 
                 //resolve external
                 var sInpHook = this.io.specialInput
-                var sInpResult = sInpHook.tractor.call(this.ctx, resolveArgs);
+                var sInpResult = sInpHook.tractor.call(this.ctx.exposed, resolveArgs);
 
                 var sResult;
                 if(sInpResult != IO.HALT && (sInpHook.eager || sInpResult !== undefined)){
@@ -102,22 +102,22 @@ namespace Gentyl {
                 }else{
                     //the input has failed to trigger resolution our output hook
                     //will provide the return value on potentially undefined input
-                    return this.io.specialOutput.tractor.call(this.ctx, sInpResult);
+                    return this.io.specialOutput.tractor.call(this.ctx.exposed, sInpResult);
                 }
             }else{
 
-                var carried = this.form.carrier.call(this.ctx, resolveArgs)
+                var carried = this.form.carrier.call(this.ctx.exposed, resolveArgs)
 
                 var resolvedNode
                 if(this.crown != undefined){
                     //form the selection for this node
-                    var selection =  this.form.selector.call(this.ctx, Object.keys(this.crown), resolveArgs);
+                    var selection =  this.form.selector.call(this.ctx.exposed, Object.keys(this.crown), resolveArgs);
                     //recurse on the contained node
                     resolvedNode = this.resolveNode(this.crown, carried, selection)
                 }
 
                 //modifies the resolved context and returns the processed result
-                var result = this.form.resolver.call(this.ctx, resolvedNode,  resolveArgs, carried)
+                var result = this.form.resolver.call(this.ctx.exposed, resolvedNode,  resolveArgs, carried)
 
                 return this.io.dispatchResult(result)
             }

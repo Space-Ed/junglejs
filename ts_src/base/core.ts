@@ -9,7 +9,6 @@ namespace Gentyl {
 
         parent:BaseNode;
         depth:number;
-        derefChain:(string|number)[]
 
         isRoot:boolean;
         root:BaseNode;
@@ -96,7 +95,7 @@ namespace Gentyl {
 
                 //prepare components
                 this.ctx.prepare();
-                this.form.preparator.call(this.ctx, prepargs);
+                this.form.preparator.call(this.ctx.exposed, prepargs);
 
                 this.io.prepare(prepargs);
 
@@ -117,11 +116,11 @@ namespace Gentyl {
             return this;
         }
 
-        protected prepareChild(prepargs, child):BaseNode{
+        protected prepareChild(prepargs, child, k):BaseNode{
             if(child instanceof BaseNode){
                 var replica = child.replicate();
 
-                replica.setParent(this);
+                replica.setParent(this, k);
                 replica.prepare(prepargs);
 
                 return replica;
@@ -130,7 +129,11 @@ namespace Gentyl {
             }
         }
 
-        protected setParent(parentNode:BaseNode){
+        protected setParent(parentNode:BaseNode, dereferent:string|number){
+
+            //append to path
+            this.ctx.path = parentNode.ctx.path.concat(dereferent);
+
             this.parent = parentNode;
             this.isRoot = false;
             this.depth = this.parent.depth + 1;
@@ -142,7 +145,7 @@ namespace Gentyl {
                 return this.ancestor.replicate()
             }else{
 
-                //this is a raw node, either an ancestor
+                //this is a raw node, either an ancestor or pattern
                 var repl = this.constructCore(this.crown, this.form.consolidate(this.io, this.ctx))
 
                 //in the case of the ancestor it comes from prepared

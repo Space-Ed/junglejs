@@ -12,8 +12,8 @@ module Gentyl {
             return new IO.LinkIO()
         }
 
-        protected prepareChild(prepargs, child){
-            var pchild = super.prepareChild(prepargs, child)
+        protected prepareChild(prepargs, child, k){
+            var pchild = super.prepareChild(prepargs, child, k)
             pchild.enshell();
 
             return pchild
