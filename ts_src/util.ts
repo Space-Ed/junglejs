@@ -402,5 +402,15 @@ namespace Gentyl{
             }
         }
 
+        export class AsyncGate{
+            locks:{};
+
+            constuctor(){
+                
+            }
+
+
+        }
+
     }
 }

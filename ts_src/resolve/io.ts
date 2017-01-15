@@ -1,77 +1,12 @@
 namespace Gentyl {
     export namespace IO{
 
-        export const HALT = {};
-        Object.freeze(HALT)
-
-        function halting(arg){
-            return HALT
-        }
-
-        function passing(arg){
-            return arg;
-        }
-
-        function defined(arg){
-            return arg === undefined ? HALT : arg;
-        }
-
-        function always(arg){
-            return true;
-        }
-
-        function nothing(arg){
-            return undefined
-        }
-
-        function host(arg){
-            //from the context
-            return this.host
-        }
-
-        export enum Orientation{
-            INPUT, OUTPUT, NEUTRAL, MIXED
-        }
-
-
         export interface Hook {
-            host:GNode,
+            host:ResolutionNode,
             label:string,
             tractor:Function,
             orientation:Orientation,
             eager:boolean
-        }
-
-        export class Port{
-
-            callbackContext:any;
-            callback:(output, ...args)=>any;
-
-
-            shells:Shell[];
-
-            constructor(public label){
-                this.shells = [];
-            }
-
-            /**
-             * every kind of port needs to be retrofusable
-             */
-            addShell(shell:Shell){
-                this.shells.push(shell)
-            }
-
-            handle(input){
-                if(this.callback){
-                    if(this.callbackContext){
-                        //call toward target
-                        this.callback.call(this.callbackContext, input)
-                    }else{
-                        //dont call globally just use the port as context;
-                        this.callback.call(this, input)
-                    }
-                }
-            }
         }
 
         /**
@@ -121,11 +56,10 @@ namespace Gentyl {
                     }
                 }
             }
-
         }
 
         export class SpecialInputPort extends ResolveInputPort {
-            constructor(private base:Component){
+            constructor(private base:ResolveIO){
                 super('$');
             }
 
@@ -178,12 +112,12 @@ namespace Gentyl {
             || (child1 === Orientation.INPUT && child2 === Orientation.OUTPUT)
         }
 
-        export class Component {
+        export class ResolveIO implements IOComponent{
             //the internal collection of io ports
             hooks:Hook[];
             orientation:Orientation;
             isShellBase:boolean;
-            base:Component;
+            base:ResolveIO;
 
             specialInput:Hook;
             specialOutput:Hook;
@@ -202,7 +136,8 @@ namespace Gentyl {
             //the conformant array of ports
             shell:HookShell;
 
-            constructor(public host:GNode, initHooks:Hook[], specialIn:Hook, specialOut:Hook){
+            constructor(public host:ResolutionNode, iospec){
+                var {hooks, specialIn, specialOut} = iospec;
 
                 this.isShellBase = false;
                 this.specialGate = false;
@@ -211,7 +146,7 @@ namespace Gentyl {
                 this.inputs = {};
                 this.outputs = {};
 
-                this.initialiseHooks(initHooks, specialIn, specialOut);
+                this.initialiseHooks(hooks, specialIn, specialOut);
 
             }
 
@@ -306,7 +241,8 @@ namespace Gentyl {
 
                 if(!Util.isPrimative(child)){
                     for (var child of this.host.crown){
-                        if (child instanceof GNode){
+                        if (child instanceof ResolutionNode){
+                            child = <ResolutionNode> child;
                             child.io.reorient();
 
                             var upo = child.io.orientation;
@@ -353,14 +289,30 @@ namespace Gentyl {
                 var accumulatedShells = [];
 
                 for (var k in this.host.crown){
-                    var child:GNode = this.host.crown[k]
-                    if(child.io != undefined){
+                    var child = this.host.crown[k]
+
+                    if(child instanceof ResolutionNode){
+                        child = <ResolutionNode> child;
                         let {hooks, shells} = child.io.collect(opcallback, opcontext);
                         accumulatedHooks = accumulatedHooks.concat(hooks);
                         accumulatedShells = accumulatedShells.concat(shells);
+                    }else if (child instanceof BaseNode){
+                        child = <BaseNode> child;
+
+                        //on other
+                        if(child.io.shell != undefined){
+                            accumulatedShells.push(child.io.shell());
+                        }else{
+                            accumulatedShells.push()
+                        }
+
+                    }
+
+                    if(child.io != undefined){
                     }
                 }
 
+                //shell creation post recurse means leaves shell first
                 if(this.isShellBase){
 
                     //special hooks are needed at this point, by default they will not trigger or pass anything.
@@ -419,10 +371,7 @@ namespace Gentyl {
             }
         }
 
-        export interface Shell {
-            sinks:any;
-            sources:any;
-        }
+
 
         export class HookShell implements Shell{
 
@@ -436,7 +385,7 @@ namespace Gentyl {
                 /**
                  * transform this node into a BaseShell, the kind that has the functions and
                  */
-            constructor(public base:Component, midrantHooks:Hook[], subshells:Shell[], opcallback, opcontext?) {
+            constructor(public base:ResolveIO, midrantHooks:Hook[], subshells:Shell[], opcallback, opcontext?) {
 
                     this.sources = {};
                     this.sinks = {};
@@ -490,7 +439,8 @@ namespace Gentyl {
                  */
                 addShell(shell:Shell){
 
-                    for(let sink of shell.sinks){
+                    for(let k in shell.sinks){
+                        let sink = shell.sinks[k]
                         if(sink.label in this.sinks){
                             //retrofusion
                             let outerSink = <ResolveInputPort>this.sinks[sink.label];
@@ -509,7 +459,8 @@ namespace Gentyl {
                         }
                     }
 
-                    for(let source of shell.sources){
+                    for(let k in shell.sources){
+                        let source = shell.sources[k]
                         if(source.label in this.sources){
                             //retrofusion
                             let outerSource = <ResolveOutputPort>this.sources[source.label];

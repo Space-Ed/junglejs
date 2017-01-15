@@ -15,12 +15,16 @@ namespace Gentyl {
     export class GContext {
         label:string;
         nominal:boolean;
+        declaration:string;
 
         internalProperties:any;
         propertyLayerMap:any;
         closed:boolean;
 
-        constructor(private host:GNode, hostContext:any, private mode:string){
+        constructor(private host:BaseNode, contextspec){
+            var {properties, declaration} = contextspec;
+            this.declaration = declaration;
+
             //parse modes
 
             Object.defineProperties(this,{
@@ -60,13 +64,27 @@ namespace Gentyl {
             });
 
             //create internally held properties.
-            for(var k in hostContext){
-                this.addOwnProperty(k, hostContext[k])
+            for(var k in properties){
+                this.addOwnProperty(k, properties[k])
             }
         }
 
+        /**
+            extract the context used by tractors, thereby safegaurding the reference to the core values, only exposing properties and special handles. .
+        */
+        borrowTractorContext(){
+            return this;
+        }
+
+        /**
+            return the context after the tractor call,
+        */
+        returnTractorContext(returned:any){
+
+        }
+
         prepare(){
-            var layers = this.parseMode(this.mode)
+            var layers = this.parseMode(this.declaration)
 
             for (let i = 0; i < layers.length; i++) {
                 let layer = layers[i];
@@ -83,7 +101,6 @@ namespace Gentyl {
                 }
 
             }
-
             //freeze context here so that modifier functions cannot add, change or delete properties
         }
 
@@ -98,6 +115,7 @@ namespace Gentyl {
             var layers:ContextLayer[] = []
 
             // header, inheritance
+            console.log("declaration @ parse mode", modestr);
 
             var usesplit = modestr.split(/use/);
 

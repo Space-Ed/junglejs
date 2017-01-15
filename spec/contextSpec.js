@@ -9,8 +9,7 @@ describe("A context labelled node",function(){
         ]
         for(var i = 0 ; i < declarations.length; i++){
             var gen = G({
-                    a:G(
-                        {},
+                    a:G({},
                         {
                             x:declarations[i]
                         }
@@ -26,19 +25,18 @@ describe("A context labelled node",function(){
     it("should rejeect invalid context declarations", function (){
         var declarations =  ["X use", "use use", "X use Z use Y", "use"]
 
-
         for(var i = 0 ; i < declarations.length; i++){
             expect(function(){
                 var gen = G({
-                        a:G(
-                            {},
+                        a:G({},
                             {
                                 x:declarations[i]
                             }
                         )
                     }
                 )
-                .prepare()
+                .prepare();
+                console.log("declaration @ spec", gen.crown.a.ctx.declaration)
             }).toThrowError()
         }
     });

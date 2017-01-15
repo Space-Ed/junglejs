@@ -9,7 +9,7 @@ namespace Gentyl {
         '__':{'':LabelTypes.ENTRIG,'_':LabelTypes.ENTRIGATE, '__':LabelTypes.ENTRIGATER}
     }
 
-    const RFormProps = ["x", "p", "d", "c", "r", "s", "prepare", "destroy", "carry", "resolve", "select"]
+
 
     var labelTypeCompatibility = {
         0:{},
@@ -38,19 +38,20 @@ namespace Gentyl {
 
      export class GForm {
 
-         //form fundamental
-         ctxmode:string;
+         static RFormProps = ["x", "p", "d", "c", "r", "s", "prepare", "destroy", "carry", "resolve", "select"]
+
          carrier:(arg)=>any;
          resolver:(obj, arg)=>any;
          selector:(keys, arg)=>any;
          preparator:(arg)=>void;
          depreparator:(arg)=>void;
 
-         constructor(private host:GNode){}
+         constructor(private host:BaseNode){}
 
-         parse(formObj:FormSpec):{hooks:IO.Hook[], context:any, specialIn:IO.Hook, specialOut:IO.Hook} {
+         parse(formObj:FormSpec):{iospec:any, contextspec:{properties:any, declaration:string}} {
 
-             this.ctxmode =  formObj.x || "";
+             var ctxdeclare =  formObj.x || "";
+
              this.carrier = formObj.c || Gentyl.Util.identity;
              this.resolver = formObj.r || Gentyl.Util.identity;
              this.selector = formObj.s || function(keys, carg){return true}
@@ -72,7 +73,7 @@ namespace Gentyl {
                 if(res){
                     var inp = res[1], label = res[2], out = res[3], formVal = formObj[k];
                     var labelType:LabelTypes = TrigateLabelTypesMap[inp][out]
-                    if(RFormProps.indexOf(label) >= 0){continue}
+                    if(GForm.RFormProps.indexOf(label) >= 0){continue}
 
                     if(label in labels){
                         //check compatibility of exi
@@ -150,19 +151,19 @@ namespace Gentyl {
                    throw new Error("Invalid label format, must have up to two leading and trailing underscores");
                }
             }
-
-            return {hooks:hooks, context:context, specialIn:specialInHook, specialOut:specialOutHook};
+            console.log("declaration @ form parse", ctxdeclare)
+            return {iospec:{hooks:hooks, specialIn:specialInHook, specialOut:specialOutHook}, contextspec:{properties:context, declaration:ctxdeclare}};
          }
 
 
-        extract():FormSpec{
-            return {
+        consolidate(io:IO.IOComponent, ctx:GContext):FormSpec{
+            return Util.melder({
                 r:this.resolver,
                 c:this.carrier ,
-                x:this.ctxmode ,
                 p:this.preparator,
                 s:this.selector,
-            }
+                x:ctx.declaration,
+            },Util.melder(io.extract(), ctx.extract()))
         }
      }
 

@@ -32,7 +32,7 @@ describe("preparation",function(){
     })
 
     it("should be deeply prepared",function(){
-        expect(g.crown instanceof gentyl.GNode).toBe(true)
+        expect(g.crown instanceof gentyl.ResolutionNode).toBe(true)
     })
 
     it("should set properties with preparator",function(){

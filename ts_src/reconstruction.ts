@@ -47,11 +47,11 @@ namespace Gentyl {
      * build a form ref object for the bundle by storing the function externally
      * and only storing in the bundle a uuid or function name;
      */
-    export function deformulate(fromNode:GNode):any{
+    export function deformulate(fromNode:BaseNode):any{
         var preform:FormSpec = {
             r:fromNode.form.resolver,
             c:fromNode.form.carrier,
-            x:fromNode.form.ctxmode
+            x:fromNode.ctx.declaration
         }
 
         var exForm = {};
@@ -83,7 +83,7 @@ namespace Gentyl {
     }
 
 
-    export class Reconstruction extends GNode {
+    export class Reconstruction extends BaseNode {
 
         constructor(bundle:Bundle){
 

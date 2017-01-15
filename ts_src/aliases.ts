@@ -5,14 +5,14 @@ namespace Gentyl {
      * @param:component
      */
     export function G(components:Object, form){
-        return new GNode(components, form)
+        return new ResolutionNode(components, form)
     }
 
     /**
      * Alias to create a functional G-node,
      */
     export function F(func, components){
-        return new GNode(components, {r:func})
+        return new ResolutionNode(components, {r:func})
     }
 
     export function R(reconstructionBundle){
