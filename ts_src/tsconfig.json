@@ -47,6 +47,8 @@
         "./reconstruction.ts",
         "./resolve/core.ts",
         "./resolve/io.ts",
+        "./resolve/ports.ts",
+        "./resolve/shell.ts",
         "./terminal.ts",
         "./util.ts"
     ]

@@ -131,7 +131,6 @@ var Gentyl;
         };
         GContext.prototype.parseMode = function (modestr) {
             var layers = [];
-            console.log("declaration @ parse mode", modestr);
             var usesplit = modestr.split(/use/);
             var header, usage;
             if (usesplit.length > 2) {
@@ -293,6 +292,10 @@ var Gentyl;
             else {
                 this.ancestor = this.replicate();
                 this.ancestor.isAncestor = true;
+            }
+            if (this.isRoot) {
+                console.log("enshell on prepare of core with form label, ", this.ctx.label);
+                this.enshell();
             }
             return this;
         };
@@ -616,7 +619,6 @@ var Gentyl;
                     throw new Error("Invalid label format, must have up to two leading and trailing underscores");
                 }
             }
-            console.log("declaration @ form parse", ctxdeclare);
             return { iospec: { hooks: hooks, specialIn: specialInHook, specialOut: specialOutHook }, contextspec: { properties: context, declaration: ctxdeclare } };
         };
         GForm.prototype.consolidate = function (io, ctx) {
@@ -965,87 +967,6 @@ var Gentyl;
 (function (Gentyl) {
     var IO;
     (function (IO) {
-        var ResolveInputPort = (function (_super) {
-            __extends(ResolveInputPort, _super);
-            function ResolveInputPort(label) {
-                var shells = [];
-                for (var _i = 1; _i < arguments.length; _i++) {
-                    shells[_i - 1] = arguments[_i];
-                }
-                _super.call(this, label);
-                this.callback = this.handleInput;
-                this.callbackContext = this;
-                for (var _a = 0, shells_1 = shells; _a < shells_1.length; _a++) {
-                    var shell = shells_1[_a];
-                    this.addShell(shell);
-                }
-            }
-            ResolveInputPort.prototype.handleInput = function (input) {
-                for (var _i = 0, _a = this.shells; _i < _a.length; _i++) {
-                    var shell = _a[_i];
-                    var inputGate = false;
-                    var baseInput = [];
-                    var hooks = [].concat(shell.inputHooks[this.label] || []);
-                    for (var _b = 0, hooks_1 = hooks; _b < hooks_1.length; _b++) {
-                        var hook = hooks_1[_b];
-                        var host = hook.host;
-                        var iresult = hook.tractor.call(host.ctx.exposed, input);
-                        inputGate = inputGate || (iresult != IO.HALT && (hook.eager || iresult !== undefined));
-                        baseInput = baseInput.concat(iresult);
-                        console.log("[input handle hook %s] Handle input: %s", hook.label, iresult);
-                    }
-                    if (inputGate) {
-                        console.log("[base trigger resolve ] Handle input: ", baseInput);
-                        shell.base.host.io.specialGate = true;
-                        shell.base.host.resolve(baseInput);
-                        shell.base.host.io.specialGate = false;
-                    }
-                }
-            };
-            return ResolveInputPort;
-        }(IO.Port));
-        IO.ResolveInputPort = ResolveInputPort;
-        var SpecialInputPort = (function (_super) {
-            __extends(SpecialInputPort, _super);
-            function SpecialInputPort(base) {
-                _super.call(this, '$');
-                this.base = base;
-            }
-            SpecialInputPort.prototype.handleInput = function (input) {
-                console.log("[SpecialInputPort::handleInput]");
-                var hook = this.base.specialInput;
-                var iresult = hook.tractor.call(this.base.host.ctx.exposed, input);
-                var inputGate = iresult != IO.HALT && (hook.eager || iresult !== undefined);
-                if (inputGate) {
-                    this.base.specialGate = true;
-                    this.base.host.resolve(iresult);
-                    this.base.specialGate = false;
-                }
-            };
-            return SpecialInputPort;
-        }(ResolveInputPort));
-        IO.SpecialInputPort = SpecialInputPort;
-        var ResolveOutputPort = (function (_super) {
-            __extends(ResolveOutputPort, _super);
-            function ResolveOutputPort(label, outputCallback, outputContext) {
-                _super.call(this, label);
-                this.callback = outputCallback;
-                this.callbackContext = this.prepareContext(outputContext);
-            }
-            ResolveOutputPort.prototype.prepareContext = function (outputContext) {
-                if (typeof (outputContext) == 'function') {
-                    return new outputContext(this);
-                }
-                else if (typeof (outputContext) == 'object') {
-                    return outputContext;
-                }
-                else {
-                    return this;
-                }
-            };
-            return ResolveOutputPort;
-        }(IO.Port));
-        IO.ResolveOutputPort = ResolveOutputPort;
         function orientationChange(child, node) {
             if (child === IO.Orientation.OUTPUT && node === IO.Orientation.INPUT) {
                 return IO.Orientation.INPUT;
@@ -1086,8 +1007,8 @@ var Gentyl;
                 this.specialOutput = specialOut;
                 this.inputHooks = {};
                 this.outputHooks = {};
-                for (var _i = 0, hooks_2 = hooks; _i < hooks_2.length; _i++) {
-                    var hook = hooks_2[_i];
+                for (var _i = 0, hooks_1 = hooks; _i < hooks_1.length; _i++) {
+                    var hook = hooks_1[_i];
                     this.addHook(hook);
                 }
             };
@@ -1156,30 +1077,39 @@ var Gentyl;
             ResolveIO.prototype.collect = function (opcallback, opcontext) {
                 var accumulatedHooks = [].concat(this.hooks);
                 var accumulatedShells = [];
-                for (var k in this.host.crown) {
-                    var child = this.host.crown[k];
-                    if (child instanceof Gentyl.ResolutionNode) {
-                        child = child;
-                        var _a = child.io.collect(opcallback, opcontext), hooks = _a.hooks, shells = _a.shells;
-                        accumulatedHooks = accumulatedHooks.concat(hooks);
-                        accumulatedShells = accumulatedShells.concat(shells);
+                var accumulator = function (child, k) {
+                    child = child;
+                    var _a = child.io.collect(opcallback, opcontext), hooks = _a.hooks, shells = _a.shells;
+                    accumulatedHooks = accumulatedHooks.concat(hooks);
+                    accumulatedShells = accumulatedShells.concat(shells);
+                };
+                if (!Gentyl.Util.isVanillaObject(this.host.crown) && !Gentyl.Util.isVanillaArray(this.host.crown)) {
+                    if (this.host.crown instanceof Gentyl.ResolutionNode) {
+                        accumulator(this.host.crown, null);
                     }
-                    else if (child instanceof Gentyl.BaseNode) {
-                        child = child;
-                        if (child.io.shell != undefined) {
-                            accumulatedShells.push(child.io.shell());
+                }
+                else {
+                    for (var k in this.host.crown) {
+                        var child = this.host.crown[k];
+                        if (child instanceof Gentyl.ResolutionNode) {
+                            child = child;
+                            accumulator(child, k);
                         }
-                        else {
-                            accumulatedShells.push();
+                        else if (child instanceof Gentyl.BaseNode) {
+                            child = child;
+                            if (child.io.shell != undefined) {
+                                accumulatedShells.push(child.io.shell);
+                            }
+                            else {
+                                accumulatedShells.push();
+                            }
                         }
-                    }
-                    if (child.io != undefined) {
                     }
                 }
                 if (this.isShellBase) {
-                    this.specialInput = this.specialInput || { tractor: IO.nothing, label: '$', host: this.host, orientation: IO.Orientation.INPUT, eager: false };
-                    this.specialOutput = this.specialOutput || { tractor: IO.nothing, label: '$', host: this.host, orientation: IO.Orientation.OUTPUT, eager: false };
-                    this.shell = new HookShell(this, accumulatedHooks, accumulatedShells, opcallback, opcontext);
+                    this.specialInput = this.specialInput || { tractor: IO.passing, label: '$', host: this.host, orientation: IO.Orientation.INPUT, eager: true };
+                    this.specialOutput = this.specialOutput || { tractor: IO.passing, label: '$', host: this.host, orientation: IO.Orientation.OUTPUT, eager: true };
+                    this.shell = new IO.HookShell(this, accumulatedHooks, accumulatedShells, opcallback, opcontext);
                     var _loop_1 = function(k_1) {
                         this_1.inputs[k_1] = (function (input) {
                             console.log("[input closure] Handle input: ", input);
@@ -1224,6 +1154,99 @@ var Gentyl;
             return ResolveIO;
         }());
         IO.ResolveIO = ResolveIO;
+    })(IO = Gentyl.IO || (Gentyl.IO = {}));
+})(Gentyl || (Gentyl = {}));
+var Gentyl;
+(function (Gentyl) {
+    var IO;
+    (function (IO) {
+        var ResolveInputPort = (function (_super) {
+            __extends(ResolveInputPort, _super);
+            function ResolveInputPort(label) {
+                var shells = [];
+                for (var _i = 1; _i < arguments.length; _i++) {
+                    shells[_i - 1] = arguments[_i];
+                }
+                _super.call(this, label);
+                this.callback = this.handleInput;
+                this.callbackContext = this;
+                for (var _a = 0, shells_1 = shells; _a < shells_1.length; _a++) {
+                    var shell = shells_1[_a];
+                    this.addShell(shell);
+                }
+            }
+            ResolveInputPort.prototype.handleInput = function (input) {
+                for (var _i = 0, _a = this.shells; _i < _a.length; _i++) {
+                    var shell = _a[_i];
+                    var inputGate = false;
+                    var baseInput = [];
+                    var hooks = [].concat(shell.inputHooks[this.label] || []);
+                    for (var _b = 0, hooks_2 = hooks; _b < hooks_2.length; _b++) {
+                        var hook = hooks_2[_b];
+                        var host = hook.host;
+                        var iresult = hook.tractor.call(host.ctx.exposed, input);
+                        inputGate = inputGate || (iresult != IO.HALT && (hook.eager || iresult !== undefined));
+                        baseInput = baseInput.concat(iresult);
+                        console.log("[input handle hook %s] Handle input: %s", hook.label, iresult);
+                    }
+                    if (inputGate) {
+                        console.log("[base trigger resolve ] Handle input: ", baseInput);
+                        shell.base.host.io.specialGate = true;
+                        shell.base.host.resolve(baseInput);
+                        shell.base.host.io.specialGate = false;
+                    }
+                }
+            };
+            return ResolveInputPort;
+        }(IO.Port));
+        IO.ResolveInputPort = ResolveInputPort;
+        var SpecialInputPort = (function (_super) {
+            __extends(SpecialInputPort, _super);
+            function SpecialInputPort(base) {
+                _super.call(this, '$');
+                this.base = base;
+            }
+            SpecialInputPort.prototype.handleInput = function (input) {
+                console.log("[SpecialInputPort::handleInput]");
+                var hook = this.base.specialInput;
+                var iresult = hook.tractor.call(this.base.host.ctx.exposed, input);
+                var inputGate = iresult != IO.HALT && (hook.eager || iresult !== undefined);
+                if (inputGate) {
+                    this.base.specialGate = true;
+                    this.base.host.resolve(iresult);
+                    this.base.specialGate = false;
+                }
+            };
+            return SpecialInputPort;
+        }(ResolveInputPort));
+        IO.SpecialInputPort = SpecialInputPort;
+        var ResolveOutputPort = (function (_super) {
+            __extends(ResolveOutputPort, _super);
+            function ResolveOutputPort(label, outputCallback, outputContext) {
+                _super.call(this, label);
+                this.callback = outputCallback;
+                this.callbackContext = this.prepareContext(outputContext);
+            }
+            ResolveOutputPort.prototype.prepareContext = function (outputContext) {
+                if (typeof (outputContext) == 'function') {
+                    return new outputContext(this);
+                }
+                else if (typeof (outputContext) == 'object') {
+                    return outputContext;
+                }
+                else {
+                    return this;
+                }
+            };
+            return ResolveOutputPort;
+        }(IO.Port));
+        IO.ResolveOutputPort = ResolveOutputPort;
+    })(IO = Gentyl.IO || (Gentyl.IO = {}));
+})(Gentyl || (Gentyl = {}));
+var Gentyl;
+(function (Gentyl) {
+    var IO;
+    (function (IO) {
         var HookShell = (function () {
             function HookShell(base, midrantHooks, subshells, opcallback, opcontext) {
                 this.base = base;
@@ -1236,17 +1259,17 @@ var Gentyl;
                     this.addMidrantHook(hook);
                 }
                 for (var label in this.inputHooks) {
-                    this.sinks[label] = new ResolveInputPort(label, this);
+                    this.sinks[label] = new IO.ResolveInputPort(label, this);
                 }
                 for (var label in this.outputHooks) {
-                    this.sources[label] = new ResolveOutputPort(label, opcallback, opcontext);
+                    this.sources[label] = new IO.ResolveOutputPort(label, opcallback, opcontext);
                 }
                 for (var _a = 0, subshells_1 = subshells; _a < subshells_1.length; _a++) {
                     var shell = subshells_1[_a];
                     this.addShell(shell);
                 }
-                this.sinks['$'] = new SpecialInputPort(this.base);
-                this.sources['$'] = new ResolveOutputPort('$', opcallback, opcontext);
+                this.sinks['$'] = new IO.SpecialInputPort(this.base);
+                this.sources['$'] = new IO.ResolveOutputPort('$', opcallback, opcontext);
             }
             HookShell.prototype.addMidrantHook = function (hook) {
                 hook.host.io.base = this.base;

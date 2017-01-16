@@ -151,7 +151,7 @@ namespace Gentyl {
                    throw new Error("Invalid label format, must have up to two leading and trailing underscores");
                }
             }
-            console.log("declaration @ form parse", ctxdeclare)
+            
             return {iospec:{hooks:hooks, specialIn:specialInHook, specialOut:specialOutHook}, contextspec:{properties:context, declaration:ctxdeclare}};
          }
 

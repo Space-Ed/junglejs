@@ -240,20 +240,6 @@ declare namespace Gentyl {
             orientation: Orientation;
             eager: boolean;
         }
-        class ResolveInputPort extends Port {
-            shells: HookShell[];
-            constructor(label: any, ...shells: HookShell[]);
-            handleInput(input: any): void;
-        }
-        class SpecialInputPort extends ResolveInputPort {
-            private base;
-            constructor(base: ResolveIO);
-            handleInput(input: any): void;
-        }
-        class ResolveOutputPort extends Port {
-            constructor(label: string, outputCallback: any, outputContext: any);
-            prepareContext(outputContext: any): any;
-        }
         class ResolveIO implements IOComponent {
             host: ResolutionNode;
             hooks: Hook[];
@@ -281,6 +267,28 @@ declare namespace Gentyl {
             };
             dispatchResult(result: any): any;
         }
+    }
+}
+declare namespace Gentyl {
+    namespace IO {
+        class ResolveInputPort extends Port {
+            shells: HookShell[];
+            constructor(label: any, ...shells: HookShell[]);
+            handleInput(input: any): void;
+        }
+        class SpecialInputPort extends ResolveInputPort {
+            private base;
+            constructor(base: ResolveIO);
+            handleInput(input: any): void;
+        }
+        class ResolveOutputPort extends Port {
+            constructor(label: string, outputCallback: any, outputContext: any);
+            prepareContext(outputContext: any): any;
+        }
+    }
+}
+declare namespace Gentyl {
+    namespace IO {
         class HookShell implements Shell {
             base: ResolveIO;
             inputHooks: any;

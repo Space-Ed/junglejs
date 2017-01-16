@@ -104,7 +104,6 @@ namespace Gentyl {
             var layers:ContextLayer[] = []
 
             // header, inheritance
-            console.log("declaration @ parse mode", modestr);
 
             var usesplit = modestr.split(/use/);
 

@@ -9,96 +9,6 @@ namespace Gentyl {
             eager:boolean
         }
 
-        /**
-         * This class handles dispersing over all the hosts with a label like
-         */
-        export class ResolveInputPort extends Port{
-
-            shells:HookShell[];
-
-            constructor(label, ...shells:HookShell[]){
-                super(label)
-                this.callback = this.handleInput
-                this.callbackContext = this
-
-                for(var shell of shells){
-                    this.addShell(shell);
-                }
-            }
-
-            handleInput(input){
-
-                for (var shell of this.shells){
-
-                    var inputGate = false;
-                    var baseInput = [];
-
-                    var hooks:Hook[] = [].concat(shell.inputHooks[this.label] || []);
-
-                    for (var hook of hooks){
-                        var host = hook.host;
-                        var iresult = hook.tractor.call(host.ctx.exposed, input);
-
-                        inputGate = inputGate || (iresult != IO.HALT && (hook.eager || iresult !== undefined));
-                        baseInput = baseInput.concat(iresult)
-
-                        console.log("[input handle hook %s] Handle input: %s", hook.label, iresult)
-                    }
-
-                    //don't trigger if no inputs have affirmative
-                    if(inputGate){
-                        console.log("[base trigger resolve ] Handle input: ", baseInput)
-
-                        //in order to get around the resolve restriction
-                        shell.base.host.io.specialGate = true;
-                        shell.base.host.resolve(baseInput);
-                        shell.base.host.io.specialGate = false;
-                    }
-                }
-            }
-        }
-
-        export class SpecialInputPort extends ResolveInputPort {
-            constructor(private base:ResolveIO){
-                super('$');
-            }
-
-            handleInput(input){
-
-                console.log("[SpecialInputPort::handleInput]")
-                var hook = this.base.specialInput;
-                var iresult = hook.tractor.call(this.base.host.ctx.exposed, input);
-
-                var inputGate = iresult != IO.HALT && (hook.eager || iresult !== undefined);
-
-                if(inputGate){
-                    this.base.specialGate = true;
-                    this.base.host.resolve(iresult);
-                    this.base.specialGate = false;
-                }
-            }
-        }
-
-        export class ResolveOutputPort extends Port {
-            constructor(label:string, outputCallback, outputContext){
-                super(label);
-                this.callback = outputCallback;
-                this.callbackContext = this.prepareContext(outputContext);
-            }
-
-            prepareContext(outputContext){
-                if (typeof(outputContext) == 'function'){
-                    return new outputContext(this);
-                }else if (typeof(outputContext)== 'object'){
-                    return outputContext;
-                }else{
-                    return this
-                }
-            }
-        }
-
-
-
         function orientationChange(child, node):Orientation{
             if(child === Orientation.OUTPUT && node === Orientation.INPUT){
                 return Orientation.INPUT;
@@ -288,36 +198,47 @@ namespace Gentyl {
                 var accumulatedHooks = [].concat(this.hooks);
                 var accumulatedShells = [];
 
-                for (var k in this.host.crown){
-                    var child = this.host.crown[k]
+                var accumulator = function(child, k){
+                    child = <ResolutionNode> child;
 
-                    if(child instanceof ResolutionNode){
-                        child = <ResolutionNode> child;
-                        let {hooks, shells} = child.io.collect(opcallback, opcontext);
-                        accumulatedHooks = accumulatedHooks.concat(hooks);
-                        accumulatedShells = accumulatedShells.concat(shells);
-                    }else if (child instanceof BaseNode){
-                        child = <BaseNode> child;
-
-                        //on other
-                        if(child.io.shell != undefined){
-                            accumulatedShells.push(child.io.shell());
-                        }else{
-                            accumulatedShells.push()
-                        }
-
-                    }
-
-                    if(child.io != undefined){
-                    }
+                    let {hooks, shells} = child.io.collect(opcallback, opcontext);
+                    accumulatedHooks = accumulatedHooks.concat(hooks);
+                    accumulatedShells = accumulatedShells.concat(shells);
                 }
+
+                //singular case handling
+                if (!Util.isVanillaObject(this.host.crown) && !Util.isVanillaArray(this.host.crown)){
+                    if(this.host.crown instanceof ResolutionNode){
+                        accumulator(this.host.crown, null);
+                    }
+                }else{
+
+                    for (var k in this.host.crown){
+                        let child = this.host.crown[k];
+                        if(child instanceof ResolutionNode){
+                            child = <ResolutionNode> child;
+                            accumulator(child, k)
+                        }else if (child instanceof BaseNode){
+                            child = <BaseNode> child;
+
+                            //on other
+                            if(child.io.shell != undefined){
+                                accumulatedShells.push(child.io.shell);
+                            }else{
+                                accumulatedShells.push()
+                            }
+                        }
+                    }
+
+                }
+
 
                 //shell creation post recurse means leaves shell first
                 if(this.isShellBase){
 
                     //special hooks are needed at this point, by default they will not trigger or pass anything.
-                    this.specialInput  = this.specialInput || {tractor:nothing, label:'$', host:this.host, orientation:Orientation.INPUT, eager:false};
-                    this.specialOutput = this.specialOutput|| {tractor:nothing, label:'$', host:this.host, orientation:Orientation.OUTPUT, eager:false};
+                    this.specialInput  = this.specialInput || {tractor:passing, label:'$', host:this.host, orientation:Orientation.INPUT, eager:true};
+                    this.specialOutput = this.specialOutput|| {tractor:passing, label:'$', host:this.host, orientation:Orientation.OUTPUT, eager:true};
 
                     //compile the accumulated hooks into a single shell
                     this.shell = new HookShell(this, accumulatedHooks, accumulatedShells, opcallback, opcontext);
@@ -325,7 +246,6 @@ namespace Gentyl {
                     //aliased input function by binding the outward facing port to the host
                     for(let k in this.shell.sinks){
                         this.inputs[k] = (function(input){
-                            console.log("[input closure] Handle input: ", input)
                             this.shell.sinks[k].handle(input);
                         }).bind(this);
                     }
@@ -370,118 +290,6 @@ namespace Gentyl {
 
             }
         }
-
-
-
-        export class HookShell implements Shell{
-
-            //map - array - hook
-            inputHooks:any;
-            outputHooks:any;
-
-            sinks:any;
-            sources:any;
-
-                /**
-                 * transform this node into a BaseShell, the kind that has the functions and
-                 */
-            constructor(public base:ResolveIO, midrantHooks:Hook[], subshells:Shell[], opcallback, opcontext?) {
-
-                    this.sources = {};
-                    this.sinks = {};
-                    this.inputHooks = {};
-                    this.outputHooks = {};
-
-                    //add hooks for inputs of base to call
-                    for (let hook of midrantHooks){
-                        this.addMidrantHook(hook)
-                    }
-
-                    //create ports based off labels
-                    for(let label in this.inputHooks){
-                        this.sinks[label] = new ResolveInputPort(label, this);
-                    }
-
-                    for(let label in this.outputHooks){
-                        this.sources[label] = new ResolveOutputPort(label, opcallback, opcontext);
-                    }
-
-                    for(let shell of subshells){
-                        //add output ports of other bases to this one
-                        this.addShell(shell);
-                    }
-
-                    //create the special IO Ports
-                    this.sinks['$'] = new SpecialInputPort(this.base);
-                    this.sources['$'] = new ResolveOutputPort('$', opcallback, opcontext);
-
-
-                }
-
-                /**
-                 * Handle the compaction of midrant hooks into label based arrays
-                 */
-                addMidrantHook(hook:Hook){
-                    hook.host.io.base = this.base;
-
-                    if(hook.orientation === Orientation.INPUT){
-                        this.inputHooks[hook.label] = (this.inputHooks[hook.label]||[]).concat(hook)
-
-                    }else if (hook.orientation === Orientation.OUTPUT){
-                        this.outputHooks[hook.label] = (this.outputHooks[hook.label]||[]).concat(hook)
-                    }
-                }
-
-                /**
-                 * Bring the subshell forward,
-                 - subsume the uncommon sinks
-                 - retrofuse
-                 */
-                addShell(shell:Shell){
-
-                    for(let k in shell.sinks){
-                        let sink = shell.sinks[k]
-                        if(sink.label in this.sinks){
-                            //retrofusion
-                            let outerSink = <ResolveInputPort>this.sinks[sink.label];
-                            outerSink.addShell(this)
-
-                            //all the shells of the fused sink now must ref the outermost
-                            for(let shell of sink.shells){
-                                (<HookShell>shell).sinks[sink.label] = outerSink;
-                            }
-
-                            //now "sink" should be GC
-
-                        }else{
-                            //subsumption
-                            this.sinks[sink.label] = sink;
-                        }
-                    }
-
-                    for(let k in shell.sources){
-                        let source = shell.sources[k]
-                        if(source.label in this.sources){
-                            //retrofusion
-                            let outerSource = <ResolveOutputPort>this.sources[source.label];
-                            outerSource.addShell(this)
-
-                            //all the shells of the fused source now must ref the outermost
-                            for(let shell of source.shells){
-                                (<HookShell>shell).sources[source.label] = outerSource;
-                            }
-
-                            //now "source" should be GC
-
-                        }else{
-                            //subsumption
-                            this.sources[source.label] = source;
-                        }
-                    }
-
-                }
-
-            }
         }
 
     }

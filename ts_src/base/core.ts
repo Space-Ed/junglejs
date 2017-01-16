@@ -109,9 +109,9 @@ namespace Gentyl {
             }
 
             // CONTROVERTIAL: does the automatic shelling of the root make sense?
-            // if(this.isRoot){
-            //     this.enshell()
-            // }
+            if(this.isRoot){
+                this.enshell()
+            }
 
             return this;
         }

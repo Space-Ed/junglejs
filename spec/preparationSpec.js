@@ -7,13 +7,13 @@ describe("preparation",function(){
 
     beforeEach(function(){
         g = G(
-            G(
-                G(0,{
-                    x:"use _",
-                    p(parg){this.anteling = parg},
-                    r(){ return this.anteling}
+                G(
+                    G({},{
+                        x:"two use _",
+                        p(parg){this.anteling = parg},
+                        r(){ return this.anteling}
                 }),{
-                x:"use _",
+                x:"one use _",
                 p(parg){this.apparation = parg},
                 r(obj){return  this.apparation + obj}
             }
