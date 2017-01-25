@@ -6,7 +6,8 @@ namespace Gentyl {
             label:string,
             tractor:Function,
             orientation:Orientation,
-            eager:boolean
+            eager:boolean,
+            reactiveValue?:boolean
         }
 
         function orientationChange(child, node):Orientation{
@@ -67,9 +68,18 @@ namespace Gentyl {
             //get the tractor functions back
             extract(){
                 var ext = {};
+                var hook:Hook
+                for (hook of this.hooks){
 
-                for (var {tractor} of this.hooks){
-                    ext[(<any>tractor).name] = tractor;
+                    var scores = hook.eager ? '__' : '_'
+                    var isinp = hook.orientation == Orientation.INPUT  || hook.orientation == Orientation.MIXED;
+                    var isout = hook.orientation == Orientation.OUTPUT || hook.orientation == Orientation.MIXED;
+
+                    var label = (isinp?scores:'')+hook.label+(isout?scores:'')
+
+                    if(!hook.reactiveValue){
+                        ext[label] = hook.tractor;
+                    }
                 }
 
                 return ext
@@ -198,7 +208,7 @@ namespace Gentyl {
                 var accumulatedHooks = [].concat(this.hooks);
                 var accumulatedShells = [];
 
-                var accumulator = function(child, k){
+                const accumulator = function(child, k){
                     child = <ResolutionNode> child;
 
                     let {hooks, shells} = child.io.collect(opcallback, opcontext);

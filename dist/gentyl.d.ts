@@ -20,9 +20,25 @@ declare namespace Gentyl {
         SHARE = 1,
         TRACK = 2,
     }
+    interface ContextSpec {
+        properties: PropertySpec[];
+        declaration: string;
+    }
     interface ContextLayer {
         source: GContext;
         mode: ASSOCMODE;
+    }
+    interface PropertySpec {
+        type: CTXPropertyTypes;
+        key: any;
+        value: any;
+        reference?: any;
+        original?: any;
+    }
+    enum CTXPropertyTypes {
+        NORMAL = 0,
+        BOUND = 1,
+        HOOK = 2,
     }
     class GContext {
         private host;
@@ -33,12 +49,18 @@ declare namespace Gentyl {
         exposed: any;
         internalProperties: any;
         propertyLayerMap: any;
+        activePropertyRegister: any;
         closed: boolean;
-        constructor(host: BaseNode, contextspec: any);
-        borrowExposed(): this;
-        restoreExposed(returned: any): void;
+        originals: any;
+        cache: any;
+        constructor(host: BaseNode, contextspec: ContextSpec);
+        addInternalProperty(spec: PropertySpec): void;
+        addHookedProperty(spec: PropertySpec): void;
+        addThroughProperty(spec: PropertySpec): void;
+        addInputProperty(spec: PropertySpec): void;
+        addOutputProperty(spec: any): void;
         prepare(): void;
-        extract(): any;
+        extract(): {};
         parseMode(modestr: string): ContextLayer[];
         addExposedProperty(name: string, defaultValue: any): void;
         removeExposedProperty(name: string): void;
@@ -53,7 +75,7 @@ declare namespace Gentyl {
     class BaseNode {
         crown: any;
         ctx: GContext;
-        form: GForm;
+        form: BaseForm;
         io: IO.IOComponent;
         act: Actions.Component;
         parent: BaseNode;
@@ -64,7 +86,7 @@ declare namespace Gentyl {
         ancestor: BaseNode;
         isAncestor: boolean;
         constructor(components: any, form?: FormSpec);
-        protected constructForm(): GForm;
+        protected constructForm(): BaseForm;
         protected constructIO(iospec: any): IO.IOComponent;
         protected constructContext(contextspec: any): GContext;
         protected constructActions(): Actions.Component;
@@ -85,30 +107,23 @@ declare namespace Gentyl {
     }
 }
 declare namespace Gentyl {
-    enum LabelTypes {
-        PASSIVE = 0,
-        TRIG = 1,
-        ENTRIG = 2,
-        GATE = 3,
-        GATER = 4,
-        TRIGATE = 5,
-        TRIGATER = 6,
-        ENTRIGATE = 7,
-        ENTRIGATER = 8,
-    }
     interface FormSpec {
         r?: (obj, args?) => any;
         c?: (args?) => any;
         s?: (keys, arg?) => any;
         p?: (arg) => void;
+        d?: (arg) => void;
         x?: string;
+        links?: string[];
+        ports?: string[];
+        lf?: (porta, portb) => any;
     }
-    class GForm {
-        private host;
-        static RFormProps: string[];
-        carrier: (arg) => any;
-        resolver: (obj, arg) => any;
-        selector: (keys, arg) => any;
+    interface FormResult {
+        iospec?: any;
+        contextspec?: ContextSpec;
+    }
+    class BaseForm {
+        host: BaseNode;
         preparator: (arg) => void;
         depreparator: (arg) => void;
         constructor(host: BaseNode);
@@ -120,6 +135,17 @@ declare namespace Gentyl {
             };
         };
         consolidate(io: IO.IOComponent, ctx: GContext): FormSpec;
+    }
+    interface IOLinkSpec {
+        ports: any;
+        linkFunciton: (a, b) => void;
+        links: string[];
+    }
+    class LForm extends BaseForm {
+        parse(formObj: FormSpec): {
+            iospec: IOLinkSpec;
+            contextspec: ContextSpec;
+        };
     }
 }
 declare namespace Gentyl {
@@ -222,13 +248,39 @@ declare namespace Gentyl {
 declare namespace Gentyl {
     class ResolutionNode extends BaseNode {
         io: IO.ResolveIO;
-        protected constructForm(): any;
+        form: GForm;
+        protected constructForm(): GForm;
         protected constructIO(iospec: any): IO.ResolveIO;
         protected constructCore(crown: any, form: any): ResolutionNode;
         private resolveArray(array, resolveArgs, selection);
         private resolveObject(node, resolveArgs, selection);
         private resolveNode(node, resolveArgs, selection);
         resolve(resolveArgs: any): any;
+    }
+}
+declare namespace Gentyl {
+    enum LabelTypes {
+        PASSIVE = 0,
+        TRIG = 1,
+        ENTRIG = 2,
+        GATE = 3,
+        GATER = 4,
+        TRIGATE = 5,
+        TRIGATER = 6,
+        ENTRIGATE = 7,
+        ENTRIGATER = 8,
+    }
+    class GForm extends BaseForm {
+        static RFormProps: string[];
+        carrier: (arg) => any;
+        resolver: (obj, arg) => any;
+        selector: (keys, arg) => any;
+        constructor(host: ResolutionNode);
+        parse(formObj: FormSpec): {
+            iospec: any;
+            contextspec: ContextSpec;
+        };
+        consolidate(io: IO.IOComponent, ctx: GContext): FormSpec;
     }
 }
 declare namespace Gentyl {
@@ -239,6 +291,7 @@ declare namespace Gentyl {
             tractor: Function;
             orientation: Orientation;
             eager: boolean;
+            reactiveValue?: boolean;
         }
         class ResolveIO implements IOComponent {
             host: ResolutionNode;
@@ -314,7 +367,7 @@ declare namespace Gentyl {
         function weightedChoice(weights: number[]): number;
         function range(...args: any[]): any[];
         function translator(node: any, translation: any): any;
-        function melder(node1: any, node2: any, merge?: (a: any, b: any) => any, concatArrays?: boolean): any;
+        function melder(node1: any, node2: any, merge?: (a: any, b: any) => any, concatArrays?: boolean, typeConstrain?: boolean): any;
         function deeplyEquals(node1: any, node2: any, allowIdentical?: boolean): boolean;
         function deeplyEqualsThrow(node1: any, node2: any, derefstack: any, seen: any, allowIdentical?: boolean): boolean;
         function isDeepReplica(node1: any, node2: any): void;
@@ -333,9 +386,14 @@ declare namespace Gentyl {
         function typeCaseSplitR(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any, initial?: any, reductor?: (a: any, b: any, k: any) => void) => any;
         function typeCaseSplitF(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;
         function typeCaseSplitM(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => void;
-        class AsyncGate {
-            locks: {};
-            constuctor(): void;
+        class Gate {
+            private callback;
+            private context;
+            locks: boolean[];
+            locki: number;
+            constructor(callback: any, context: any);
+            lock(): () => void;
+            allUnlocked(): boolean;
         }
     }
 }

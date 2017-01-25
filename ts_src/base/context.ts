@@ -4,9 +4,28 @@ namespace Gentyl {
         SHARE,
         TRACK
     }
+
+    export interface ContextSpec {
+        properties:PropertySpec[],
+        declaration:string
+    }
     export interface ContextLayer {
         source:GContext;
         mode:ASSOCMODE;
+    }
+
+    export interface PropertySpec {
+        type:CTXPropertyTypes;
+        key:any;
+        value:any;
+        reference?:any;
+        original?:any;
+    }
+
+    export enum CTXPropertyTypes {
+        NORMAL,
+        BOUND,
+        HOOK
     }
 
     /**
@@ -22,9 +41,15 @@ namespace Gentyl {
 
         internalProperties:any;
         propertyLayerMap:any;
+
+        activePropertyRegister:any;
+
         closed:boolean;
 
-        constructor(private host:BaseNode, contextspec){
+        originals:any;
+        cache:any;
+
+        constructor(private host:BaseNode, contextspec:ContextSpec){
             var {properties, declaration} = contextspec;
             this.declaration = declaration;
 
@@ -46,6 +71,9 @@ namespace Gentyl {
                 },
             });
 
+
+            this.originals = {};
+            this.cache = {};
             this.closed = false;
             this.label = "";
             this.nominal = false;
@@ -53,24 +81,89 @@ namespace Gentyl {
             this.exposed = {path:this.path};
 
             //create internally held properties.
-            for(var k in properties){
-                this.addExposedProperty(k, properties[k])
+            properties.forEach(function(value, index){
+
+                this.addInternalProperty(value);
+            }, this);
+        }
+
+        addInternalProperty(spec:PropertySpec){
+            switch(spec.type){
+                case CTXPropertyTypes.NORMAL: this.addExposedProperty(spec.key,spec.value);break;
+                case CTXPropertyTypes.BOUND: this.addExposedProperty(spec.key,spec.value.bind(this.exposed)); break;
+                case CTXPropertyTypes.HOOK: this.addHookedProperty(spec);
             }
         }
 
-        /**
-            extract the context used by tractors, thereby safegaurding the reference to the core values, only exposing properties and special handles. .
-        */
-        borrowExposed(){
-            return this;
+        addHookedProperty(spec:PropertySpec){
+
+            /*possible issue: bound functions cant be applied to other exposures so the io-ctx relationship must be 1:1.
+            that is these bound functions must not persist beyond the lifetime of the counterpart shell
+            */
+
+            this.originals[spec.key] = spec;
+            this.cache[spec.key] = spec.value;
+
+            if(spec.reference instanceof Array){ // then it is [input output] hooks
+                this.addThroughProperty(spec);
+            }else{
+                let href:IO.Hook = spec.reference
+                if(href.orientation === IO.Orientation.INPUT){
+                    this.addInputProperty(spec);
+                }else{
+                    this.addOutputProperty(spec);
+                }
+            }
+
+            this.addExposedProperty(spec.key, spec.value);
         }
 
-        /**
-            return the context after the tractor call,
-        */
-        restoreExposed(returned:any){
+        addThroughProperty(spec:PropertySpec){
+            //shallow spec copy to achieve tractor difference
+            var ospec:PropertySpec = {type:spec.type, key:spec.key, value:spec.value, reference:spec.reference[1], original:spec.original};
+            spec.reference = spec.reference[0];
+            this.addInputProperty(spec);
+            this.addOutputProperty(ospec);
+        }
+
+        addInputProperty(spec:PropertySpec){
+            spec.reference.reactiveValue = true;
+
+            //This is binding to access the cache and set the exposed to the input
+
+            (<IO.Hook>spec.reference).tractor = (function(inp){
+                this.exposed[spec.key] = inp;
+
+                //console.log(`injected input, key:${spec.key}, input: ${inp}, cached ${this.cache[spec.key]}`);
+                if(spec.reference.eager && this.cache[spec.key] !== inp){
+                    this.cache[spec.key] = inp;
+                }else{
+                    return IO.HALT;
+                }
+            }).bind(this);
+
 
         }
+
+        addOutputProperty(spec){
+            spec.reference.reactiveValue = true;
+
+            //This is binding to access the cache so when it changes the next output trigger will grab it
+
+            (<IO.Hook>spec.reference).tractor = (function(output){
+
+                let current = this.exposed[spec.key]
+                //console.log(`injected output tractor, key:${spec.key}, current: ${current}, cached ${this.cache[spec.key]}`)
+
+                if(spec.reference.eager || this.cache[spec.key] !== current){
+                    this.cache[spec.key] = current;
+                    return current;
+                }else{
+                    return IO.HALT;
+                }
+            }).bind(this);
+        }
+
 
         prepare(){
             var layers = this.parseMode(this.declaration)
@@ -94,7 +187,20 @@ namespace Gentyl {
         }
 
         extract(){
-            return Util.deepCopy(this.internalProperties)
+
+            //internals include labels that should be recovered from the original spec
+            let patch = {};
+            for (let k in this.internalProperties){
+                let v = this.internalProperties[k];
+
+                if(k in this.originals){
+                    let orig = this.originals[k]
+                    patch[orig.original || orig.key] = orig.value;
+                }else{
+                    patch[k] = Util.deepCopy(v);
+                }
+            }
+            return patch;
         }
 
         /**

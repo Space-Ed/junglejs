@@ -83,7 +83,7 @@ namespace Gentyl{
             }
         }
 
-        export function melder(node1, node2, merge=function(a,b){return b}, concatArrays=false):any{
+        export function melder(node1, node2, merge=function(a,b){return b}, concatArrays=false, typeConstrain=true):any{
             if(node1 == undefined){
                 return node2
             }
@@ -91,7 +91,7 @@ namespace Gentyl{
                 return node1
             }
 
-            if(typeof(node1) != typeof(node2)){
+            if(typeConstrain && (typeof(node1) != typeof(node2))){
                 var errmsg = "Expected melding nodes to be the same type \n"+
                             "type of node1: "+typeof(node1)+"\n"+
                             "type of node2: "+typeof(node2)+"\n"
@@ -263,7 +263,7 @@ namespace Gentyl{
         }
 
         export function isPrimative(thing){
-            return typeof(thing) !== 'object';
+            return thing == undefined || typeof(thing) !== 'object';
         }
 
         export function isVanillaObject(thing){
@@ -402,14 +402,30 @@ namespace Gentyl{
             }
         }
 
-        export class AsyncGate{
-            locks:{};
 
-            constuctor(){
-                
+        export class Gate{
+            locks:boolean[];
+            locki:number;
+
+            constructor(private callback, private context){
+                this.locks = [];
+                this.locki = 0;
             }
 
+            lock():() => void {
+                this.locks[this.locki] = true;
 
+                return (function(locki){
+                    this.locks[locki] = false;
+                    if(this.allUnlocked()){
+                        this.callback.call(this.context);
+                    }
+                }).bind(this, this.locki++)
+            }
+
+            allUnlocked():boolean{
+                return this.locks.filter(function(x){return x}).length === 0;
+            }
         }
 
     }

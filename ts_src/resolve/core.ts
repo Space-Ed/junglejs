@@ -3,6 +3,7 @@ namespace Gentyl {
     export class ResolutionNode extends BaseNode {
 
         io:IO.ResolveIO;
+        form:GForm;
 
         protected constructForm(){
             return new GForm(this)

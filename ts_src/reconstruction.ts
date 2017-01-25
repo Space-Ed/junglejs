@@ -48,10 +48,12 @@ namespace Gentyl {
      * and only storing in the bundle a uuid or function name;
      */
     export function deformulate(fromNode:BaseNode):any{
+        let rNode = <ResolutionNode>fromNode;
+
         var preform:FormSpec = {
-            r:fromNode.form.resolver,
-            c:fromNode.form.carrier,
-            x:fromNode.ctx.declaration
+            r:rNode.form.resolver,
+            c:rNode.form.carrier,
+            x:rNode.ctx.declaration
         }
 
         var exForm = {};

@@ -77,6 +77,12 @@ var Gentyl;
         ASSOCMODE[ASSOCMODE["TRACK"] = 2] = "TRACK";
     })(Gentyl.ASSOCMODE || (Gentyl.ASSOCMODE = {}));
     var ASSOCMODE = Gentyl.ASSOCMODE;
+    (function (CTXPropertyTypes) {
+        CTXPropertyTypes[CTXPropertyTypes["NORMAL"] = 0] = "NORMAL";
+        CTXPropertyTypes[CTXPropertyTypes["BOUND"] = 1] = "BOUND";
+        CTXPropertyTypes[CTXPropertyTypes["HOOK"] = 2] = "HOOK";
+    })(Gentyl.CTXPropertyTypes || (Gentyl.CTXPropertyTypes = {}));
+    var CTXPropertyTypes = Gentyl.CTXPropertyTypes;
     var GContext = (function () {
         function GContext(host, contextspec) {
             this.host = host;
@@ -96,19 +102,75 @@ var Gentyl;
                     configurable: false
                 },
             });
+            this.originals = {};
+            this.cache = {};
             this.closed = false;
             this.label = "";
             this.nominal = false;
             this.path = [];
             this.exposed = { path: this.path };
-            for (var k in properties) {
-                this.addExposedProperty(k, properties[k]);
-            }
+            properties.forEach(function (value, index) {
+                this.addInternalProperty(value);
+            }, this);
         }
-        GContext.prototype.borrowExposed = function () {
-            return this;
+        GContext.prototype.addInternalProperty = function (spec) {
+            switch (spec.type) {
+                case CTXPropertyTypes.NORMAL:
+                    this.addExposedProperty(spec.key, spec.value);
+                    break;
+                case CTXPropertyTypes.BOUND:
+                    this.addExposedProperty(spec.key, spec.value.bind(this.exposed));
+                    break;
+                case CTXPropertyTypes.HOOK: this.addHookedProperty(spec);
+            }
         };
-        GContext.prototype.restoreExposed = function (returned) {
+        GContext.prototype.addHookedProperty = function (spec) {
+            this.originals[spec.key] = spec;
+            this.cache[spec.key] = spec.value;
+            if (spec.reference instanceof Array) {
+                this.addThroughProperty(spec);
+            }
+            else {
+                var href = spec.reference;
+                if (href.orientation === Gentyl.IO.Orientation.INPUT) {
+                    this.addInputProperty(spec);
+                }
+                else {
+                    this.addOutputProperty(spec);
+                }
+            }
+            this.addExposedProperty(spec.key, spec.value);
+        };
+        GContext.prototype.addThroughProperty = function (spec) {
+            var ospec = { type: spec.type, key: spec.key, value: spec.value, reference: spec.reference[1], original: spec.original };
+            spec.reference = spec.reference[0];
+            this.addInputProperty(spec);
+            this.addOutputProperty(ospec);
+        };
+        GContext.prototype.addInputProperty = function (spec) {
+            spec.reference.reactiveValue = true;
+            spec.reference.tractor = (function (inp) {
+                this.exposed[spec.key] = inp;
+                if (spec.reference.eager && this.cache[spec.key] !== inp) {
+                    this.cache[spec.key] = inp;
+                }
+                else {
+                    return Gentyl.IO.HALT;
+                }
+            }).bind(this);
+        };
+        GContext.prototype.addOutputProperty = function (spec) {
+            spec.reference.reactiveValue = true;
+            spec.reference.tractor = (function (output) {
+                var current = this.exposed[spec.key];
+                if (spec.reference.eager || this.cache[spec.key] !== current) {
+                    this.cache[spec.key] = current;
+                    return current;
+                }
+                else {
+                    return Gentyl.IO.HALT;
+                }
+            }).bind(this);
         };
         GContext.prototype.prepare = function () {
             var layers = this.parseMode(this.declaration);
@@ -127,7 +189,18 @@ var Gentyl;
             }
         };
         GContext.prototype.extract = function () {
-            return Gentyl.Util.deepCopy(this.internalProperties);
+            var patch = {};
+            for (var k in this.internalProperties) {
+                var v = this.internalProperties[k];
+                if (k in this.originals) {
+                    var orig = this.originals[k];
+                    patch[orig.original || orig.key] = orig.value;
+                }
+                else {
+                    patch[k] = Gentyl.Util.deepCopy(v);
+                }
+            }
+            return patch;
         };
         GContext.prototype.parseMode = function (modestr) {
             var layers = [];
@@ -241,14 +314,14 @@ var Gentyl;
             this.prepared = false;
             this.form = this.constructForm();
             var _a = this.form.parse(form), iospec = _a.iospec, contextspec = _a.contextspec;
-            this.io = this.constructIO(iospec);
             this.ctx = this.constructContext(contextspec);
+            this.io = this.constructIO(iospec);
             this.act = this.constructActions();
             var inductor = this.inductComponent.bind(this);
             this.crown = Gentyl.Util.typeCaseSplitF(inductor, inductor, null)(components);
         }
         BaseNode.prototype.constructForm = function () {
-            return new Gentyl.GForm(this);
+            return new Gentyl.BaseForm(this);
         };
         BaseNode.prototype.constructIO = function (iospec) {
             return new Gentyl.IO.BaseIO();
@@ -294,7 +367,6 @@ var Gentyl;
                 this.ancestor.isAncestor = true;
             }
             if (this.isRoot) {
-                console.log("enshell on prepare of core with form label, ", this.ctx.label);
                 this.enshell();
             }
             return this;
@@ -415,225 +487,84 @@ var Gentyl;
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {
-    (function (LabelTypes) {
-        LabelTypes[LabelTypes["PASSIVE"] = 0] = "PASSIVE";
-        LabelTypes[LabelTypes["TRIG"] = 1] = "TRIG";
-        LabelTypes[LabelTypes["ENTRIG"] = 2] = "ENTRIG";
-        LabelTypes[LabelTypes["GATE"] = 3] = "GATE";
-        LabelTypes[LabelTypes["GATER"] = 4] = "GATER";
-        LabelTypes[LabelTypes["TRIGATE"] = 5] = "TRIGATE";
-        LabelTypes[LabelTypes["TRIGATER"] = 6] = "TRIGATER";
-        LabelTypes[LabelTypes["ENTRIGATE"] = 7] = "ENTRIGATE";
-        LabelTypes[LabelTypes["ENTRIGATER"] = 8] = "ENTRIGATER";
-    })(Gentyl.LabelTypes || (Gentyl.LabelTypes = {}));
-    var LabelTypes = Gentyl.LabelTypes;
-    var TrigateLabelTypesMap = {
-        '': { '': LabelTypes.PASSIVE, '_': LabelTypes.GATE, '__': LabelTypes.GATER },
-        '_': { '': LabelTypes.TRIG, '_': LabelTypes.TRIGATE, '__': LabelTypes.TRIGATER },
-        '__': { '': LabelTypes.ENTRIG, '_': LabelTypes.ENTRIGATE, '__': LabelTypes.ENTRIGATER }
-    };
-    var labelTypeCompatibility = {
-        0: {},
-        1: { 3: true, 4: true },
-        2: { 3: true, 4: true },
-        3: { 1: true, 2: true },
-        4: { 1: true, 2: true },
-        5: {},
-        6: {},
-        7: {},
-        8: {},
-        9: {}
-    };
-    var GForm = (function () {
-        function GForm(host) {
+    var BaseForm = (function () {
+        function BaseForm(host) {
             this.host = host;
         }
-        GForm.prototype.parse = function (formObj) {
+        BaseForm.prototype.parse = function (formObj) {
             var ctxdeclare = formObj.x || "";
-            this.carrier = formObj.c || Gentyl.Util.identity;
-            this.resolver = formObj.r || Gentyl.Util.identity;
-            this.selector = formObj.s || function (keys, carg) { return true; };
             this.preparator = formObj.p || function (x) { };
-            var ioRegex = /^(_{0,2})([a-zA-Z](?:\w*[a-zA-Z])?|\$)(_{0,2})$/;
-            var hooks = [];
+            this.preparator = formObj.p || function (x) { };
+            var contextprops = [];
+            var linkPropRegex = /^[a-zA-Z](?:\w*[a-zA-Z])?$/;
+            for (var k in formObj) {
+                if (Gentyl.GForm.RFormProps.indexOf(k) > -1)
+                    continue;
+                if (k.match(linkPropRegex)) {
+                    contextprops.push({ key: k, type: Gentyl.CTXPropertyTypes.NORMAL, value: formObj[k] });
+                }
+                else {
+                    throw new Error("Invalid property for link context, use ports");
+                }
+            }
+            return { iospec: null, contextspec: { properties: contextprops, declaration: ctxdeclare } };
+        };
+        BaseForm.prototype.consolidate = function (io, ctx) {
+            return Gentyl.Util.melder({
+                p: this.preparator,
+                d: this.depreparator,
+                x: ctx.declaration,
+            }, ctx.extract());
+        };
+        return BaseForm;
+    }());
+    Gentyl.BaseForm = BaseForm;
+    var LForm = (function (_super) {
+        __extends(LForm, _super);
+        function LForm() {
+            _super.apply(this, arguments);
+        }
+        LForm.prototype.parse = function (formObj) {
+            var ctxdeclare = formObj.x || "";
+            this.preparator = formObj.p || function (x) { };
+            var links = formObj.links || [];
+            var linkf = formObj.lf || function (a, b) { };
+            var ports = formObj.ports || [];
             var context = {};
             var specialInHook;
             var specialOutHook;
+            var portlabels = {};
             var labels = {};
-            for (var k in formObj) {
-                var res = k.match(ioRegex);
-                if (res) {
-                    var inp = res[1], label = res[2], out = res[3], formVal = formObj[k];
-                    var labelType = TrigateLabelTypesMap[inp][out];
-                    if (GForm.RFormProps.indexOf(label) >= 0) {
-                        continue;
+            var contextprops = [];
+            var linkPortRegex = /^(_?)([a-zA-Z](?:\w*[a-zA-Z])?)(_?)$/;
+            for (var i = 0; i < ports.length; i++) {
+                var pmatch = ports[i].match(linkPortRegex);
+                if (pmatch) {
+                    var inp = pmatch[1], label = pmatch[2], out = pmatch[3];
+                    if (inp) {
+                        portlabels[label] = { label: label, direction: Gentyl.IO.Orientation.INPUT };
                     }
-                    if (label in labels) {
-                        if (labelTypeCompatibility[labelType][labels[label]]) {
-                            labels[label] = LabelTypes.PASSIVE;
-                        }
-                        else {
-                            throw new Error("Duplicate incompatible label " + label + " in form parsing, labelType1:" + labelType + ", labelType2:" + labels[label]);
-                        }
+                    if (out) {
+                        portlabels[label] = { label: label, direction: Gentyl.IO.Orientation.OUTPUT };
                     }
-                    else {
-                        labels[label] = labelType;
-                    }
-                    if (label === '$') {
-                        var hook = { label: label, tractor: formObj[k], orientation: undefined, host: this.host, eager: undefined };
-                        if (labelType === LabelTypes.TRIG) {
-                            hook.orientation = Gentyl.IO.Orientation.INPUT;
-                            hook.eager = false;
-                            specialInHook = hook;
-                        }
-                        else if (labelType === LabelTypes.ENTRIG) {
-                            hook.orientation = Gentyl.IO.Orientation.INPUT;
-                            hook.eager = true;
-                            specialInHook = hook;
-                        }
-                        else if (labelType === LabelTypes.GATE) {
-                            hook.orientation = Gentyl.IO.Orientation.OUTPUT;
-                            hook.eager = false;
-                            specialOutHook = hook;
-                        }
-                        else if (labelType === LabelTypes.GATER) {
-                            hook.orientation = Gentyl.IO.Orientation.OUTPUT;
-                            hook.eager = true;
-                            specialOutHook = hook;
-                        }
-                        else {
-                            throw new Error("Special label must be input or output, not mixed");
-                        }
-                    }
-                    else if (formVal instanceof Function) {
-                        var hook = { label: label, tractor: formObj[k], orientation: undefined, host: this.host, eager: undefined };
-                        if (labelType === LabelTypes.PASSIVE) {
-                            context[label] = formVal;
-                            continue;
-                        }
-                        else if (labelType === LabelTypes.TRIG) {
-                            hook.orientation = Gentyl.IO.Orientation.INPUT, hook.eager = false;
-                        }
-                        else if (labelType === LabelTypes.ENTRIG) {
-                            hook.orientation = Gentyl.IO.Orientation.INPUT, hook.eager = true;
-                        }
-                        else if (labelType === LabelTypes.GATE) {
-                            hook.orientation = Gentyl.IO.Orientation.OUTPUT, hook.eager = false;
-                        }
-                        else if (labelType === LabelTypes.GATER) {
-                            hook.orientation = Gentyl.IO.Orientation.OUTPUT, hook.eager = true;
-                        }
-                        else if (labelType === LabelTypes.TRIGATE) {
-                            hook.orientation = Gentyl.IO.Orientation.MIXED, hook.eager = false;
-                        }
-                        else if (labelType === LabelTypes.TRIGATER) {
-                            console.warn("This label configuration doesn't make sense for functions");
-                        }
-                        else if (labelType === LabelTypes.ENTRIGATE) {
-                            console.warn("This label configuration doesn't make sense for functions");
-                        }
-                        else if (labelType === LabelTypes.ENTRIGATER) {
-                            hook.orientation = Gentyl.IO.Orientation.MIXED, hook.eager = true;
-                        }
-                        hooks.push(hook);
-                    }
-                    else if (Gentyl.Util.isPrimative(formVal)) {
-                        var changeCheckValueReturn = function (input) {
-                            if (this[label] === this.cache[label]) {
-                                return Gentyl.IO.HALT;
-                            }
-                            return this[label];
-                        };
-                        var hookI = { label: label, tractor: function (input) { this[label] = input; }, orientation: Gentyl.IO.Orientation.INPUT, host: this.host, eager: undefined };
-                        var hookO = { label: label, tractor: function (input) { return this.label; }, orientation: Gentyl.IO.Orientation.OUTPUT, host: this.host, eager: true };
-                        var I = false;
-                        var O = false;
-                        if (labelType === LabelTypes.PASSIVE) {
-                            context[label] = formVal;
-                            continue;
-                        }
-                        else if (labelType === LabelTypes.TRIG) {
-                            context[label] = formVal;
-                            hookI.eager = false;
-                            I = true;
-                        }
-                        else if (labelType === LabelTypes.ENTRIG) {
-                            context[label] = formVal;
-                            hookI.eager = true;
-                            I = true;
-                        }
-                        else if (labelType === LabelTypes.GATE) {
-                            context[label] = formVal;
-                            O = true;
-                            hookO.tractor = changeCheckValueReturn;
-                        }
-                        else if (labelType === LabelTypes.GATER) {
-                            context[label] = formVal;
-                            O = true;
-                        }
-                        else if (labelType === LabelTypes.TRIGATE) {
-                            context[label] = formVal;
-                            hookI.eager = false;
-                            O = true;
-                            I = true;
-                            hookO.tractor = changeCheckValueReturn;
-                        }
-                        else if (labelType === LabelTypes.TRIGATER) {
-                            context[label] = formVal;
-                            hookI.eager = false;
-                            O = true;
-                            I = true;
-                        }
-                        else if (labelType === LabelTypes.ENTRIGATE) {
-                            context[label] = formVal;
-                            hookI.eager = true;
-                            O = true;
-                            I = true;
-                            hookO.tractor = changeCheckValueReturn;
-                        }
-                        else if (labelType === LabelTypes.ENTRIGATER) {
-                            context[label] = formVal;
-                            hookI.eager = true;
-                            O = true;
-                            I = true;
-                        }
-                        if (I) {
-                            hooks.push(hookI);
-                        }
-                        ;
-                        if (O) {
-                            hooks.push(hookO);
-                        }
-                        ;
-                        labels[label] = LabelTypes.PASSIVE;
-                    }
-                    else {
-                        if (labelType === LabelTypes.PASSIVE) {
-                            context[label] = formVal;
-                            continue;
-                        }
-                        throw new Error("Unsupported form value type");
-                    }
-                }
-                else {
-                    throw new Error("Invalid label format, must have up to two leading and trailing underscores");
                 }
             }
-            return { iospec: { hooks: hooks, specialIn: specialInHook, specialOut: specialOutHook }, contextspec: { properties: context, declaration: ctxdeclare } };
+            var linkPropRegex = /^[a-zA-Z](?:\w*[a-zA-Z])?$/;
+            for (var k in formObj) {
+                if (Gentyl.GForm.RFormProps.indexOf(k) > -1)
+                    continue;
+                if (k.match(linkPropRegex)) {
+                    contextprops.push({ key: k, type: Gentyl.CTXPropertyTypes.NORMAL, value: formObj[k] });
+                }
+                else {
+                    throw new Error("Invalid property for link context, use ports");
+                }
+            }
+            return { iospec: { ports: portlabels, links: links, linkFunciton: linkf }, contextspec: { properties: contextprops, declaration: ctxdeclare } };
         };
-        GForm.prototype.consolidate = function (io, ctx) {
-            return Gentyl.Util.melder({
-                r: this.resolver,
-                c: this.carrier,
-                p: this.preparator,
-                s: this.selector,
-                x: ctx.declaration,
-            }, Gentyl.Util.melder(io.extract(), ctx.extract()));
-        };
-        GForm.RFormProps = ["x", "p", "d", "c", "r", "s", "prepare", "destroy", "carry", "resolve", "select"];
-        return GForm;
-    }());
-    Gentyl.GForm = GForm;
+        return LForm;
+    }(BaseForm));
+    Gentyl.LForm = LForm;
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {
@@ -819,10 +750,11 @@ var Gentyl;
     }());
     var liveCache = new ObjectFunctionCache();
     function deformulate(fromNode) {
+        var rNode = fromNode;
         var preform = {
-            r: fromNode.form.resolver,
-            c: fromNode.form.carrier,
-            x: fromNode.ctx.declaration
+            r: rNode.form.resolver,
+            c: rNode.form.carrier,
+            x: rNode.ctx.declaration
         };
         var exForm = {};
         for (var k in preform) {
@@ -965,6 +897,229 @@ var Gentyl;
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {
+    (function (LabelTypes) {
+        LabelTypes[LabelTypes["PASSIVE"] = 0] = "PASSIVE";
+        LabelTypes[LabelTypes["TRIG"] = 1] = "TRIG";
+        LabelTypes[LabelTypes["ENTRIG"] = 2] = "ENTRIG";
+        LabelTypes[LabelTypes["GATE"] = 3] = "GATE";
+        LabelTypes[LabelTypes["GATER"] = 4] = "GATER";
+        LabelTypes[LabelTypes["TRIGATE"] = 5] = "TRIGATE";
+        LabelTypes[LabelTypes["TRIGATER"] = 6] = "TRIGATER";
+        LabelTypes[LabelTypes["ENTRIGATE"] = 7] = "ENTRIGATE";
+        LabelTypes[LabelTypes["ENTRIGATER"] = 8] = "ENTRIGATER";
+    })(Gentyl.LabelTypes || (Gentyl.LabelTypes = {}));
+    var LabelTypes = Gentyl.LabelTypes;
+    var TrigateLabelTypesMap = {
+        '': { '': LabelTypes.PASSIVE, '_': LabelTypes.GATE, '__': LabelTypes.GATER },
+        '_': { '': LabelTypes.TRIG, '_': LabelTypes.TRIGATE, '__': LabelTypes.TRIGATER },
+        '__': { '': LabelTypes.ENTRIG, '_': LabelTypes.ENTRIGATE, '__': LabelTypes.ENTRIGATER }
+    };
+    var labelTypeCompatibility = {
+        0: {},
+        1: { 3: true, 4: true },
+        2: { 3: true, 4: true },
+        3: { 1: true, 2: true },
+        4: { 1: true, 2: true },
+        5: {},
+        6: {},
+        7: {},
+        8: {},
+        9: {}
+    };
+    var GForm = (function (_super) {
+        __extends(GForm, _super);
+        function GForm(host) {
+            _super.call(this, host);
+        }
+        GForm.prototype.parse = function (formObj) {
+            var ctxdeclare = formObj.x || "";
+            this.carrier = formObj.c || Gentyl.Util.identity;
+            this.resolver = formObj.r || Gentyl.Util.identity;
+            this.selector = formObj.s || function (keys, carg) { return true; };
+            this.preparator = formObj.p || function (x) { };
+            var hookIORegex = /^(_{0,2})([a-zA-Z]+(?:\w*[a-zA-Z])?|\$)(_{0,2})$/;
+            var hooks = [];
+            var context = { properties: [], declaration: ctxdeclare };
+            var props = context.properties;
+            var specialInHook;
+            var specialOutHook;
+            var labels = {};
+            for (var k in formObj) {
+                var res = k.match(hookIORegex);
+                if (res) {
+                    var inp = res[1], label = res[2], out = res[3], formVal = formObj[k];
+                    var labelType = TrigateLabelTypesMap[inp][out];
+                    if (GForm.RFormProps.indexOf(label) >= 0) {
+                        continue;
+                    }
+                    if (label in labels) {
+                        if (labelTypeCompatibility[labelType][labels[label]]) {
+                            labels[label] = LabelTypes.PASSIVE;
+                        }
+                        else {
+                            throw new Error("Duplicate incompatible label " + label + " in form parsing, labelType1:" + labelType + ", labelType2:" + labels[label]);
+                        }
+                    }
+                    else {
+                        labels[label] = labelType;
+                    }
+                    if (label === '$') {
+                        var hook = { label: label, tractor: formObj[k], orientation: undefined, host: this.host, eager: undefined };
+                        if (labelType === LabelTypes.TRIG) {
+                            hook.orientation = Gentyl.IO.Orientation.INPUT;
+                            hook.eager = false;
+                            specialInHook = hook;
+                        }
+                        else if (labelType === LabelTypes.ENTRIG) {
+                            hook.orientation = Gentyl.IO.Orientation.INPUT;
+                            hook.eager = true;
+                            specialInHook = hook;
+                        }
+                        else if (labelType === LabelTypes.GATE) {
+                            hook.orientation = Gentyl.IO.Orientation.OUTPUT;
+                            hook.eager = false;
+                            specialOutHook = hook;
+                        }
+                        else if (labelType === LabelTypes.GATER) {
+                            hook.orientation = Gentyl.IO.Orientation.OUTPUT;
+                            hook.eager = true;
+                            specialOutHook = hook;
+                        }
+                        else {
+                            throw new Error("Special label must be input or output, not mixed");
+                        }
+                    }
+                    else if (formVal instanceof Function) {
+                        var hook = { label: label, tractor: formObj[k], orientation: undefined, host: this.host, eager: undefined };
+                        if (labelType === LabelTypes.PASSIVE) {
+                            props.push({ key: label, type: Gentyl.CTXPropertyTypes.BOUND, value: formVal });
+                            continue;
+                        }
+                        else if (labelType === LabelTypes.TRIG) {
+                            hook.orientation = Gentyl.IO.Orientation.INPUT, hook.eager = false;
+                        }
+                        else if (labelType === LabelTypes.ENTRIG) {
+                            hook.orientation = Gentyl.IO.Orientation.INPUT, hook.eager = true;
+                        }
+                        else if (labelType === LabelTypes.GATE) {
+                            hook.orientation = Gentyl.IO.Orientation.OUTPUT, hook.eager = false;
+                        }
+                        else if (labelType === LabelTypes.GATER) {
+                            hook.orientation = Gentyl.IO.Orientation.OUTPUT, hook.eager = true;
+                        }
+                        else if (labelType === LabelTypes.TRIGATE) {
+                            hook.orientation = Gentyl.IO.Orientation.MIXED, hook.eager = false;
+                        }
+                        else if (labelType === LabelTypes.TRIGATER) {
+                            console.warn("This label configuration doesn't make sense for functions");
+                        }
+                        else if (labelType === LabelTypes.ENTRIGATE) {
+                            console.warn("This label configuration doesn't make sense for functions");
+                        }
+                        else if (labelType === LabelTypes.ENTRIGATER) {
+                            hook.orientation = Gentyl.IO.Orientation.MIXED, hook.eager = true;
+                        }
+                        hooks.push(hook);
+                    }
+                    else if (Gentyl.Util.isPrimative(formVal)) {
+                        var hookI = { label: label, tractor: null, orientation: Gentyl.IO.Orientation.INPUT, host: this.host, eager: undefined };
+                        var hookO = { label: label, tractor: null, orientation: Gentyl.IO.Orientation.OUTPUT, host: this.host, eager: true };
+                        var I = false;
+                        var O = false;
+                        if (labelType === LabelTypes.PASSIVE) {
+                            props.push({ type: Gentyl.CTXPropertyTypes.NORMAL, key: label, value: formVal });
+                            continue;
+                        }
+                        else if (labelType === LabelTypes.TRIG) {
+                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: hookI, original: k });
+                            hookI.eager = false;
+                            I = true;
+                        }
+                        else if (labelType === LabelTypes.ENTRIG) {
+                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: hookI, original: k });
+                            hookI.eager = true;
+                            I = true;
+                        }
+                        else if (labelType === LabelTypes.GATE) {
+                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: hookO, original: k });
+                            hookO.eager = false;
+                            O = true;
+                        }
+                        else if (labelType === LabelTypes.GATER) {
+                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: hookO, original: k });
+                            hookO.eager = true;
+                            O = true;
+                        }
+                        else if (labelType === LabelTypes.TRIGATE) {
+                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: [hookI, hookO], original: k });
+                            hookI.eager = true;
+                            hookO.eager = false;
+                            O = true;
+                            I = true;
+                        }
+                        else if (labelType === LabelTypes.TRIGATER) {
+                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: [hookI, hookO], original: k });
+                            hookI.eager = true;
+                            hookO.eager = true;
+                            O = true;
+                            I = true;
+                        }
+                        else if (labelType === LabelTypes.ENTRIGATE) {
+                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: [hookI, hookO], original: k });
+                            hookI.eager = false;
+                            hookO.eager = false;
+                            O = true;
+                            I = true;
+                        }
+                        else if (labelType === LabelTypes.ENTRIGATER) {
+                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: [hookI, hookO], original: k });
+                            hookI.eager = false;
+                            hookO.eager = true;
+                            O = true;
+                            I = true;
+                        }
+                        if (I) {
+                            hooks.push(hookI);
+                        }
+                        ;
+                        if (O) {
+                            hooks.push(hookO);
+                        }
+                        ;
+                        labels[label] = LabelTypes.PASSIVE;
+                    }
+                    else {
+                        if (labelType === LabelTypes.PASSIVE) {
+                            props.push({ type: Gentyl.CTXPropertyTypes.NORMAL, key: label, value: formVal });
+                            continue;
+                        }
+                        throw new Error("Unsupported form value type label: " + label + ", label-type:" + labelType + ", value-type:" + typeof (formVal));
+                    }
+                }
+                else {
+                    throw new Error("Invalid label format, raw label:" + k + " must have up to two leading and trailing underscores");
+                }
+            }
+            return { iospec: { hooks: hooks, specialIn: specialInHook, specialOut: specialOutHook }, contextspec: { properties: props, declaration: ctxdeclare } };
+        };
+        GForm.prototype.consolidate = function (io, ctx) {
+            var consolidated = Gentyl.Util.melder({
+                r: this.resolver,
+                c: this.carrier,
+                p: this.preparator,
+                d: this.depreparator,
+                s: this.selector,
+                x: ctx.declaration,
+            }, Gentyl.Util.melder(io.extract(), ctx.extract(), void 0, void 0, false));
+            return consolidated;
+        };
+        GForm.RFormProps = ["x", "p", "d", "c", "r", "s", "prepare", "destroy", "carry", "resolve", "select"];
+        return GForm;
+    }(Gentyl.BaseForm));
+    Gentyl.GForm = GForm;
+})(Gentyl || (Gentyl = {}));
+var Gentyl;
+(function (Gentyl) {
     var IO;
     (function (IO) {
         function orientationChange(child, node) {
@@ -995,9 +1150,16 @@ var Gentyl;
             };
             ResolveIO.prototype.extract = function () {
                 var ext = {};
+                var hook;
                 for (var _i = 0, _a = this.hooks; _i < _a.length; _i++) {
-                    var tractor = _a[_i].tractor;
-                    ext[tractor.name] = tractor;
+                    hook = _a[_i];
+                    var scores = hook.eager ? '__' : '_';
+                    var isinp = hook.orientation == IO.Orientation.INPUT || hook.orientation == IO.Orientation.MIXED;
+                    var isout = hook.orientation == IO.Orientation.OUTPUT || hook.orientation == IO.Orientation.MIXED;
+                    var label = (isinp ? scores : '') + hook.label + (isout ? scores : '');
+                    if (!hook.reactiveValue) {
+                        ext[label] = hook.tractor;
+                    }
                 }
                 return ext;
             };
@@ -1112,7 +1274,6 @@ var Gentyl;
                     this.shell = new IO.HookShell(this, accumulatedHooks, accumulatedShells, opcallback, opcontext);
                     var _loop_1 = function(k_1) {
                         this_1.inputs[k_1] = (function (input) {
-                            console.log("[input closure] Handle input: ", input);
                             this.shell.sinks[k_1].handle(input);
                         }).bind(this_1);
                     };
@@ -1187,10 +1348,8 @@ var Gentyl;
                         var iresult = hook.tractor.call(host.ctx.exposed, input);
                         inputGate = inputGate || (iresult != IO.HALT && (hook.eager || iresult !== undefined));
                         baseInput = baseInput.concat(iresult);
-                        console.log("[input handle hook %s] Handle input: %s", hook.label, iresult);
                     }
                     if (inputGate) {
-                        console.log("[base trigger resolve ] Handle input: ", baseInput);
                         shell.base.host.io.specialGate = true;
                         shell.base.host.resolve(baseInput);
                         shell.base.host.io.specialGate = false;
@@ -1207,7 +1366,6 @@ var Gentyl;
                 this.base = base;
             }
             SpecialInputPort.prototype.handleInput = function (input) {
-                console.log("[SpecialInputPort::handleInput]");
                 var hook = this.base.specialInput;
                 var iresult = hook.tractor.call(this.base.host.ctx.exposed, input);
                 var inputGate = iresult != IO.HALT && (hook.eager || iresult !== undefined);
@@ -1425,16 +1583,17 @@ var Gentyl;
             }
         }
         Util.translator = translator;
-        function melder(node1, node2, merge, concatArrays) {
+        function melder(node1, node2, merge, concatArrays, typeConstrain) {
             if (merge === void 0) { merge = function (a, b) { return b; }; }
             if (concatArrays === void 0) { concatArrays = false; }
+            if (typeConstrain === void 0) { typeConstrain = true; }
             if (node1 == undefined) {
                 return node2;
             }
             if (node2 == undefined) {
                 return node1;
             }
-            if (typeof (node1) != typeof (node2)) {
+            if (typeConstrain && (typeof (node1) != typeof (node2))) {
                 var errmsg = "Expected melding nodes to be the same type \n" +
                     "type of node1: " + typeof (node1) + "\n" +
                     "type of node2: " + typeof (node2) + "\n";
@@ -1603,7 +1762,7 @@ var Gentyl;
         }
         Util.objectArrayTranspose = objectArrayTranspose;
         function isPrimative(thing) {
-            return typeof (thing) !== 'object';
+            return thing == undefined || typeof (thing) !== 'object';
         }
         Util.isPrimative = isPrimative;
         function isVanillaObject(thing) {
@@ -1743,13 +1902,27 @@ var Gentyl;
             };
         }
         Util.typeCaseSplitM = typeCaseSplitM;
-        var AsyncGate = (function () {
-            function AsyncGate() {
+        var Gate = (function () {
+            function Gate(callback, context) {
+                this.callback = callback;
+                this.context = context;
+                this.locks = [];
+                this.locki = 0;
             }
-            AsyncGate.prototype.constuctor = function () {
+            Gate.prototype.lock = function () {
+                this.locks[this.locki] = true;
+                return (function (locki) {
+                    this.locks[locki] = false;
+                    if (this.allUnlocked()) {
+                        this.callback.call(this.context);
+                    }
+                }).bind(this, this.locki++);
             };
-            return AsyncGate;
+            Gate.prototype.allUnlocked = function () {
+                return this.locks.filter(function (x) { return x; }).length === 0;
+            };
+            return Gate;
         }());
-        Util.AsyncGate = AsyncGate;
+        Util.Gate = Gate;
     })(Util = Gentyl.Util || (Gentyl.Util = {}));
 })(Gentyl || (Gentyl = {}));

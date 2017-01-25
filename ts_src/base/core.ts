@@ -3,7 +3,7 @@ namespace Gentyl {
     export class BaseNode{
         crown:any;
         ctx:GContext;
-        form:GForm;
+        form:BaseForm;
         io:IO.IOComponent;
         act:Actions.Component;
 
@@ -24,11 +24,13 @@ namespace Gentyl {
             this.prepared = false;
 
             this.form = this.constructForm();
+
             var {iospec, contextspec} = this.form.parse(form);
 
-            this.io = this.constructIO(iospec);
-
             this.ctx = this.constructContext(contextspec);
+
+            //iospec has some injected hooks from ctx
+            this.io = this.constructIO(iospec);
 
             this.act = this.constructActions();
 
@@ -38,7 +40,7 @@ namespace Gentyl {
         }
 
         protected constructForm(){
-            return new GForm(this);
+            return new BaseForm(this);
         }
 
         protected constructIO(iospec):IO.IOComponent{

@@ -36,7 +36,6 @@ describe("A context labelled node",function(){
                     }
                 )
                 .prepare();
-                console.log("declaration @ spec", gen.crown.a.ctx.declaration)
             }).toThrowError()
         }
     });
