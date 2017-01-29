@@ -10,6 +10,10 @@ namespace Gentyl {
         parent:BaseNode;
         depth:number;
 
+        deplexer:IO.GatedPort;
+        async:boolean = false;
+        engaged:boolean;
+
         isRoot:boolean;
         root:BaseNode;
         prepared:boolean;
@@ -19,9 +23,12 @@ namespace Gentyl {
         isAncestor:boolean;
 
         constructor(components:any, form:FormSpec = {}){
+            //volatile
+
             this.depth = 0;
             this.isRoot = true;
             this.prepared = false;
+            this.engaged = false;
 
             this.form = this.constructForm();
 
@@ -79,7 +86,14 @@ namespace Gentyl {
         /**
          * setup the state tree, recursively preparing the contexts
          */
-        public prepare(prepargs=null):BaseNode{
+        public prepare(prepargs=null):BaseNode|IO.GatedPort{
+
+
+            this.deplexer = new IO.GatedPort('prepare', this, this.complete);
+
+
+            this.ctx.exposed.gate = this.deplexer.gate;
+            this.engaged = true;
 
             if(this.isAncestor){
                 throw Error("Ancestors cannot be prepared for resolution")
@@ -104,12 +118,38 @@ namespace Gentyl {
                 //prepare children, object, array, primative
                 this.crown = Util.typeCaseSplitF(this.prepareChild.bind(this, prepargs))(this.crown);
 
-                this.prepared = true;
+                //after all tributaries collected
+                if(this.async){
+                    if(this.deplexer.allHome()){
+                        //all value returns so return the deposit to transmit the value
+                        this.complete();
+                    }
+
+                    return this.deplexer;
+                }else{
+                    if(!this.deplexer.allHome()){
+                        //some async children have not returned cant complete
+                        return this.deplexer
+                    }
+
+                    return this.complete();
+                }
+
             } else {
                 this.ancestor = this.replicate();
                 this.ancestor.isAncestor = true;
             }
+        }
 
+        public complete():BaseNode{
+            this.deplexer.deposit = this
+            this.deplexer.returned = true;
+
+            //called to finalise prepare her once all is complete
+            //this.deplexer.reset();
+            this.engaged = false;
+
+            this.prepared = true;
             // CONTROVERTIAL: does the automatic shelling of the root make sense?
             if(this.isRoot){
                 this.enshell()
@@ -120,12 +160,26 @@ namespace Gentyl {
 
         protected prepareChild(prepargs, child, k):BaseNode{
             if(child instanceof BaseNode){
-                var replica = child.replicate();
 
-                replica.setParent(this, k);
-                replica.prepare(prepargs);
+                var replica:(BaseNode|IO.GatedPort) = child.replicate();
 
-                return replica;
+                (<BaseNode>replica).setParent(this, k);
+
+                //once all child preparations return
+                replica = (<BaseNode>replica).prepare(prepargs);
+
+                //
+                if(replica instanceof IO.GatedPort){
+                    //register to this node's deplex
+                    if(!replica.returned){
+                        this.deplexer.addTributary(replica);
+                    }
+                    return (<IO.GatedPort>replica).host;
+                }else{
+                    //the child is not async let it be
+                    return (<BaseNode>replica);
+                }
+
             }else{
                 return child;
             }
@@ -149,6 +203,7 @@ namespace Gentyl {
 
                 //this is a raw node, either an ancestor or pattern
                 var repl = this.constructCore(this.crown, this.form.consolidate(this.io, this.ctx))
+                repl.async=this.async;
 
                 //in the case of the ancestor it comes from prepared
                 if(this.isAncestor){
@@ -242,13 +297,20 @@ namespace Gentyl {
         }
 
 
-        enshell(callback?:any, context_factory?:any){
-            this.io.enshell(callback, context_factory);
+        enshell(){
+            this.io.enshell();
 
             return this;
         }
 
         resolve(arg){
+            if(!this.prepared){
+                if(this.engaged){
+                    //badbad, the prepare is in progress dont restart
+                }
+                this.prepare()
+            }
+
             return null;
         }
 

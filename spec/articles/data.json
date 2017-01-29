@@ -1,0 +1,10 @@
+{
+    "shallow":0,
+    "deep":{
+        "sorts":"data",
+        "counts":2
+    },
+    "many":[
+        "again","defined"
+    ]
+}

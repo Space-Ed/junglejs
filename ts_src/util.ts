@@ -390,7 +390,7 @@ namespace Gentyl{
                         inThing[i] = afunc(subBundle, i)
                     }
 
-                }else if(isVanillaObject){
+                }else if(isVanillaObject(inThing)){
                     for (var k in inThing){
                         var subBundle = inThing[k];
                         inThing[k] = ofunc(subBundle, k)
@@ -402,25 +402,59 @@ namespace Gentyl{
             }
         }
 
+        export function collapseValues(obj):any[]{
 
-        export class Gate{
-            locks:boolean[];
-            locki:number;
-
-            constructor(private callback, private context){
-                this.locks = [];
-                this.locki = 0;
+            if(!isVanillaTree(obj)){
+                throw new Error("cant collapse circular structure")
             }
 
-            lock():() => void {
+            let valArr = [];
+
+            function nodeProcess(node){
+                valArr.push(node);
+            }
+
+            function recursor(node:any){
+                typeCaseSplitF(recursor, recursor, nodeProcess)(node);
+            }
+
+            recursor(obj)
+
+            return valArr
+
+        }
+
+
+        export class Gate{
+            private locks:boolean[];
+            private locki:number;
+            private data:any[];
+
+            constructor(public callback?, public context?){
+                this.locks = [];
+                this.locki = 0;
+                this.data = [];
+            }
+
+            lock():(arg) => void {
                 this.locks[this.locki] = true;
 
-                return (function(locki){
+                return (function(locki, arg){
+
+                    if(arg != undefined){
+                        this.data = arg;
+                    }
+
                     this.locks[locki] = false;
                     if(this.allUnlocked()){
-                        this.callback.call(this.context);
+                        this.callback.call(this.context, this.data);
                     }
                 }).bind(this, this.locki++)
+            }
+
+            reset(){
+                this.locks = [];
+                this.locki = 0;
             }
 
             allUnlocked():boolean{

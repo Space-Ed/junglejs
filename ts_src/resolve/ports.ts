@@ -70,21 +70,16 @@ namespace Gentyl {
         }
 
         export class ResolveOutputPort extends Port {
-            constructor(label:string, outputCallback, outputContext){
+            constructor(label:string){
                 super(label);
-                this.callback = outputCallback;
-                this.callbackContext = this.prepareContext(outputContext);
             }
 
-            prepareContext(outputContext){
-                if (typeof(outputContext) == 'function'){
-                    return new outputContext(this);
-                }else if (typeof(outputContext)== 'object'){
-                    return outputContext;
-                }else{
-                    return this
-                }
+            handle(input){
+                super.handle(input);
+                console.log("Resolve Output:", input)
             }
+
+
         }
 
     }

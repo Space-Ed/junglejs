@@ -80,44 +80,77 @@ describe("input-output", function(){
         })
     })
 
-    describe('signal shelling',function(){
+    describe('dressing',function(){
 
         beforeEach(function(){
             g1.prepare()
-            g1.io.enshell(signals.Signal.prototype.dispatch, signals.Signal)
+            g1.io.enshell();
+            })
 
-            //spyOn(this, 'outcatch')
+        describe('with callbacks', function(){
 
-        })
-
-        it('should have a signal instance on outputs', function(){
-            expect(g1.io.outputs.arc.callbackContext instanceof signals.Signal).toBe(true)
-            expect(g1.io.outputs.beamout.callbackContext instanceof signals.Signal).toBe(true)
-        })
-
-        describe('with output detectors',function(){
+            var ctx, spyctx;
 
             beforeEach(function(){
-                this.outcatch = function(out){
-                    this.deposit = out
-                };
-                this.deposit = undefined
 
-                g1.io.outputs["beamout"].callbackContext.add(this.outcatch, this);
+                spyctx ={
+                    cb(){}
+                }
+
+                ctx = {
+                    cb(x){
+                        spyctx.cb(x);
+                    },
+                }
+
+                g1.io.dress("*", {callback:ctx.cb, context: ctx});
+            });
+
+            it('should be applied to all outputs', function(){
+                expect(g1.io.outputs.arc.callback).toBe(ctx.cb);
+                expect(g1.io.outputs.arc.callbackContext).toBe(ctx);
+                expect(g1.io.outputs.beamout.callback).toBe(ctx.cb);
+                expect(g1.io.outputs.beamout.callbackContext).toBe(ctx);
+                expect(g1.io.outputs.$.callback).toBe(ctx.cb);
+                expect(g1.io.outputs.$.callbackContext).toBe(ctx);
             })
+
+
+
+            it('should be triggered ',function(){
+                spyOn(spyctx, 'cb');
+                g1.io.inputs.beamin("Buckets");
+                expect(spyctx.cb).not.toHaveBeenCalled();
+                g1.io.inputs.trigger(2);
+                expect(spyctx.cb).not.toHaveBeenCalled();
+                g1.io.inputs.trigger(6);
+                expect(spyctx.cb).toHaveBeenCalledWith("Buckets");
+            });
+        })
+
+        describe('with signals',function(){
+            beforeEach(function(){
+                g1.io.dress("*", {callback:'dispatch', context: signals.Signal})
+            });
+
+            it('should have a signal instance on outputs', function(){
+                expect(g1.io.outputs.arc.callbackContext instanceof signals.Signal).toBe(true)
+                expect(g1.io.outputs.beamout.callbackContext instanceof signals.Signal).toBe(true)
+            });
 
             it('should allow signal subscription', function(){
-                var s = g1.io;
-                s.inputs.beamin("Buckets")
-                expect(this.deposit).toBeUndefined();
-                s.inputs.trigger(2);
-                expect(this.deposit).toBeUndefined();
-                s.inputs.trigger(6);
-                expect(this.deposit).toBe("Buckets")
+                var signal = g1.io.outputs.beamout.callbackContext;
 
-                //spyOn(s.outs.beamout, "dispatch")
-                //expect(s.outs.beamout.dispatch).toHaveBeenCalled()
-            })
+                spyOn(signal, 'dispatch');
+
+                g1.io.inputs.beamin("Buckets");
+                expect(signal.dispatch).not.toHaveBeenCalled();
+                g1.io.inputs.trigger(2);
+                expect(signal.dispatch).not.toHaveBeenCalled();
+                g1.io.inputs.trigger(6);
+                expect(signal.dispatch).toHaveBeenCalledWith("Buckets")
+
+            });
 
         })
     })
@@ -171,17 +204,18 @@ describe("input-output", function(){
             }).prepare();
         })
 
-        it('should do root io', function(){
+        it('should have dressed the root', function(){
 
-            g2.io.enshell(function(x){}, {});
+            g2.io.enshell();
+            let cb = function(x){console.log("FUCK", this.store)};
+            let ctx = {}
+            g2.io.dress("*", {callback:cb,  context:ctx});
+            let shell = g2.io.shell;
 
-            var s = g2.io;
+            expect(shell.sources.$.callback).toBe(cb);
+            expect(shell.sources.$.callbackContext).toBe(ctx);
 
-            s.inputs.$("stagnation")
-            spyOn(s.outputs.$, "callback")
-            s.inputs.$("stagnation")
-
-            expect(s.outputs.$.callback).toHaveBeenCalled()
+            shell.sinks.$.handle("en HEY")
 
         })
 
@@ -189,13 +223,27 @@ describe("input-output", function(){
             g2.io.enshell();
             expect(g2.resolve("alive")).toBe("store: alive");
 
-            for (var i = 0; i < versions.length; i++) {
-                var g = versions[i]
-                var source = g.io.shell.sources.$;
+
+            for (let i = 0; i < versions.length; i++) {
+
+                let cb = function(x){console.log("FUCK")};
+                let ctx = {}
+
+                let g = versions[i]
+
+                g.io.dress("*", {callback:cb,  context:ctx});
+
+                let source = g.io.shell.sources.$;
                 spyOn(source, 'callback')
 
                 //routing through special io
-                expect(g.resolve(inputs[i])).toBe(results[i]);
+                let res = g.resolve(inputs[i]);
+
+                if(res instanceof Gentyl.IO.GatedPort){
+                    console.log(`resolve not returned input ${inputs[i]}, expected result: ${results[i]}`)
+                }
+
+                expect(res).toBe(results[i]);
 
                 if(calls[i]){
                     expect(source.callback).toHaveBeenCalled();

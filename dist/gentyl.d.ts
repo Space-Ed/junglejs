@@ -80,6 +80,9 @@ declare namespace Gentyl {
         act: Actions.Component;
         parent: BaseNode;
         depth: number;
+        deplexer: IO.GatedPort;
+        async: boolean;
+        engaged: boolean;
         isRoot: boolean;
         root: BaseNode;
         prepared: boolean;
@@ -92,7 +95,8 @@ declare namespace Gentyl {
         protected constructActions(): Actions.Component;
         protected constructCore(crown: any, form: any): BaseNode;
         inductComponent(component: any): any;
-        prepare(prepargs?: any): BaseNode;
+        prepare(prepargs?: any): BaseNode | IO.GatedPort;
+        complete(): BaseNode;
         protected prepareChild(prepargs: any, child: any, k: any): BaseNode;
         protected setParent(parentNode: BaseNode, dereferent: string | number): void;
         replicate(): BaseNode;
@@ -102,7 +106,7 @@ declare namespace Gentyl {
         terminalScan(recursive?: boolean, collection?: any[], locale?: any): any[];
         checkComplete(recursive?: boolean): boolean;
         bundle(): Bundle;
-        enshell(callback?: any, context_factory?: any): this;
+        enshell(): this;
         resolve(arg: any): any;
     }
 }
@@ -171,29 +175,68 @@ declare namespace Gentyl {
                 $: Port;
             };
             base: IOComponent;
+            designate: (designator: PortDesignator) => Port[];
+            dress: (designator: PortDesignator, coat: OutputCoat) => void;
         }
         interface IOComponent {
             shell: Shell;
-            enshell: (callback?, context?) => Shell;
+            enshell: () => Shell;
+            dress: (designator: string, coat: OutputCoat) => void;
             prepare: (parg) => void;
             extract: () => any;
         }
-        class Port {
-            label: any;
-            callbackContext: any;
-            callback: (output, ...args) => any;
-            shells: Shell[];
-            constructor(label: any);
-            addShell(shell: Shell): void;
-            handle(input: any): void;
+        enum DesignationTypes {
+            ALL = 0,
+            MATCH = 1,
+            REGEX = 2,
+            FUNC = 3,
+        }
+        interface PortDesignator {
+            direction: Orientation;
+            type: DesignationTypes;
+            data: any;
+        }
+        interface OutputCoat {
+            context: Object | ((ResolveOutputPort) => Object);
+            callback: (output: any) => any;
         }
         class BaseIO implements IOComponent {
             specialGate: boolean;
             shell: Shell;
             constructor();
             prepare(): void;
+            dress(designation: string, coat: OutputCoat): void;
             enshell(): Shell;
             extract(): any;
+        }
+    }
+}
+declare namespace Gentyl {
+    namespace IO {
+        class Port {
+            label: any;
+            callbackContext: any;
+            callback: any;
+            shells: Shell[];
+            constructor(label: any);
+            addShell(shell: any): void;
+            designate(designator: PortDesignator): boolean;
+            dress(coat: OutputCoat): void;
+            prepareCallback(callback: any): void;
+            prepareContext(outputContext: any): void;
+            handle(input: any): void;
+        }
+        class GatedPort extends Port {
+            host: BaseNode;
+            complete: (...args: any[]) => any;
+            gate: Util.Gate;
+            deposit: any;
+            returned: any;
+            constructor(label: any, host: BaseNode, complete: (...args: any[]) => any);
+            addTributary(tributary: GatedPort): void;
+            handle(input: any): void;
+            allHome(): boolean;
+            reset(label: string, completer: (...args) => any): void;
         }
     }
 }
@@ -217,7 +260,8 @@ declare namespace Gentyl {
             shell: Shell;
             specialGate: boolean;
             constructor();
-            enshell(callback: any, context: any): Shell;
+            enshell(): Shell;
+            dress(designator: string, coat: OutputCoat): void;
             prepare(parg: any): void;
             extract(): void;
         }
@@ -247,6 +291,14 @@ declare namespace Gentyl {
 }
 declare namespace Gentyl {
     class ResolutionNode extends BaseNode {
+        resolveCache: {
+            stage: string;
+            resolveArgs: any;
+            carried: any;
+            selection: any;
+            resolvedCrown: any;
+            resolvedValue: any;
+        };
         io: IO.ResolveIO;
         form: GForm;
         protected constructForm(): GForm;
@@ -255,7 +307,12 @@ declare namespace Gentyl {
         private resolveArray(array, resolveArgs, selection);
         private resolveObject(node, resolveArgs, selection);
         private resolveNode(node, resolveArgs, selection);
+        proceed(received: any): void;
         resolve(resolveArgs: any): any;
+        resolveSelect(): any;
+        resolveCrown(): any;
+        resolveReturn(): any;
+        resolveComplete(): any;
     }
 }
 declare namespace Gentyl {
@@ -310,11 +367,12 @@ declare namespace Gentyl {
             constructor(host: ResolutionNode, iospec: any);
             prepare(): void;
             extract(): {};
+            dress(designation: any, coat: OutputCoat): void;
             initialiseHooks(hooks: Hook[], specialIn: Hook, specialOut: Hook): void;
             addHook(hook: Hook): void;
-            enshell(opcallback: any, opcontext?: any): HookShell;
+            enshell(): HookShell;
             reorient(): void;
-            collect(opcallback: any, opcontext?: any): {
+            collect(): {
                 hooks: Hook[];
                 shells: Shell[];
             };
@@ -335,8 +393,8 @@ declare namespace Gentyl {
             handleInput(input: any): void;
         }
         class ResolveOutputPort extends Port {
-            constructor(label: string, outputCallback: any, outputContext: any);
-            prepareContext(outputContext: any): any;
+            constructor(label: string);
+            handle(input: any): void;
         }
     }
 }
@@ -348,9 +406,11 @@ declare namespace Gentyl {
             outputHooks: any;
             sinks: any;
             sources: any;
-            constructor(base: ResolveIO, midrantHooks: Hook[], subshells: Shell[], opcallback: any, opcontext?: any);
+            constructor(base: ResolveIO, midrantHooks: Hook[], subshells: Shell[]);
             addMidrantHook(hook: Hook): void;
             addShell(shell: Shell): void;
+            designate(designator: PortDesignator): (ResolveInputPort | ResolveOutputPort)[];
+            dress(designator: PortDesignator, coat: OutputCoat): void;
         }
     }
 }
@@ -386,13 +446,16 @@ declare namespace Gentyl {
         function typeCaseSplitR(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any, initial?: any, reductor?: (a: any, b: any, k: any) => void) => any;
         function typeCaseSplitF(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;
         function typeCaseSplitM(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => void;
+        function collapseValues(obj: any): any[];
         class Gate {
-            private callback;
-            private context;
-            locks: boolean[];
-            locki: number;
-            constructor(callback: any, context: any);
-            lock(): () => void;
+            callback: any;
+            context: any;
+            private locks;
+            private locki;
+            private data;
+            constructor(callback?: any, context?: any);
+            lock(): (arg) => void;
+            reset(): void;
             allUnlocked(): boolean;
         }
     }

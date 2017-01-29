@@ -309,9 +309,11 @@ var Gentyl;
     var BaseNode = (function () {
         function BaseNode(components, form) {
             if (form === void 0) { form = {}; }
+            this.async = false;
             this.depth = 0;
             this.isRoot = true;
             this.prepared = false;
+            this.engaged = false;
             this.form = this.constructForm();
             var _a = this.form.parse(form), iospec = _a.iospec, contextspec = _a.contextspec;
             this.ctx = this.constructContext(contextspec);
@@ -350,6 +352,9 @@ var Gentyl;
         };
         BaseNode.prototype.prepare = function (prepargs) {
             if (prepargs === void 0) { prepargs = null; }
+            this.deplexer = new Gentyl.IO.GatedPort('prepare', this, this.complete);
+            this.ctx.exposed.gate = this.deplexer.gate;
+            this.engaged = true;
             if (this.isAncestor) {
                 throw Error("Ancestors cannot be prepared for resolution");
             }
@@ -360,12 +365,29 @@ var Gentyl;
                 this.form.preparator.call(this.ctx.exposed, prepargs);
                 this.io.prepare(prepargs);
                 this.crown = Gentyl.Util.typeCaseSplitF(this.prepareChild.bind(this, prepargs))(this.crown);
-                this.prepared = true;
+                if (this.async) {
+                    if (this.deplexer.allHome()) {
+                        this.complete();
+                    }
+                    return this.deplexer;
+                }
+                else {
+                    if (!this.deplexer.allHome()) {
+                        return this.deplexer;
+                    }
+                    return this.complete();
+                }
             }
             else {
                 this.ancestor = this.replicate();
                 this.ancestor.isAncestor = true;
             }
+        };
+        BaseNode.prototype.complete = function () {
+            this.deplexer.deposit = this;
+            this.deplexer.returned = true;
+            this.engaged = false;
+            this.prepared = true;
             if (this.isRoot) {
                 this.enshell();
             }
@@ -375,8 +397,16 @@ var Gentyl;
             if (child instanceof BaseNode) {
                 var replica = child.replicate();
                 replica.setParent(this, k);
-                replica.prepare(prepargs);
-                return replica;
+                replica = replica.prepare(prepargs);
+                if (replica instanceof Gentyl.IO.GatedPort) {
+                    if (!replica.returned) {
+                        this.deplexer.addTributary(replica);
+                    }
+                    return replica.host;
+                }
+                else {
+                    return replica;
+                }
             }
             else {
                 return child;
@@ -394,6 +424,7 @@ var Gentyl;
             }
             else {
                 var repl = this.constructCore(this.crown, this.form.consolidate(this.io, this.ctx));
+                repl.async = this.async;
                 if (this.isAncestor) {
                     repl.ancestor = this;
                 }
@@ -474,11 +505,16 @@ var Gentyl;
             };
             return product;
         };
-        BaseNode.prototype.enshell = function (callback, context_factory) {
-            this.io.enshell(callback, context_factory);
+        BaseNode.prototype.enshell = function () {
+            this.io.enshell();
             return this;
         };
         BaseNode.prototype.resolve = function (arg) {
+            if (!this.prepared) {
+                if (this.engaged) {
+                }
+                this.prepare();
+            }
             return null;
         };
         return BaseNode;
@@ -603,31 +639,19 @@ var Gentyl;
             Orientation[Orientation["MIXED"] = 3] = "MIXED";
         })(IO.Orientation || (IO.Orientation = {}));
         var Orientation = IO.Orientation;
-        var Port = (function () {
-            function Port(label) {
-                this.label = label;
-                this.shells = [];
-            }
-            Port.prototype.addShell = function (shell) {
-                this.shells.push(shell);
-            };
-            Port.prototype.handle = function (input) {
-                if (this.callback) {
-                    if (this.callbackContext) {
-                        this.callback.call(this.callbackContext, input);
-                    }
-                    else {
-                        this.callback.call(this, input);
-                    }
-                }
-            };
-            return Port;
-        }());
-        IO.Port = Port;
+        (function (DesignationTypes) {
+            DesignationTypes[DesignationTypes["ALL"] = 0] = "ALL";
+            DesignationTypes[DesignationTypes["MATCH"] = 1] = "MATCH";
+            DesignationTypes[DesignationTypes["REGEX"] = 2] = "REGEX";
+            DesignationTypes[DesignationTypes["FUNC"] = 3] = "FUNC";
+        })(IO.DesignationTypes || (IO.DesignationTypes = {}));
+        var DesignationTypes = IO.DesignationTypes;
         var BaseIO = (function () {
             function BaseIO() {
             }
             BaseIO.prototype.prepare = function () {
+            };
+            BaseIO.prototype.dress = function (designation, coat) {
             };
             BaseIO.prototype.enshell = function () {
                 return this.shell;
@@ -638,6 +662,115 @@ var Gentyl;
             return BaseIO;
         }());
         IO.BaseIO = BaseIO;
+    })(IO = Gentyl.IO || (Gentyl.IO = {}));
+})(Gentyl || (Gentyl = {}));
+var Gentyl;
+(function (Gentyl) {
+    var IO;
+    (function (IO) {
+        var Port = (function () {
+            function Port(label) {
+                this.label = label;
+                this.shells = [];
+            }
+            Port.prototype.addShell = function (shell) {
+                this.shells.push(shell);
+            };
+            Port.prototype.designate = function (designator) {
+                switch (designator.type) {
+                    case IO.DesignationTypes.ALL: {
+                        return true;
+                    }
+                    case IO.DesignationTypes.REGEX: {
+                        return this.label.match(designator.data);
+                    }
+                    case IO.DesignationTypes.FUNC: {
+                        return designator.data(this);
+                    }
+                    default:
+                        return false;
+                }
+            };
+            Port.prototype.dress = function (coat) {
+                console.log("dressing up");
+                this.prepareContext(coat.context);
+                this.prepareCallback(coat.callback);
+            };
+            Port.prototype.prepareCallback = function (callback) {
+                if (!(typeof (callback) == 'string' || typeof (callback) == 'function')) {
+                    throw new Error('Callback must be method name or');
+                }
+                this.callback = callback;
+            };
+            Port.prototype.prepareContext = function (outputContext) {
+                if (typeof (outputContext) == 'function') {
+                    this.callbackContext = new outputContext(this);
+                }
+                else if (outputContext instanceof Object) {
+                    this.callbackContext = outputContext;
+                }
+                else {
+                    throw Error("Invalid context fabrication, must be object or contructor");
+                }
+            };
+            Port.prototype.handle = function (input) {
+                if (this.callback) {
+                    if (this.callbackContext) {
+                        if (typeof (this.callback) == 'string') {
+                            var method = this.callbackContext[this.callback];
+                            if (method === undefined) {
+                                throw new Error("method must be accessible in provided context");
+                            }
+                            method.call(this.callbackContext, input);
+                        }
+                        else {
+                            this.callback.call(this.callbackContext, input);
+                        }
+                    }
+                    else {
+                        if (typeof (this.callback) == 'string') {
+                            throw new Error("method name can only be given with context");
+                        }
+                        this.callback.call(null, input);
+                    }
+                }
+            };
+            return Port;
+        }());
+        IO.Port = Port;
+        var GatedPort = (function (_super) {
+            __extends(GatedPort, _super);
+            function GatedPort(label, host, complete) {
+                _super.call(this, label);
+                this.host = host;
+                this.complete = complete;
+                this.gate = new Gentyl.Util.Gate(this.handle, this);
+                this.returned = false;
+            }
+            GatedPort.prototype.addTributary = function (tributary) {
+                var unlock = this.gate.lock();
+                tributary.callback = unlock;
+            };
+            GatedPort.prototype.handle = function (input) {
+                this.complete.call(this.host, input);
+                this.returned = true;
+                _super.prototype.handle.call(this, this.deposit);
+            };
+            GatedPort.prototype.allHome = function () {
+                return this.gate.allUnlocked();
+            };
+            GatedPort.prototype.reset = function (label, completer) {
+                this.label = label;
+                this.complete = completer;
+                this.callbackContext = undefined;
+                this.callback = undefined;
+                this.returned = false;
+                this.deposit = undefined;
+                this.gate.reset();
+            };
+            return GatedPort;
+        }(Port));
+        IO.GatedPort = GatedPort;
     })(IO = Gentyl.IO || (Gentyl.IO = {}));
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
@@ -698,10 +831,12 @@ var Gentyl;
         var LinkIO = (function () {
             function LinkIO() {
             }
-            LinkIO.prototype.enshell = function (callback, context) {
+            LinkIO.prototype.enshell = function () {
                 return this.shell;
             };
             ;
+            LinkIO.prototype.dress = function (designator, coat) {
+            };
             LinkIO.prototype.prepare = function (parg) {
             };
             ;
@@ -799,6 +934,20 @@ var Gentyl;
 })(Gentyl || (Gentyl = {}));
 var Gentyl;
 (function (Gentyl) {
+    function cleanCrown(crown) {
+        function clean(gem) {
+            if (gem instanceof Gentyl.IO.GatedPort) {
+                if (!gem.returned) {
+                    throw Error("Crown should not return if and tributary is yet unreturned");
+                }
+                return gem.deposit;
+            }
+            else {
+                return gem;
+            }
+        }
+        return Gentyl.Util.typeCaseSplitF(clean)(crown);
+    }
     var ResolutionNode = (function (_super) {
         __extends(ResolutionNode, _super);
         function ResolutionNode() {
@@ -826,17 +975,18 @@ var Gentyl;
             }
         };
         ResolutionNode.prototype.resolveObject = function (node, resolveArgs, selection) {
+            var resolution;
             if (selection instanceof Array) {
-                var resolution = {};
+                resolution = {};
                 for (var i = 0; i < selection.length; i++) {
                     var k = selection[i];
                     resolution[k] = this.resolveNode(node[k], resolveArgs, true);
                 }
-                return resolution;
             }
             else {
-                return this.resolveNode(node[selection], resolveArgs, true);
+                resolution = this.resolveNode(node[selection], resolveArgs, true);
             }
+            return resolution;
         };
         ResolutionNode.prototype.resolveNode = function (node, resolveArgs, selection) {
             var cut = false;
@@ -851,7 +1001,16 @@ var Gentyl;
             }
             else if (typeof (node) === "object") {
                 if (node instanceof Gentyl.BaseNode) {
-                    return cut ? null : node.resolve(resolveArgs);
+                    if (!cut) {
+                        var resolved = node.resolve(resolveArgs);
+                        if (resolved instanceof Gentyl.IO.GatedPort) {
+                            if (!resolved.returned) {
+                                this.deplexer.addTributary(resolved);
+                            }
+                            return this.deplexer;
+                        }
+                        return resolved;
+                    }
                 }
                 else {
                     return cut ? {} : this.resolveObject(node, resolveArgs, selection);
@@ -861,10 +1020,38 @@ var Gentyl;
                 return cut ? null : node;
             }
         };
+        ResolutionNode.prototype.proceed = function (received) {
+            console.log('proceed reached stage ' + this.resolveCache.stage + ' with: ', received);
+            switch (this.resolveCache.stage) {
+                case 'resolve-carry': {
+                    this.resolveCache.carried = received;
+                    this.resolveSelect();
+                    break;
+                }
+                case 'resolve-select': {
+                    this.resolveCache.selection = received;
+                    this.resolveCrown();
+                    break;
+                }
+                case 'resolve-crown': {
+                    this.resolveCache.resolvedCrown = cleanCrown(this.resolveCache.resolvedCrown);
+                    this.resolveReturn();
+                    break;
+                }
+                case 'resolve-return': {
+                    this.resolveCache.resolvedValue = received;
+                    this.resolveComplete();
+                    break;
+                }
+            }
+        };
         ResolutionNode.prototype.resolve = function (resolveArgs) {
             Object.freeze(resolveArgs);
             if (!this.prepared) {
-                this.prepare();
+                var pr = this.prepare();
+                if (pr instanceof Gentyl.IO.GatedPort) {
+                    return pr;
+                }
             }
             if (this.io.isShellBase && !this.io.specialGate) {
                 var sInpHook = this.io.specialInput;
@@ -881,15 +1068,72 @@ var Gentyl;
                 }
             }
             else {
+                this.resolveCache = {
+                    stage: 'resolve-carry',
+                    resolveArgs: resolveArgs,
+                    carried: undefined,
+                    selection: undefined,
+                    resolvedCrown: undefined,
+                    resolvedValue: undefined
+                };
+                this.deplexer.reset("resolve", this.proceed);
+                this.engaged = true;
                 var carried = this.form.carrier.call(this.ctx.exposed, resolveArgs);
-                var resolvedNode;
-                if (this.crown != undefined) {
-                    var selection = this.form.selector.call(this.ctx.exposed, Object.keys(this.crown), resolveArgs);
-                    resolvedNode = this.resolveNode(this.crown, carried, selection);
+                if (this.deplexer.allHome()) {
+                    this.resolveCache.carried = carried;
+                    return this.resolveSelect();
                 }
-                var result = this.form.resolver.call(this.ctx.exposed, resolvedNode, resolveArgs, carried);
-                return this.io.dispatchResult(result);
+                else {
+                    return this.deplexer;
+                }
             }
+        };
+        ResolutionNode.prototype.resolveSelect = function () {
+            this.resolveCache.stage = 'resolve-select';
+            var resolvedNode;
+            if (this.crown != undefined) {
+                var selection = this.form.selector.call(this.ctx.exposed, Object.keys(this.crown), this.resolveCache.resolveArgs);
+                if (this.deplexer.allHome()) {
+                    this.resolveCache.selection = selection;
+                    return this.resolveCrown();
+                }
+                else {
+                    return this.deplexer;
+                }
+            }
+            else {
+                return this.resolveReturn();
+            }
+        };
+        ResolutionNode.prototype.resolveCrown = function () {
+            this.resolveCache.stage = 'resolve-crown';
+            var resolvedCrown = this.resolveNode(this.crown, this.resolveCache.carried, this.resolveCache.selection);
+            this.resolveCache.resolvedCrown = resolvedCrown;
+            if (this.deplexer.allHome()) {
+                this.resolveCache.resolvedCrown = cleanCrown(resolvedCrown);
+                return this.resolveReturn();
+            }
+            else {
+                return this.deplexer;
+            }
+        };
+        ResolutionNode.prototype.resolveReturn = function () {
+            this.resolveCache.stage = 'resolve-return';
+            var result = this.form.resolver.call(this.ctx.exposed, this.resolveCache.resolvedCrown, this.resolveCache.resolveArgs, this.resolveCache.carried);
+            if (this.deplexer.allHome()) {
+                console.log("resolve return, nothing to wait for, result", result);
+                this.resolveCache.resolvedValue = result;
+                return this.resolveComplete();
+            }
+            else {
+                return this.deplexer;
+            }
+        };
+        ResolutionNode.prototype.resolveComplete = function () {
+            this.engaged = false;
+            var dispached = this.io.dispatchResult(this.resolveCache.resolvedValue);
+            this.deplexer.deposit = dispached;
+            return dispached;
         };
         return ResolutionNode;
     }(Gentyl.BaseNode));
@@ -1163,6 +1407,26 @@ var Gentyl;
                 }
                 return ext;
             };
+            ResolveIO.prototype.dress = function (designation, coat) {
+                var designator = {
+                    direction: IO.Orientation.OUTPUT,
+                    type: IO.DesignationTypes.MATCH,
+                    data: undefined,
+                };
+                if (typeof (designation) === 'string') {
+                    if (designation === '*') {
+                        designator.type = IO.DesignationTypes.ALL;
+                    }
+                    else {
+                        designator.type = IO.DesignationTypes.REGEX;
+                        designator.data = designation;
+                    }
+                }
+                else {
+                    throw new Error("Invalid Designator: string required");
+                }
+                this.shell.dress(designator, coat);
+            };
             ResolveIO.prototype.initialiseHooks = function (hooks, specialIn, specialOut) {
                 this.hooks = [];
                 this.specialInput = specialIn;
@@ -1191,13 +1455,13 @@ var Gentyl;
                 }
                 this.hooks.push(hook);
             };
-            ResolveIO.prototype.enshell = function (opcallback, opcontext) {
+            ResolveIO.prototype.enshell = function () {
                 if (!this.host.prepared) {
                     throw new Error("unable to shell unprepared node");
                 }
                 this.reorient();
                 this.isShellBase = true;
-                this.collect(opcallback, opcontext);
+                this.collect();
                 return this.shell;
             };
             ResolveIO.prototype.reorient = function () {
@@ -1236,18 +1500,19 @@ var Gentyl;
                     this.isShellBase = false;
                 }
             };
-            ResolveIO.prototype.collect = function (opcallback, opcontext) {
-                var accumulatedHooks = [].concat(this.hooks);
-                var accumulatedShells = [];
-                var accumulator = function (child, k) {
+            ResolveIO.prototype.collect = function () {
+                var accumulated = {
+                    hooks: [].concat(this.hooks),
+                    shells: []
+                };
+                var accumulator = function (child, k, accumulated) {
                     child = child;
-                    var _a = child.io.collect(opcallback, opcontext), hooks = _a.hooks, shells = _a.shells;
-                    accumulatedHooks = accumulatedHooks.concat(hooks);
-                    accumulatedShells = accumulatedShells.concat(shells);
+                    var _a = child.io.collect(), hooks = _a.hooks, shells = _a.shells;
+                    return { hooks: accumulated.hooks.concat(hooks), shells: accumulated.shells.concat(shells) };
                 };
                 if (!Gentyl.Util.isVanillaObject(this.host.crown) && !Gentyl.Util.isVanillaArray(this.host.crown)) {
                     if (this.host.crown instanceof Gentyl.ResolutionNode) {
-                        accumulator(this.host.crown, null);
+                        accumulated = accumulator(this.host.crown, null, accumulated);
                     }
                 }
                 else {
@@ -1255,15 +1520,12 @@ var Gentyl;
                         var child = this.host.crown[k];
                         if (child instanceof Gentyl.ResolutionNode) {
                             child = child;
-                            accumulator(child, k);
+                            accumulated = accumulator(child, k, accumulated);
                         }
                         else if (child instanceof Gentyl.BaseNode) {
                             child = child;
                             if (child.io.shell != undefined) {
-                                accumulatedShells.push(child.io.shell);
-                            }
-                            else {
-                                accumulatedShells.push();
+                                accumulated.shells.push(child.io.shell);
                             }
                         }
                     }
@@ -1271,7 +1533,7 @@ var Gentyl;
                 if (this.isShellBase) {
                     this.specialInput = this.specialInput || { tractor: IO.passing, label: '$', host: this.host, orientation: IO.Orientation.INPUT, eager: true };
                     this.specialOutput = this.specialOutput || { tractor: IO.passing, label: '$', host: this.host, orientation: IO.Orientation.OUTPUT, eager: true };
-                    this.shell = new IO.HookShell(this, accumulatedHooks, accumulatedShells, opcallback, opcontext);
+                    this.shell = new IO.HookShell(this, accumulated.hooks, accumulated.shells);
                     var _loop_1 = function(k_1) {
                         this_1.inputs[k_1] = (function (input) {
                             this.shell.sinks[k_1].handle(input);
@@ -1287,7 +1549,7 @@ var Gentyl;
                     return { shells: [this.shell], hooks: [] };
                 }
                 else {
-                    return { hooks: accumulatedHooks, shells: accumulatedShells };
+                    return { hooks: accumulated.hooks, shells: accumulated.shells };
                 }
             };
             ResolveIO.prototype.dispatchResult = function (result) {
@@ -1380,21 +1642,12 @@ var Gentyl;
         IO.SpecialInputPort = SpecialInputPort;
         var ResolveOutputPort = (function (_super) {
             __extends(ResolveOutputPort, _super);
-            function ResolveOutputPort(label, outputCallback, outputContext) {
+            function ResolveOutputPort(label) {
                 _super.call(this, label);
-                this.callback = outputCallback;
-                this.callbackContext = this.prepareContext(outputContext);
             }
-            ResolveOutputPort.prototype.prepareContext = function (outputContext) {
-                if (typeof (outputContext) == 'function') {
-                    return new outputContext(this);
-                }
-                else if (typeof (outputContext) == 'object') {
-                    return outputContext;
-                }
-                else {
-                    return this;
-                }
+            ResolveOutputPort.prototype.handle = function (input) {
+                _super.prototype.handle.call(this, input);
+                console.log("Resolve Output:", input);
             };
             return ResolveOutputPort;
         }(IO.Port));
@@ -1406,7 +1659,7 @@ var Gentyl;
     var IO;
     (function (IO) {
         var HookShell = (function () {
-            function HookShell(base, midrantHooks, subshells, opcallback, opcontext) {
+            function HookShell(base, midrantHooks, subshells) {
                 this.base = base;
                 this.sources = {};
                 this.sinks = {};
@@ -1420,14 +1673,14 @@ var Gentyl;
                     this.sinks[label] = new IO.ResolveInputPort(label, this);
                 }
                 for (var label in this.outputHooks) {
-                    this.sources[label] = new IO.ResolveOutputPort(label, opcallback, opcontext);
+                    this.sources[label] = new IO.ResolveOutputPort(label);
                 }
                 for (var _a = 0, subshells_1 = subshells; _a < subshells_1.length; _a++) {
                     var shell = subshells_1[_a];
                     this.addShell(shell);
                 }
                 this.sinks['$'] = new IO.SpecialInputPort(this.base);
-                this.sources['$'] = new IO.ResolveOutputPort('$', opcallback, opcontext);
+                this.sources['$'] = new IO.ResolveOutputPort('$');
             }
             HookShell.prototype.addMidrantHook = function (hook) {
                 hook.host.io.base = this.base;
@@ -1466,6 +1719,43 @@ var Gentyl;
                     else {
                         this.sources[source.label] = source;
                     }
+                }
+            };
+            HookShell.prototype.designate = function (designator) {
+                var scanDomain;
+                var designation = [];
+                switch (designator.direction) {
+                    case IO.Orientation.NEUTRAL: {
+                        return [];
+                    }
+                    case IO.Orientation.INPUT: {
+                        scanDomain = this.sinks;
+                        break;
+                    }
+                    case IO.Orientation.OUTPUT: {
+                        scanDomain = this.sources;
+                        break;
+                    }
+                    case IO.Orientation.MIXED: {
+                        scanDomain = Gentyl.Util.collapseValues(this.sources).concat(Gentyl.Util.collapseValues(this.sinks));
+                        break;
+                    }
+                }
+                for (var portlabel in scanDomain) {
+                    var port = scanDomain[portlabel];
+                    if (port.designate(designator)) {
+                        designation.push(port);
+                    }
+                }
+                console.log("designation:", designation);
+                return designation;
+            };
+            HookShell.prototype.dress = function (designator, coat) {
+                designator.direction = IO.Orientation.OUTPUT;
+                var designation = this.designate(designator);
+                for (var k in designation) {
+                    var outport = designation[k];
+                    outport.dress(coat);
                 }
             };
             return HookShell;
@@ -1890,7 +2180,7 @@ var Gentyl;
                         inThing[i] = afunc(subBundle, i);
                     }
                 }
-                else if (isVanillaObject) {
+                else if (isVanillaObject(inThing)) {
                     for (var k in inThing) {
                         var subBundle = inThing[k];
                         inThing[k] = ofunc(subBundle, k);
@@ -1902,21 +2192,44 @@ var Gentyl;
             };
         }
         Util.typeCaseSplitM = typeCaseSplitM;
+        function collapseValues(obj) {
+            if (!isVanillaTree(obj)) {
+                throw new Error("cant collapse circular structure");
+            }
+            var valArr = [];
+            function nodeProcess(node) {
+                valArr.push(node);
+            }
+            function recursor(node) {
+                typeCaseSplitF(recursor, recursor, nodeProcess)(node);
+            }
+            recursor(obj);
+            return valArr;
+        }
+        Util.collapseValues = collapseValues;
         var Gate = (function () {
             function Gate(callback, context) {
                 this.callback = callback;
                 this.context = context;
                 this.locks = [];
                 this.locki = 0;
+                this.data = [];
             }
             Gate.prototype.lock = function () {
                 this.locks[this.locki] = true;
-                return (function (locki) {
+                return (function (locki, arg) {
+                    if (arg != undefined) {
+                        this.data = arg;
+                    }
                     this.locks[locki] = false;
                     if (this.allUnlocked()) {
-                        this.callback.call(this.context);
+                        this.callback.call(this.context, this.data);
                     }
                 }).bind(this, this.locki++);
+            };
+            Gate.prototype.reset = function () {
+                this.locks = [];
+                this.locki = 0;
             };
             Gate.prototype.allUnlocked = function () {
                 return this.locks.filter(function (x) { return x; }).length === 0;

@@ -37,45 +37,31 @@ namespace Gentyl {
             sinks:{$:Port};
             sources:{$:Port};
             base:IOComponent;
-
+            designate:(designator:PortDesignator)=>Port[];
+            dress:(designator:PortDesignator, coat:OutputCoat) => void;
         }
 
         export interface IOComponent {
             shell:Shell;
-            enshell:(callback?, context?)=>Shell;
+            enshell:() => Shell;
+            dress:(designator: string, coat:OutputCoat) => void;
             prepare:(parg)=>void;
             extract:()=>any;
-
         }
 
-        export class Port{
-            callbackContext:any;
-            callback:(output, ...args)=>any;
+        export enum DesignationTypes {
+            ALL, MATCH, REGEX, FUNC
+        }
 
-            shells:Shell[];
+        export interface PortDesignator{
+            direction:Orientation,
+            type:DesignationTypes,
+            data: any
+        }
 
-            constructor(public label){
-                this.shells = [];
-            }
-
-            /**
-             * every kind of port needs to be retrofusable
-             */
-            addShell(shell:Shell){
-                this.shells.push(shell)
-            }
-
-            handle(input){
-                if(this.callback){
-                    if(this.callbackContext){
-                        //call toward target
-                        this.callback.call(this.callbackContext, input)
-                    }else{
-                        //dont call globally just use the port as context;
-                        this.callback.call(this, input)
-                    }
-                }
-            }
+        export interface OutputCoat {
+            context:Object|((ResolveOutputPort)=>Object);
+            callback:(output:any)=>any;
         }
 
         export class BaseIO implements IOComponent{
@@ -89,6 +75,10 @@ namespace Gentyl {
 
             prepare(){
 
+            }
+
+            dress(designation:string, coat:OutputCoat){
+                
             }
 
             enshell():Shell{

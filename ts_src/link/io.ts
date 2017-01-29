@@ -11,10 +11,13 @@ namespace Gentyl {
 
             }
 
-            enshell(callback, context):Shell{
+            enshell():Shell{
                 return this.shell
             };
 
+            dress(designator: string, coat:OutputCoat){
+
+            }
 
             prepare(parg){
 

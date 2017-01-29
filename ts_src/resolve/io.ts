@@ -10,6 +10,8 @@ namespace Gentyl {
             reactiveValue?:boolean
         }
 
+
+
         function orientationChange(child, node):Orientation{
             if(child === Orientation.OUTPUT && node === Orientation.INPUT){
                 return Orientation.INPUT;
@@ -86,6 +88,32 @@ namespace Gentyl {
             }
 
 
+
+            /*
+                scan the whole shell's output ports to ascribe the callbacks using a unified format
+            */
+            dress(designation:any, coat:OutputCoat){
+                let designator: PortDesignator = {
+                    direction:Orientation.OUTPUT,
+                    type:DesignationTypes.MATCH,
+                    data:undefined,
+                }
+
+                //rudimentary parse of wildcards
+                if(typeof(designation) === 'string'){
+                    if(designation === '*'){
+                        designator.type = DesignationTypes.ALL;
+                    }else{
+                        designator.type = DesignationTypes.REGEX;
+                        designator.data = designation;
+                    }
+                }else{
+                    throw new Error("Invalid Designator: string required")
+                }
+
+                this.shell.dress(designator, coat);
+            }
+
             initialiseHooks(hooks:Hook[], specialIn:Hook, specialOut:Hook){
                 this.hooks = [];
 
@@ -129,7 +157,7 @@ namespace Gentyl {
 
             }
 
-            enshell(opcallback, opcontext?){
+            enshell(){
 
                 if(!this.host.prepared){
                     throw new Error("unable to shell unprepared node")
@@ -141,7 +169,7 @@ namespace Gentyl {
                 //regardless of orientation this is the designated base.
                 this.isShellBase = true;
 
-                this.collect(opcallback, opcontext);
+                this.collect();
 
                 return this.shell;
 
@@ -201,25 +229,25 @@ namespace Gentyl {
                 }
             }
 
-            collect(opcallback, opcontext?):{hooks:Hook[], shells:Shell[]} {
+            collect():{hooks:Hook[], shells:Shell[]} {
                 //if child is an inversion node then shell it else provide the io map to the accumulated nodes
 
                 //begin with the hooks of this node
-                var accumulatedHooks = [].concat(this.hooks);
-                var accumulatedShells = [];
+                var accumulated = {
+                    hooks:[].concat(this.hooks),
+                    shells:[]
+                };
 
-                const accumulator = function(child, k){
+                const accumulator = function(child, k, accumulated : {hooks:Hook[], shells:Shell[]}) : {hooks:Hook[], shells:Shell[]}{
                     child = <ResolutionNode> child;
-
-                    let {hooks, shells} = child.io.collect(opcallback, opcontext);
-                    accumulatedHooks = accumulatedHooks.concat(hooks);
-                    accumulatedShells = accumulatedShells.concat(shells);
+                    let {hooks, shells} = child.io.collect();
+                    return {hooks: accumulated.hooks.concat(hooks), shells: accumulated.shells.concat(shells)};
                 }
 
                 //singular case handling
                 if (!Util.isVanillaObject(this.host.crown) && !Util.isVanillaArray(this.host.crown)){
                     if(this.host.crown instanceof ResolutionNode){
-                        accumulator(this.host.crown, null);
+                        accumulated = accumulator(this.host.crown, null, accumulated);
                     }
                 }else{
 
@@ -227,31 +255,27 @@ namespace Gentyl {
                         let child = this.host.crown[k];
                         if(child instanceof ResolutionNode){
                             child = <ResolutionNode> child;
-                            accumulator(child, k)
+                            accumulated = accumulator(child, k, accumulated);
                         }else if (child instanceof BaseNode){
                             child = <BaseNode> child;
 
-                            //on other
+                            //on other node
                             if(child.io.shell != undefined){
-                                accumulatedShells.push(child.io.shell);
-                            }else{
-                                accumulatedShells.push()
+                                accumulated.shells.push(child.io.shell);
                             }
                         }
                     }
-
                 }
-
 
                 //shell creation post recurse means leaves shell first
                 if(this.isShellBase){
 
-                    //special hooks are needed at this point, by default they will not trigger or pass anything.
+                    //special hooks are needed at this point, by default they will trigger and pass.
                     this.specialInput  = this.specialInput || {tractor:passing, label:'$', host:this.host, orientation:Orientation.INPUT, eager:true};
                     this.specialOutput = this.specialOutput|| {tractor:passing, label:'$', host:this.host, orientation:Orientation.OUTPUT, eager:true};
 
                     //compile the accumulated hooks into a single shell
-                    this.shell = new HookShell(this, accumulatedHooks, accumulatedShells, opcallback, opcontext);
+                    this.shell = new HookShell(this, accumulated.hooks, accumulated.shells);
 
                     //aliased input function by binding the outward facing port to the host
                     for(let k in this.shell.sinks){
@@ -266,7 +290,7 @@ namespace Gentyl {
 
                     return {shells:[this.shell], hooks:[]}
                 }else{
-                    return {hooks: accumulatedHooks, shells:accumulatedShells};
+                    return {hooks: accumulated.hooks, shells:accumulated.shells};
                 }
             }
 

@@ -43,7 +43,7 @@ describe("operationality", function () {
 
     it("should generate from changing context properties", function(){
         var gen = g({
-                inc:1
+                inc:2
             },{
                 r(obj, args){
                     this.prop += obj.inc;
@@ -53,10 +53,9 @@ describe("operationality", function () {
             }
         )
 
-        var res = gen.resolve();
-        expect(res).toEqual(1);
-        res = gen.resolve();
-        expect(res).toEqual(2);
+        expect(gen.resolve()).toEqual(2);
+
+        expect(gen.resolve()).toEqual(4);
 
     })
 
