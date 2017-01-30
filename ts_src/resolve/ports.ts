@@ -76,7 +76,6 @@ namespace Gentyl {
 
             handle(input){
                 super.handle(input);
-                console.log("Resolve Output:", input)
             }
 
 

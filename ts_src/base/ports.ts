@@ -37,8 +37,6 @@ namespace Gentyl{
             }
 
             dress(coat:OutputCoat){
-
-                console.log("dressing up")
                 this.prepareContext(coat.context);
                 this.prepareCallback(coat.callback);
             }

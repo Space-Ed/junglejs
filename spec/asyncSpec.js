@@ -114,79 +114,107 @@ describe("asynchronous tractors", function(){
     })
 
     describe("resolve", function(){
-        var g
+        var g, g2, g1;
+
+        function timeout(label, returnValueOrFunc, labelArg, funcArgs, timeout){
+
+            let rf = (returnValueOrFunc instanceof Function ) ? returnValueOrFunc : function(){return returnValueOrFunc}
+
+            return function(...tractorArgs){
+                let inargs = tractorArgs;
+
+                let args = []
+                for (var i = 0; i < funcArgs.length; i++) {
+                    args[i] = tractorArgs[funcArgs[i]];
+                }
+                let rvinner = rf.apply(this, args);
+
+                if(arguments[labelArg].indexOf(label) != -1 ){
+                    let unlock = this.gate.lock();
+                    setTimeout(function(){
+                        unlock(rvinner);
+                    },10);
+                }else{
+                    return rvinner;
+                }
+            }
+        }
 
         beforeEach(function(){
             g = G("I",{
-                c(arg){
-                    if(arg === 'c'){
-                        console.log('selected carry')
-                        let unlock = this.gate.lock();
-                        setTimeout(function(){
-                            unlock("C");
-                        },10)
-                    }else{
-                        return "C";
-                    }
-                },
-                s(keys, arg){
-                    if (arg === 's'){
-                        console.log('selected select')
-                        let unlock = this.gate.lock();
-                        setTimeout(function(){
-                            unlock(true);
-                        },10)
-                    }else{
-                        return true;
-                    }
-                },
-                r(obj, arg, carg){
-                    if (arg === 'r'){
-                        console.log('selected resolve')
-                        let unlock = this.gate.lock();
-                        setTimeout(function(){
-                            unlock(obj+carg+"R");
-                        },10)
-                    }else{
-                        return obj+carg+"R";
-                    }
-                }
+                c:timeout('c', 'C', 0,[], 10),
+                s:timeout('s', true, 1,[], 10),
+                r:timeout('r', function(o,a,c){return o+c+'R'}, 1, [0,1,2],10)
             }).prepare();
-        })
 
-        describe("children synced, timeout tractors,", function(){
-
-            fit('should return gate when carry performs a lock', function(done){
-                var labels = ['r','s','c'];
-
-                function recur(label){
-                    expect(g.engaged).toBe(false);
-                    var gp = g.resolve(label);
-
-                    expect(g.deplexer.gate).toBe(g.ctx.exposed.gate, "should be the same gate as prepped")
-                    expect(gp === g.deplexer).toBe(true, "should return the deplexer");
-                    expect(gp.label).toBe('resolve');
-                    expect(g.engaged).toBe(true, 'engaged');
-                    expect(gp.returned).toBe(false, 'not returned');
-
-                    setTimeout(function () {
-                        expect(gp.deposit).toBe("ICR", label);
-                        expect(gp.returned).toBe(true);
-
-                        if(labels.length == 0){
-                            done();
-                        }else{
-                            recur(labels.pop());
-                        }
-                    },20);
-                }
-                recur(labels.pop());
-            });
-
-            fit('when select performs a lock', function(){
-
+            g1 = G("I",{
+                c:timeout('k', 'C', 0,[], 10),
+                s:timeout('z', true, 1,[], 10),
+                r:timeout('d', function(o,a,c){return o+c+'D'}, 1, [0,1,2],10)
             })
 
+            g2 = G([
+                g,
+                g1
+            ]);
         })
-    })
-})
+
+        it('should return gate when any tractor performs a lock', function(done){
+            var labels = ['r','s','c', 'rc', 'rsc', 'sc', 'rs'];
+
+            function recur(i){
+                expect(g.engaged).toBe(false);
+                var gp = g.resolve(labels[i]);
+
+                expect(g.deplexer.gate).toBe(g.ctx.exposed.gate, "should be the same gate as prepped")
+                expect(gp === g.deplexer).toBe(true, "should return the deplexer");
+                expect(gp.label).toBe('resolve');
+                expect(g.engaged).toBe(true, 'engaged');
+                expect(gp.returned).toBe(false, 'not returned');
+
+                setTimeout(function () {
+                    expect(gp.deposit).toBe("ICR", labels[i]);
+                    expect(gp.returned).toBe(true);
+
+                    if(i === labels.length-1){
+                        done();
+                    }else{
+                        recur(i+1);
+                    }
+                },50);
+            }
+            recur(0);
+        });
+
+        it('should return gate if any object child locks', function(){
+
+            var labels = ['c', 'k', 'z', 'cz'];
+
+            function recur(i){
+                expect(g2.engaged).toBe(false);
+                var gp = g2.resolve(labels[i]);
+
+                expect(g2.deplexer.gate).toBe(g2.ctx.exposed.gate, "should be the same gate as prepped")
+                expect(gp === g2.deplexer).toBe(true, "should return the deplexer");
+                expect(gp.label).toBe('resolve');
+                expect(g2.engaged).toBe(true, 'engaged');
+                expect(gp.returned).toBe(false, 'not returned');
+
+                setTimeout(function () {
+                    expect(gp.deposit.a).toBe("ICR", labels[i]);
+                    expect(gp.deposit.b).toBe("ICD", labels[i]);
+                    expect(gp.returned).toBe(true);
+
+                    if(i === labels.length-1){
+                        done();
+                    }else{
+                        recur(i+1);
+                    }
+                },150);
+            }
+
+            recur(0);
+        })
+
+    });
+});

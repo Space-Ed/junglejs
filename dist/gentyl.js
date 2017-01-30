@@ -692,7 +692,6 @@ var Gentyl;
                 }
             };
             Port.prototype.dress = function (coat) {
-                console.log("dressing up");
                 this.prepareContext(coat.context);
                 this.prepareCallback(coat.callback);
             };
@@ -937,8 +936,8 @@ var Gentyl;
     function cleanCrown(crown) {
         function clean(gem) {
             if (gem instanceof Gentyl.IO.GatedPort) {
-                if (!gem.returned) {
-                    throw Error("Crown should not return if and tributary is yet unreturned");
+                if (!gem.allHome()) {
+                    throw Error("Crown still contains unreturned ");
                 }
                 return gem.deposit;
             }
@@ -1021,7 +1020,6 @@ var Gentyl;
             }
         };
         ResolutionNode.prototype.proceed = function (received) {
-            console.log('proceed reached stage ' + this.resolveCache.stage + ' with: ', received);
             switch (this.resolveCache.stage) {
                 case 'resolve-carry': {
                     this.resolveCache.carried = received;
@@ -1121,7 +1119,6 @@ var Gentyl;
             this.resolveCache.stage = 'resolve-return';
             var result = this.form.resolver.call(this.ctx.exposed, this.resolveCache.resolvedCrown, this.resolveCache.resolveArgs, this.resolveCache.carried);
             if (this.deplexer.allHome()) {
-                console.log("resolve return, nothing to wait for, result", result);
                 this.resolveCache.resolvedValue = result;
                 return this.resolveComplete();
             }
@@ -1407,26 +1404,6 @@ var Gentyl;
                 }
                 return ext;
             };
-            ResolveIO.prototype.dress = function (designation, coat) {
-                var designator = {
-                    direction: IO.Orientation.OUTPUT,
-                    type: IO.DesignationTypes.MATCH,
-                    data: undefined,
-                };
-                if (typeof (designation) === 'string') {
-                    if (designation === '*') {
-                        designator.type = IO.DesignationTypes.ALL;
-                    }
-                    else {
-                        designator.type = IO.DesignationTypes.REGEX;
-                        designator.data = designation;
-                    }
-                }
-                else {
-                    throw new Error("Invalid Designator: string required");
-                }
-                this.shell.dress(designator, coat);
-            };
             ResolveIO.prototype.initialiseHooks = function (hooks, specialIn, specialOut) {
                 this.hooks = [];
                 this.specialInput = specialIn;
@@ -1552,6 +1529,26 @@ var Gentyl;
                     return { hooks: accumulated.hooks, shells: accumulated.shells };
                 }
             };
+            ResolveIO.prototype.dress = function (designation, coat) {
+                var designator = {
+                    direction: IO.Orientation.OUTPUT,
+                    type: IO.DesignationTypes.MATCH,
+                    data: undefined,
+                };
+                if (typeof (designation) === 'string') {
+                    if (designation === '*') {
+                        designator.type = IO.DesignationTypes.ALL;
+                    }
+                    else {
+                        designator.type = IO.DesignationTypes.REGEX;
+                        designator.data = designation;
+                    }
+                }
+                else {
+                    throw new Error("Invalid Designator: string required");
+                }
+                this.shell.dress(designator, coat);
+            };
             ResolveIO.prototype.dispatchResult = function (result) {
                 var baseResult;
                 for (var k in this.outputHooks) {
@@ -1647,7 +1644,6 @@ var Gentyl;
             }
             ResolveOutputPort.prototype.handle = function (input) {
                 _super.prototype.handle.call(this, input);
-                console.log("Resolve Output:", input);
             };
             return ResolveOutputPort;
         }(IO.Port));
@@ -1747,7 +1743,6 @@ var Gentyl;
                         designation.push(port);
                     }
                 }
-                console.log("designation:", designation);
                 return designation;
             };
             HookShell.prototype.dress = function (designator, coat) {

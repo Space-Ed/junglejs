@@ -367,7 +367,6 @@ declare namespace Gentyl {
             constructor(host: ResolutionNode, iospec: any);
             prepare(): void;
             extract(): {};
-            dress(designation: any, coat: OutputCoat): void;
             initialiseHooks(hooks: Hook[], specialIn: Hook, specialOut: Hook): void;
             addHook(hook: Hook): void;
             enshell(): HookShell;
@@ -376,6 +375,7 @@ declare namespace Gentyl {
                 hooks: Hook[];
                 shells: Shell[];
             };
+            dress(designation: any, coat: OutputCoat): void;
             dispatchResult(result: any): any;
         }
     }

@@ -136,7 +136,6 @@ namespace Gentyl{
                     }
                 }
 
-                console.log("designation:", designation)
                 return designation;
             }
 
@@ -147,7 +146,6 @@ namespace Gentyl{
                 for(let k in designation){
                     let outport = <ResolveOutputPort>designation[k];
                     outport.dress(coat);
-
                 }
             }
         }

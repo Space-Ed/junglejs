@@ -44,8 +44,4 @@ describe("preparation",function(){
         g.prepare("again")
         expect(g.resolve()).toBe("againagainagain")
     })
-
-    it("should deeply set properties - shared, child preference")
-
-    it("should deeply set properties - isolated")
 })

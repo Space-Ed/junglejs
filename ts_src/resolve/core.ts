@@ -3,8 +3,8 @@ namespace Gentyl {
     function cleanCrown(crown){
         function clean(gem){
             if(gem instanceof IO.GatedPort){
-                if(!gem.returned){
-                    throw Error("Crown should not return if and tributary is yet unreturned")
+                if(!gem.allHome()){
+                    throw Error("Crown still contains unreturned ")
                 }
                 return gem.deposit;
             }else{
@@ -124,7 +124,7 @@ namespace Gentyl {
         */
         proceed(received){
 
-            console.log('proceed reached stage '+ this.resolveCache.stage +' with: ', received)
+            //console.log('proceed reached stage '+ this.resolveCache.stage +' with: ', received)
 
             switch(this.resolveCache.stage){
                 case 'resolve-carry': {
@@ -249,7 +249,6 @@ namespace Gentyl {
             var result = this.form.resolver.call(this.ctx.exposed, this.resolveCache.resolvedCrown,  this.resolveCache.resolveArgs, this.resolveCache.carried);
 
             if(this.deplexer.allHome()){
-                console.log("resolve return, nothing to wait for, result", result)
                 this.resolveCache.resolvedValue = result;
                 return this.resolveComplete();
             }else{

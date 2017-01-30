@@ -45,7 +45,7 @@ describe("node replication", function(){
     it("should deeply equate and not identify(is should replicate) after replication.", function (){
         pending("cannot replicate functions, these are identical to the defined function")
         var g2 = this.g.replicate()
-        G.Util.isDeepReplicaThrow(g2, this.g)
+        G.Util.isDeepReplicaThrow(g2, this.g);
     })
 
     describe("with prepared base", function(){

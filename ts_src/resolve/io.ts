@@ -89,30 +89,6 @@ namespace Gentyl {
 
 
 
-            /*
-                scan the whole shell's output ports to ascribe the callbacks using a unified format
-            */
-            dress(designation:any, coat:OutputCoat){
-                let designator: PortDesignator = {
-                    direction:Orientation.OUTPUT,
-                    type:DesignationTypes.MATCH,
-                    data:undefined,
-                }
-
-                //rudimentary parse of wildcards
-                if(typeof(designation) === 'string'){
-                    if(designation === '*'){
-                        designator.type = DesignationTypes.ALL;
-                    }else{
-                        designator.type = DesignationTypes.REGEX;
-                        designator.data = designation;
-                    }
-                }else{
-                    throw new Error("Invalid Designator: string required")
-                }
-
-                this.shell.dress(designator, coat);
-            }
 
             initialiseHooks(hooks:Hook[], specialIn:Hook, specialOut:Hook){
                 this.hooks = [];
@@ -294,6 +270,30 @@ namespace Gentyl {
                 }
             }
 
+            /*
+                scan the whole shell's output ports to ascribe the callbacks using a unified format
+            */
+            dress(designation:any, coat:OutputCoat){
+                let designator: PortDesignator = {
+                    direction:Orientation.OUTPUT,
+                    type:DesignationTypes.MATCH,
+                    data:undefined,
+                }
+
+                //rudimentary parse of wildcards
+                if(typeof(designation) === 'string'){
+                    if(designation === '*'){
+                        designator.type = DesignationTypes.ALL;
+                    }else{
+                        designator.type = DesignationTypes.REGEX;
+                        designator.data = designation;
+                    }
+                }else{
+                    throw new Error("Invalid Designator: string required")
+                }
+
+                this.shell.dress(designator, coat);
+            }
 
 
             dispatchResult(result:any){
