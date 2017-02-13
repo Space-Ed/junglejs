@@ -1,14 +1,14 @@
 {
-  "name": "gentyl",
-  "version": "1.1.0",
-  "description": "A Generator That You'll Love",
-  "main": "./dist/gentyl.js",
+  "name": "junglejs",
+  "version": "0.0.1",
+  "description": "The organic programming framework",
+  "main": "./dist/junglejs.js",
   "scripts": {
     "test": "jasmine"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Space-Ed/gentyl.git"
+    "url": "git+https://github.com/Space-Ed/junglejs.git"
   },
   "keywords": [
     "gentle",
@@ -25,9 +25,9 @@
   "author": "Edward Dalley",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Space-Ed/gentyl/issues"
+    "url": "https://github.com/Space-Ed/junglejs/issues"
   },
-  "homepage": "https://github.com/Space-Ed/gentyl#readme",
+  "homepage": "https://github.com/Space-Ed/junglejs#readme",
   "devDependencies": {
     "browserify": "^13.1.0",
     "jasmine": "^2.5.2",

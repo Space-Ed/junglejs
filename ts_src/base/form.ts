@@ -1,4 +1,4 @@
-namespace Gentyl {
+namespace Jungle {
 
     export interface FormSpec {
         r?:(obj, args?)=>any;
@@ -26,7 +26,7 @@ namespace Gentyl {
          preparator:(arg)=>void;
          depreparator:(arg)=>void;
 
-         constructor(public host:BaseNode){
+         constructor(public host:BaseCell){
          }
 
          parse(formObj:FormSpec):{iospec:any, contextspec:{properties:any, declaration:string}} {

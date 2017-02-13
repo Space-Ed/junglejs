@@ -1,4 +1,4 @@
-namespace Gentyl.Inv {
+namespace Jungle.Inv {
 
     export function retract(obj, arg){
         return arg

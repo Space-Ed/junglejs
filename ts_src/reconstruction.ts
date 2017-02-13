@@ -1,5 +1,5 @@
 
-namespace Gentyl {
+namespace Jungle {
 
     export interface FormRef {
         f:string,
@@ -47,13 +47,13 @@ namespace Gentyl {
      * build a form ref object for the bundle by storing the function externally
      * and only storing in the bundle a uuid or function name;
      */
-    export function deformulate(fromNode:BaseNode):any{
-        let rNode = <ResolutionNode>fromNode;
+    export function deformulate(fromCell:BaseCell):any{
+        let rCell = <ResolutionCell>fromCell;
 
         var preform:FormSpec = {
-            r:rNode.form.resolver,
-            c:rNode.form.carrier,
-            x:rNode.ctx.declaration
+            r:rCell.form.resolver,
+            c:rCell.form.carrier,
+            x:rCell.ctx.declaration
         }
 
         var exForm = {};
@@ -85,7 +85,7 @@ namespace Gentyl {
     }
 
 
-    export class Reconstruction extends BaseNode {
+    export class Reconstruction extends BaseCell {
 
         constructor(bundle:Bundle){
 
@@ -102,7 +102,7 @@ namespace Gentyl {
             let node = Util.typeCaseSplitF(debundle)(bundle.node)
 
             //reconstruction is almost entirely for this, so that it can pass through reformulation.
-            let form =  Gentyl.reformulate(bundle.form);
+            let form =  Jungle.reformulate(bundle.form);
             let state = bundle.state;
 
             super(node, Util.melder(form, state))

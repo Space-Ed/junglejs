@@ -1,4 +1,4 @@
-namespace Gentyl{
+namespace Jungle{
      export namespace Util
      {
         export function identity(x){

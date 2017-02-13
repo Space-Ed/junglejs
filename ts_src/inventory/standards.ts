@@ -1,4 +1,4 @@
-namespace Gentyl.Inv {
+namespace Jungle.Inv {
 
     export function pass(x){
         return x

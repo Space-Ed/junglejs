@@ -1,4 +1,4 @@
-namespace Gentyl {
+namespace Jungle {
 
     function cleanCrown(crown){
         function clean(gem){
@@ -16,7 +16,7 @@ namespace Gentyl {
 
     }
 
-    export class ResolutionNode extends BaseNode {
+    export class ResolutionCell extends BaseCell {
 
         resolveCache:{
             stage:string,
@@ -39,7 +39,7 @@ namespace Gentyl {
         }
 
         protected constructCore(crown, form){
-            return new ResolutionNode(crown, form)
+            return new ResolutionCell(crown, form)
         }
 
         private  resolveArray(array:any[],resolveArgs, selection):any[]{
@@ -48,11 +48,11 @@ namespace Gentyl {
             if(selection instanceof Array){
                 var resolution = []
                 for (var i = 0; i < selection.length; i++){
-                    resolution[i] = this.resolveNode(array[selection[i]], resolveArgs, true)
+                    resolution[i] = this.resolveCell(array[selection[i]], resolveArgs, true)
                 }
                 return resolution
             }else {
-                return this.resolveNode(array[selection], resolveArgs, true)
+                return this.resolveCell(array[selection], resolveArgs, true)
             }
         }
 
@@ -63,10 +63,10 @@ namespace Gentyl {
 
                 for (var i = 0; i < selection.length; i++){
                     var k = selection[i];
-                    resolution[k] = this.resolveNode(node[k], resolveArgs, true);
+                    resolution[k] = this.resolveCell(node[k], resolveArgs, true);
                 }
             }else{
-                resolution = this.resolveNode(node[selection], resolveArgs, true);
+                resolution = this.resolveCell(node[selection], resolveArgs, true);
             }
 
 
@@ -75,7 +75,7 @@ namespace Gentyl {
         }
 
         //main recursion
-        private  resolveNode(node, resolveArgs, selection):any{
+        private  resolveCell(node, resolveArgs, selection):any{
             //log("node to resolve: ", node)
 
             //cutting dictates that we select nothing and therefore will
@@ -94,7 +94,7 @@ namespace Gentyl {
                 return cut ? [] : this.resolveArray(node, resolveArgs, selection)
             }
             else if (typeof(node) === "object"){
-                if(node instanceof BaseNode){
+                if(node instanceof BaseCell){
                     if(!cut){
                         let resolved = node.resolve(resolveArgs);
 
@@ -212,7 +212,7 @@ namespace Gentyl {
         resolveSelect(){
             this.resolveCache.stage = 'resolve-select';
 
-            var resolvedNode
+            var resolvedCell
             if(this.crown != undefined){
                 var selection = this.form.selector.call(this.ctx.exposed, Object.keys(this.crown), this.resolveCache.resolveArgs);
 
@@ -232,7 +232,7 @@ namespace Gentyl {
 
         resolveCrown(){
             this.resolveCache.stage = 'resolve-crown';
-            var resolvedCrown = this.resolveNode(this.crown, this.resolveCache.carried, this.resolveCache.selection)
+            var resolvedCrown = this.resolveCell(this.crown, this.resolveCache.carried, this.resolveCache.selection)
 
             this.resolveCache.resolvedCrown = resolvedCrown;
             if(this.deplexer.allHome()){

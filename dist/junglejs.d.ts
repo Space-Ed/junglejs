@@ -1,20 +1,20 @@
 /// <reference path="../typings/index.d.ts" />
-declare namespace Gentyl {
-    function G(components: Object, form: any): ResolutionNode;
-    function F(func: any, components: any): ResolutionNode;
+declare namespace Jungle {
+    function G(components: Object, form: any): ResolutionCell;
+    function F(func: any, components: any): ResolutionCell;
     function R(reconstructionBundle: any): Reconstruction;
     function T(type: any): Terminal;
 }
-declare namespace Gentyl {
+declare namespace Jungle {
     namespace Actions {
         class Component {
             private host;
-            constructor(host: BaseNode);
+            constructor(host: BaseCell);
             add(keyOrVal: any, val: any): void;
         }
     }
 }
-declare namespace Gentyl {
+declare namespace Jungle {
     enum ASSOCMODE {
         INHERIT = 0,
         SHARE = 1,
@@ -53,7 +53,7 @@ declare namespace Gentyl {
         closed: boolean;
         originals: any;
         cache: any;
-        constructor(host: BaseNode, contextspec: ContextSpec);
+        constructor(host: BaseCell, contextspec: ContextSpec);
         addInternalProperty(spec: PropertySpec): void;
         addHookedProperty(spec: PropertySpec): void;
         addThroughProperty(spec: PropertySpec): void;
@@ -71,38 +71,38 @@ declare namespace Gentyl {
         addSourceLayer(layer: ContextLayer): void;
     }
 }
-declare namespace Gentyl {
-    class BaseNode {
+declare namespace Jungle {
+    class BaseCell {
         crown: any;
         ctx: GContext;
         form: BaseForm;
         io: IO.IOComponent;
         act: Actions.Component;
-        parent: BaseNode;
+        parent: BaseCell;
         depth: number;
         deplexer: IO.GatedPort;
         async: boolean;
         engaged: boolean;
         isRoot: boolean;
-        root: BaseNode;
+        root: BaseCell;
         prepared: boolean;
-        ancestor: BaseNode;
+        ancestor: BaseCell;
         isAncestor: boolean;
         constructor(components: any, form?: FormSpec);
         protected constructForm(): BaseForm;
         protected constructIO(iospec: any): IO.IOComponent;
         protected constructContext(contextspec: any): GContext;
         protected constructActions(): Actions.Component;
-        protected constructCore(crown: any, form: any): BaseNode;
+        protected constructCore(crown: any, form: any): BaseCell;
         inductComponent(component: any): any;
-        prepare(prepargs?: any): BaseNode | IO.GatedPort;
-        complete(): BaseNode;
-        protected prepareChild(prepargs: any, child: any, k: any): BaseNode;
-        protected setParent(parentNode: BaseNode, dereferent: string | number): void;
-        replicate(): BaseNode;
-        getParent(toDepth?: number): BaseNode;
-        getRoot(): BaseNode;
-        getNominal(label: any): BaseNode;
+        prepare(prepargs?: any): BaseCell | IO.GatedPort;
+        complete(): BaseCell;
+        protected prepareChild(prepargs: any, child: any, k: any): BaseCell;
+        protected setParent(parentCell: BaseCell, dereferent: string | number): void;
+        replicate(): BaseCell;
+        getParent(toDepth?: number): BaseCell;
+        getRoot(): BaseCell;
+        getNominal(label: any): BaseCell;
         terminalScan(recursive?: boolean, collection?: any[], locale?: any): any[];
         checkComplete(recursive?: boolean): boolean;
         bundle(): Bundle;
@@ -110,7 +110,7 @@ declare namespace Gentyl {
         resolve(arg: any): any;
     }
 }
-declare namespace Gentyl {
+declare namespace Jungle {
     interface FormSpec {
         r?: (obj, args?) => any;
         c?: (args?) => any;
@@ -127,10 +127,10 @@ declare namespace Gentyl {
         contextspec?: ContextSpec;
     }
     class BaseForm {
-        host: BaseNode;
+        host: BaseCell;
         preparator: (arg) => void;
         depreparator: (arg) => void;
-        constructor(host: BaseNode);
+        constructor(host: BaseCell);
         parse(formObj: FormSpec): {
             iospec: any;
             contextspec: {
@@ -152,7 +152,7 @@ declare namespace Gentyl {
         };
     }
 }
-declare namespace Gentyl {
+declare namespace Jungle {
     namespace IO {
         const HALT: {};
         function halting(arg: any): {};
@@ -211,7 +211,7 @@ declare namespace Gentyl {
         }
     }
 }
-declare namespace Gentyl {
+declare namespace Jungle {
     namespace IO {
         class Port {
             label: any;
@@ -227,12 +227,12 @@ declare namespace Gentyl {
             handle(input: any): void;
         }
         class GatedPort extends Port {
-            host: BaseNode;
+            host: BaseCell;
             complete: (...args: any[]) => any;
             gate: Util.Gate;
             deposit: any;
             returned: any;
-            constructor(label: any, host: BaseNode, complete: (...args: any[]) => any);
+            constructor(label: any, host: BaseCell, complete: (...args: any[]) => any);
             addTributary(tributary: GatedPort): void;
             handle(input: any): void;
             allHome(): boolean;
@@ -240,21 +240,21 @@ declare namespace Gentyl {
         }
     }
 }
-declare namespace Gentyl.Inv {
+declare namespace Jungle.Inv {
 }
-declare namespace Gentyl.Inv {
+declare namespace Jungle.Inv {
     function retract(obj: any, arg: any): any;
 }
-declare namespace Gentyl.Inv {
+declare namespace Jungle.Inv {
     function selectNone(): any[];
 }
-declare namespace Gentyl.Inv {
+declare namespace Jungle.Inv {
     function pass(x: any): any;
     function abstain(x: any): void;
 }
-declare module Gentyl {
+declare module Jungle {
 }
-declare namespace Gentyl {
+declare namespace Jungle {
     namespace IO {
         class LinkIO implements IOComponent {
             shell: Shell;
@@ -267,7 +267,7 @@ declare namespace Gentyl {
         }
     }
 }
-declare namespace Gentyl {
+declare namespace Jungle {
     interface FormRef {
         f: string;
         c: string;
@@ -283,14 +283,14 @@ declare namespace Gentyl {
         state: any;
     }
     function isBundle(object: any): boolean;
-    function deformulate(fromNode: BaseNode): any;
+    function deformulate(fromCell: BaseCell): any;
     function reformulate(formRef: FormRef): FormSpec;
-    class Reconstruction extends BaseNode {
+    class Reconstruction extends BaseCell {
         constructor(bundle: Bundle);
     }
 }
-declare namespace Gentyl {
-    class ResolutionNode extends BaseNode {
+declare namespace Jungle {
+    class ResolutionCell extends BaseCell {
         resolveCache: {
             stage: string;
             resolveArgs: any;
@@ -303,10 +303,10 @@ declare namespace Gentyl {
         form: GForm;
         protected constructForm(): GForm;
         protected constructIO(iospec: any): IO.ResolveIO;
-        protected constructCore(crown: any, form: any): ResolutionNode;
+        protected constructCore(crown: any, form: any): ResolutionCell;
         private resolveArray(array, resolveArgs, selection);
         private resolveObject(node, resolveArgs, selection);
-        private resolveNode(node, resolveArgs, selection);
+        private resolveCell(node, resolveArgs, selection);
         proceed(received: any): void;
         resolve(resolveArgs: any): any;
         resolveSelect(): any;
@@ -315,7 +315,7 @@ declare namespace Gentyl {
         resolveComplete(): any;
     }
 }
-declare namespace Gentyl {
+declare namespace Jungle {
     enum LabelTypes {
         PASSIVE = 0,
         TRIG = 1,
@@ -332,7 +332,7 @@ declare namespace Gentyl {
         carrier: (arg) => any;
         resolver: (obj, arg) => any;
         selector: (keys, arg) => any;
-        constructor(host: ResolutionNode);
+        constructor(host: ResolutionCell);
         parse(formObj: FormSpec): {
             iospec: any;
             contextspec: ContextSpec;
@@ -340,10 +340,10 @@ declare namespace Gentyl {
         consolidate(io: IO.IOComponent, ctx: GContext): FormSpec;
     }
 }
-declare namespace Gentyl {
+declare namespace Jungle {
     namespace IO {
         interface Hook {
-            host: ResolutionNode;
+            host: ResolutionCell;
             label: string;
             tractor: Function;
             orientation: Orientation;
@@ -351,7 +351,7 @@ declare namespace Gentyl {
             reactiveValue?: boolean;
         }
         class ResolveIO implements IOComponent {
-            host: ResolutionNode;
+            host: ResolutionCell;
             hooks: Hook[];
             orientation: Orientation;
             isShellBase: boolean;
@@ -364,7 +364,7 @@ declare namespace Gentyl {
             inputHooks: any;
             outputHooks: any;
             shell: HookShell;
-            constructor(host: ResolutionNode, iospec: any);
+            constructor(host: ResolutionCell, iospec: any);
             prepare(): void;
             extract(): {};
             initialiseHooks(hooks: Hook[], specialIn: Hook, specialOut: Hook): void;
@@ -380,7 +380,7 @@ declare namespace Gentyl {
         }
     }
 }
-declare namespace Gentyl {
+declare namespace Jungle {
     namespace IO {
         class ResolveInputPort extends Port {
             shells: HookShell[];
@@ -398,7 +398,7 @@ declare namespace Gentyl {
         }
     }
 }
-declare namespace Gentyl {
+declare namespace Jungle {
     namespace IO {
         class HookShell implements Shell {
             base: ResolveIO;
@@ -414,14 +414,14 @@ declare namespace Gentyl {
         }
     }
 }
-declare namespace Gentyl {
+declare namespace Jungle {
     class Terminal {
         private type;
         constructor(type: any);
         check(obj: any): boolean;
     }
 }
-declare namespace Gentyl {
+declare namespace Jungle {
     namespace Util {
         function identity(x: any): any;
         function weightedChoice(weights: number[]): number;

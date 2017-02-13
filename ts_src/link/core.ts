@@ -1,8 +1,8 @@
-module Gentyl {
+module Jungle {
 
 
 
-    class LinkNode extends BaseNode{
+    class LinkCell extends BaseCell{
 
         constructor(crown, formspec){
             super(crown, formspec)

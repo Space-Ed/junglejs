@@ -19,7 +19,7 @@
 
 */
 
-namespace Gentyl {
+namespace Jungle {
 
     export class Terminal {
 

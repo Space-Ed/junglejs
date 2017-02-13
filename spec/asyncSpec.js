@@ -1,5 +1,5 @@
-var Gentyl = require("../dist/gentyl.js");
-var G = Gentyl.G;
+var Jungle = require("../dist/junglejs.js");
+var G = Jungle.G;
 
 const fs = require('fs');
 
@@ -93,7 +93,7 @@ describe("asynchronous tractors", function(){
                     expect(port.returned).toBe(true);
 
                     expect(function(){
-                        Gentyl.Util.deeplyEqualsThrow(g.resolve(),
+                        Jungle.Util.deeplyEqualsThrow(g.resolve(),
                         {
                             "shallow":0,
                             "deep":{

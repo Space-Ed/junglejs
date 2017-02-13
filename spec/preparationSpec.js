@@ -1,6 +1,6 @@
 
-var gentyl = require('../dist/gentyl.js');
-var G = gentyl.G;
+var junglejs = require('../dist/junglejs.js');
+var G = junglejs.G;
 
 describe("preparation",function(){
     var g;
@@ -32,7 +32,7 @@ describe("preparation",function(){
     })
 
     it("should be deeply prepared",function(){
-        expect(g.crown instanceof gentyl.ResolutionNode).toBe(true)
+        expect(g.crown instanceof junglejs.ResolutionCell).toBe(true)
     })
 
     it("should set properties with preparator",function(){

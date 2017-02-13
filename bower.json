@@ -1,7 +1,7 @@
 {
-  "name": "gentyl",
+  "name": "junglejs",
   "description": "A Generator That You'll Love",
-  "main": "./dist/gentyl.js",
+  "main": "./dist/junglejs.js",
   "authors": [
     "Edward Dalley"
   ],
@@ -18,7 +18,7 @@
     "data",
     "hierarchy"
   ],
-  "homepage": "https://github.com/Space-Ed/gentyl",
+  "homepage": "https://github.com/Space-Ed/junglejs",
   "ignore": [
     "**/.*",
     "node_modules",

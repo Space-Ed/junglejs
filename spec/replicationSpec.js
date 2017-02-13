@@ -1,4 +1,4 @@
-var G = require("../dist/gentyl.js");
+var G = require("../dist/junglejs.js");
 var g = G.G;
 
 describe("node replication", function(){

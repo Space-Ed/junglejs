@@ -1,6 +1,6 @@
-var Gentyl = require('../dist/gentyl.js');
+var Jungle = require('../dist/junglejs.js');
 var signals = require('signals')
-var G = Gentyl.G, I = Gentyl.I, O = Gentyl.O;
+var G = Jungle.G, I = Jungle.I, O = Jungle.O;
 
 describe("input-output", function(){
     var g1;
@@ -34,7 +34,7 @@ describe("input-output", function(){
                 ,{
                     __trigger(input){
                         if(input <= 5){
-                            return Gentyl.IO.HALT
+                            return Jungle.IO.HALT
                         }
                     }
                 })
@@ -163,7 +163,7 @@ describe("input-output", function(){
             trigate = G({isolated:0},{
                 _$(input){},
                 $_(output){}
-            }).prepare().enshell(Gentyl.Inv.pass, {});
+            }).prepare().enshell(Jungle.Inv.pass, {});
 
             entrigate = G({open:1},{
                 __$(input){return input},
@@ -174,22 +174,22 @@ describe("input-output", function(){
                     return obj.open + carg;
                 },
                 $_(output){return output}
-            }).prepare().enshell(Gentyl.Inv.pass, {});
+            }).prepare().enshell(Jungle.Inv.pass, {});
 
             entrigater = G({},{
                 __$(input){},
-                $__(output){return Gentyl.IO.HALT},
-            }).prepare().enshell(Gentyl.Inv.pass, {});
+                $__(output){return Jungle.IO.HALT},
+            }).prepare().enshell(Jungle.Inv.pass, {});
 
             trigater = G({},{
                 _$(input){this.supreme = input;},
                 r(x, o){this.supreme = 'false'},
                 $__(output){return this.supreme},
-            },{supreme:"ruler"}).prepare().enshell(Gentyl.Inv.pass, {});
+            },{supreme:"ruler"}).prepare().enshell(Jungle.Inv.pass, {});
 
             versions = [trigate,     entrigate,   entrigater,    trigater];
             inputs =   [undefined,   1,           undefined,     'chancellor']
-            results =  [undefined,   3,           Gentyl.IO.HALT,'chancellor']
+            results =  [undefined,   3,           Jungle.IO.HALT,'chancellor']
             calls =    [false,       true,        false,         false]
 
             g2 = G(null,{
@@ -239,7 +239,7 @@ describe("input-output", function(){
                 //routing through special io
                 let res = g.resolve(inputs[i]);
 
-                if(res instanceof Gentyl.IO.GatedPort){
+                if(res instanceof Jungle.IO.GatedPort){
                     console.log(`resolve not returned input ${inputs[i]}, expected result: ${results[i]}`)
                 }
 

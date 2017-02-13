@@ -3,27 +3,27 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-var Gentyl;
-(function (Gentyl) {
+var Jungle;
+(function (Jungle) {
     function G(components, form) {
-        return new Gentyl.ResolutionNode(components, form);
+        return new Jungle.ResolutionCell(components, form);
     }
-    Gentyl.G = G;
+    Jungle.G = G;
     function F(func, components) {
-        return new Gentyl.ResolutionNode(components, { r: func });
+        return new Jungle.ResolutionCell(components, { r: func });
     }
-    Gentyl.F = F;
+    Jungle.F = F;
     function R(reconstructionBundle) {
-        return new Gentyl.Reconstruction(reconstructionBundle);
+        return new Jungle.Reconstruction(reconstructionBundle);
     }
-    Gentyl.R = R;
+    Jungle.R = R;
     function T(type) {
-        return new Gentyl.Terminal(type);
+        return new Jungle.Terminal(type);
     }
-    Gentyl.T = T;
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+    Jungle.T = T;
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var Actions;
     (function (Actions) {
         var Component = (function () {
@@ -42,10 +42,10 @@ var Gentyl;
                         ins = this.host.crown.length;
                         this.host.crown.push(val);
                     }
-                    else if (Gentyl.Util.isVanillaObject(this.host.crown)) {
+                    else if (Jungle.Util.isVanillaObject(this.host.crown)) {
                         throw Error("Requires key and value to add to object crown");
                     }
-                    else if (this.host.crown instanceof Gentyl.Terminal) {
+                    else if (this.host.crown instanceof Jungle.Terminal) {
                         if (this.host.crown.check(val)) {
                             this.host.crown = val;
                         }
@@ -55,7 +55,7 @@ var Gentyl;
                     }
                 }
                 else {
-                    if (Gentyl.Util.isVanillaObject(this.host.crown)) {
+                    if (Jungle.Util.isVanillaObject(this.host.crown)) {
                         ins = keyOrVal;
                         this.host.crown[keyOrVal] = val;
                     }
@@ -67,22 +67,22 @@ var Gentyl;
             return Component;
         }());
         Actions.Component = Component;
-    })(Actions = Gentyl.Actions || (Gentyl.Actions = {}));
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+    })(Actions = Jungle.Actions || (Jungle.Actions = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     (function (ASSOCMODE) {
         ASSOCMODE[ASSOCMODE["INHERIT"] = 0] = "INHERIT";
         ASSOCMODE[ASSOCMODE["SHARE"] = 1] = "SHARE";
         ASSOCMODE[ASSOCMODE["TRACK"] = 2] = "TRACK";
-    })(Gentyl.ASSOCMODE || (Gentyl.ASSOCMODE = {}));
-    var ASSOCMODE = Gentyl.ASSOCMODE;
+    })(Jungle.ASSOCMODE || (Jungle.ASSOCMODE = {}));
+    var ASSOCMODE = Jungle.ASSOCMODE;
     (function (CTXPropertyTypes) {
         CTXPropertyTypes[CTXPropertyTypes["NORMAL"] = 0] = "NORMAL";
         CTXPropertyTypes[CTXPropertyTypes["BOUND"] = 1] = "BOUND";
         CTXPropertyTypes[CTXPropertyTypes["HOOK"] = 2] = "HOOK";
-    })(Gentyl.CTXPropertyTypes || (Gentyl.CTXPropertyTypes = {}));
-    var CTXPropertyTypes = Gentyl.CTXPropertyTypes;
+    })(Jungle.CTXPropertyTypes || (Jungle.CTXPropertyTypes = {}));
+    var CTXPropertyTypes = Jungle.CTXPropertyTypes;
     var GContext = (function () {
         function GContext(host, contextspec) {
             this.host = host;
@@ -132,7 +132,7 @@ var Gentyl;
             }
             else {
                 var href = spec.reference;
-                if (href.orientation === Gentyl.IO.Orientation.INPUT) {
+                if (href.orientation === Jungle.IO.Orientation.INPUT) {
                     this.addInputProperty(spec);
                 }
                 else {
@@ -155,7 +155,7 @@ var Gentyl;
                     this.cache[spec.key] = inp;
                 }
                 else {
-                    return Gentyl.IO.HALT;
+                    return Jungle.IO.HALT;
                 }
             }).bind(this);
         };
@@ -168,7 +168,7 @@ var Gentyl;
                     return current;
                 }
                 else {
-                    return Gentyl.IO.HALT;
+                    return Jungle.IO.HALT;
                 }
             }).bind(this);
         };
@@ -197,7 +197,7 @@ var Gentyl;
                     patch[orig.original || orig.key] = orig.value;
                 }
                 else {
-                    patch[k] = Gentyl.Util.deepCopy(v);
+                    patch[k] = Jungle.Util.deepCopy(v);
                 }
             }
             return patch;
@@ -302,12 +302,12 @@ var Gentyl;
         };
         return GContext;
     }());
-    Gentyl.GContext = GContext;
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
-    var BaseNode = (function () {
-        function BaseNode(components, form) {
+    Jungle.GContext = GContext;
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var BaseCell = (function () {
+        function BaseCell(components, form) {
             if (form === void 0) { form = {}; }
             this.async = false;
             this.depth = 0;
@@ -320,39 +320,39 @@ var Gentyl;
             this.io = this.constructIO(iospec);
             this.act = this.constructActions();
             var inductor = this.inductComponent.bind(this);
-            this.crown = Gentyl.Util.typeCaseSplitF(inductor, inductor, null)(components);
+            this.crown = Jungle.Util.typeCaseSplitF(inductor, inductor, null)(components);
         }
-        BaseNode.prototype.constructForm = function () {
-            return new Gentyl.BaseForm(this);
+        BaseCell.prototype.constructForm = function () {
+            return new Jungle.BaseForm(this);
         };
-        BaseNode.prototype.constructIO = function (iospec) {
-            return new Gentyl.IO.BaseIO();
+        BaseCell.prototype.constructIO = function (iospec) {
+            return new Jungle.IO.BaseIO();
         };
-        BaseNode.prototype.constructContext = function (contextspec) {
-            return new Gentyl.GContext(this, contextspec);
+        BaseCell.prototype.constructContext = function (contextspec) {
+            return new Jungle.GContext(this, contextspec);
         };
-        BaseNode.prototype.constructActions = function () {
-            return new Gentyl.Actions.Component(this);
+        BaseCell.prototype.constructActions = function () {
+            return new Jungle.Actions.Component(this);
         };
-        BaseNode.prototype.constructCore = function (crown, form) {
-            return new BaseNode(crown, form);
+        BaseCell.prototype.constructCore = function (crown, form) {
+            return new BaseCell(crown, form);
         };
-        BaseNode.prototype.inductComponent = function (component) {
+        BaseCell.prototype.inductComponent = function (component) {
             var c;
-            if (component instanceof BaseNode) {
+            if (component instanceof BaseCell) {
                 c = component;
             }
             else if (component instanceof Object) {
-                c = new Gentyl.ResolutionNode(component);
+                c = new Jungle.ResolutionCell(component);
             }
             else {
                 c = component;
             }
             return c;
         };
-        BaseNode.prototype.prepare = function (prepargs) {
+        BaseCell.prototype.prepare = function (prepargs) {
             if (prepargs === void 0) { prepargs = null; }
-            this.deplexer = new Gentyl.IO.GatedPort('prepare', this, this.complete);
+            this.deplexer = new Jungle.IO.GatedPort('prepare', this, this.complete);
             this.ctx.exposed.gate = this.deplexer.gate;
             this.engaged = true;
             if (this.isAncestor) {
@@ -364,7 +364,7 @@ var Gentyl;
                 this.ctx.prepare();
                 this.form.preparator.call(this.ctx.exposed, prepargs);
                 this.io.prepare(prepargs);
-                this.crown = Gentyl.Util.typeCaseSplitF(this.prepareChild.bind(this, prepargs))(this.crown);
+                this.crown = Jungle.Util.typeCaseSplitF(this.prepareChild.bind(this, prepargs))(this.crown);
                 if (this.async) {
                     if (this.deplexer.allHome()) {
                         this.complete();
@@ -383,7 +383,7 @@ var Gentyl;
                 this.ancestor.isAncestor = true;
             }
         };
-        BaseNode.prototype.complete = function () {
+        BaseCell.prototype.complete = function () {
             this.deplexer.deposit = this;
             this.deplexer.returned = true;
             this.engaged = false;
@@ -393,12 +393,12 @@ var Gentyl;
             }
             return this;
         };
-        BaseNode.prototype.prepareChild = function (prepargs, child, k) {
-            if (child instanceof BaseNode) {
+        BaseCell.prototype.prepareChild = function (prepargs, child, k) {
+            if (child instanceof BaseCell) {
                 var replica = child.replicate();
                 replica.setParent(this, k);
                 replica = replica.prepare(prepargs);
-                if (replica instanceof Gentyl.IO.GatedPort) {
+                if (replica instanceof Jungle.IO.GatedPort) {
                     if (!replica.returned) {
                         this.deplexer.addTributary(replica);
                     }
@@ -412,13 +412,13 @@ var Gentyl;
                 return child;
             }
         };
-        BaseNode.prototype.setParent = function (parentNode, dereferent) {
-            this.ctx.path = parentNode.ctx.path.concat(dereferent);
-            this.parent = parentNode;
+        BaseCell.prototype.setParent = function (parentCell, dereferent) {
+            this.ctx.path = parentCell.ctx.path.concat(dereferent);
+            this.parent = parentCell;
             this.isRoot = false;
             this.depth = this.parent.depth + 1;
         };
-        BaseNode.prototype.replicate = function () {
+        BaseCell.prototype.replicate = function () {
             if (this.prepared) {
                 return this.ancestor.replicate();
             }
@@ -431,7 +431,7 @@ var Gentyl;
                 return repl;
             }
         };
-        BaseNode.prototype.getParent = function (toDepth) {
+        BaseCell.prototype.getParent = function (toDepth) {
             if (toDepth === void 0) { toDepth = 1; }
             if (this.parent == undefined) {
                 throw new Error("parent not set, or exceeding getParent depth");
@@ -443,10 +443,10 @@ var Gentyl;
                 return this.parent.getParent(toDepth - 1);
             }
         };
-        BaseNode.prototype.getRoot = function () {
+        BaseCell.prototype.getRoot = function () {
             return this.isRoot ? this : this.getParent().getRoot();
         };
-        BaseNode.prototype.getNominal = function (label) {
+        BaseCell.prototype.getNominal = function (label) {
             if (this.ctx.label == label) {
                 return this;
             }
@@ -459,37 +459,37 @@ var Gentyl;
                 }
             }
         };
-        BaseNode.prototype.terminalScan = function (recursive, collection, locale) {
+        BaseCell.prototype.terminalScan = function (recursive, collection, locale) {
             if (recursive === void 0) { recursive = false; }
             if (collection === void 0) { collection = []; }
             if (locale === void 0) { locale = null; }
             var locale = locale || this;
-            Gentyl.Util.typeCaseSplitF(function (thing, dereferent) {
-                if (thing instanceof Gentyl.Terminal) {
+            Jungle.Util.typeCaseSplitF(function (thing, dereferent) {
+                if (thing instanceof Jungle.Terminal) {
                     collection.push({ node: locale, term: thing, deref: dereferent });
                 }
-                else if (recursive && thing instanceof BaseNode) {
+                else if (recursive && thing instanceof BaseCell) {
                     thing.terminalScan(true, collection, locale = thing);
                 }
             })(this.crown);
             return collection;
         };
-        BaseNode.prototype.checkComplete = function (recursive) {
+        BaseCell.prototype.checkComplete = function (recursive) {
             if (recursive === void 0) { recursive = false; }
             var result = true;
-            Gentyl.Util.typeCaseSplitF(function (thing) {
-                if (thing instanceof Gentyl.Terminal) {
+            Jungle.Util.typeCaseSplitF(function (thing) {
+                if (thing instanceof Jungle.Terminal) {
                     result = false;
                 }
-                else if (recursive && thing instanceof BaseNode) {
+                else if (recursive && thing instanceof BaseCell) {
                     thing.checkComplete(true);
                 }
             })(this.crown);
             return result;
         };
-        BaseNode.prototype.bundle = function () {
+        BaseCell.prototype.bundle = function () {
             function bundler(node) {
-                if (node instanceof BaseNode) {
+                if (node instanceof BaseCell) {
                     var product = node.bundle();
                     return product;
                 }
@@ -497,19 +497,19 @@ var Gentyl;
                     return node;
                 }
             }
-            var recurrentNodeBundle = Gentyl.Util.typeCaseSplitF(bundler, bundler, null)(this.crown);
+            var recurrentCellBundle = Jungle.Util.typeCaseSplitF(bundler, bundler, null)(this.crown);
             var product = {
-                node: recurrentNodeBundle,
-                form: Gentyl.deformulate(this),
+                node: recurrentCellBundle,
+                form: Jungle.deformulate(this),
                 state: this.ctx.extract()
             };
             return product;
         };
-        BaseNode.prototype.enshell = function () {
+        BaseCell.prototype.enshell = function () {
             this.io.enshell();
             return this;
         };
-        BaseNode.prototype.resolve = function (arg) {
+        BaseCell.prototype.resolve = function (arg) {
             if (!this.prepared) {
                 if (this.engaged) {
                 }
@@ -517,12 +517,12 @@ var Gentyl;
             }
             return null;
         };
-        return BaseNode;
+        return BaseCell;
     }());
-    Gentyl.BaseNode = BaseNode;
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+    Jungle.BaseCell = BaseCell;
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var BaseForm = (function () {
         function BaseForm(host) {
             this.host = host;
@@ -534,10 +534,10 @@ var Gentyl;
             var contextprops = [];
             var linkPropRegex = /^[a-zA-Z](?:\w*[a-zA-Z])?$/;
             for (var k in formObj) {
-                if (Gentyl.GForm.RFormProps.indexOf(k) > -1)
+                if (Jungle.GForm.RFormProps.indexOf(k) > -1)
                     continue;
                 if (k.match(linkPropRegex)) {
-                    contextprops.push({ key: k, type: Gentyl.CTXPropertyTypes.NORMAL, value: formObj[k] });
+                    contextprops.push({ key: k, type: Jungle.CTXPropertyTypes.NORMAL, value: formObj[k] });
                 }
                 else {
                     throw new Error("Invalid property for link context, use ports");
@@ -546,7 +546,7 @@ var Gentyl;
             return { iospec: null, contextspec: { properties: contextprops, declaration: ctxdeclare } };
         };
         BaseForm.prototype.consolidate = function (io, ctx) {
-            return Gentyl.Util.melder({
+            return Jungle.Util.melder({
                 p: this.preparator,
                 d: this.depreparator,
                 x: ctx.declaration,
@@ -554,7 +554,7 @@ var Gentyl;
         };
         return BaseForm;
     }());
-    Gentyl.BaseForm = BaseForm;
+    Jungle.BaseForm = BaseForm;
     var LForm = (function (_super) {
         __extends(LForm, _super);
         function LForm() {
@@ -578,19 +578,19 @@ var Gentyl;
                 if (pmatch) {
                     var inp = pmatch[1], label = pmatch[2], out = pmatch[3];
                     if (inp) {
-                        portlabels[label] = { label: label, direction: Gentyl.IO.Orientation.INPUT };
+                        portlabels[label] = { label: label, direction: Jungle.IO.Orientation.INPUT };
                     }
                     if (out) {
-                        portlabels[label] = { label: label, direction: Gentyl.IO.Orientation.OUTPUT };
+                        portlabels[label] = { label: label, direction: Jungle.IO.Orientation.OUTPUT };
                     }
                 }
             }
             var linkPropRegex = /^[a-zA-Z](?:\w*[a-zA-Z])?$/;
             for (var k in formObj) {
-                if (Gentyl.GForm.RFormProps.indexOf(k) > -1)
+                if (Jungle.GForm.RFormProps.indexOf(k) > -1)
                     continue;
                 if (k.match(linkPropRegex)) {
-                    contextprops.push({ key: k, type: Gentyl.CTXPropertyTypes.NORMAL, value: formObj[k] });
+                    contextprops.push({ key: k, type: Jungle.CTXPropertyTypes.NORMAL, value: formObj[k] });
                 }
                 else {
                     throw new Error("Invalid property for link context, use ports");
@@ -600,10 +600,10 @@ var Gentyl;
         };
         return LForm;
     }(BaseForm));
-    Gentyl.LForm = LForm;
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+    Jungle.LForm = LForm;
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var IO;
     (function (IO) {
         IO.HALT = {};
@@ -662,10 +662,10 @@ var Gentyl;
             return BaseIO;
         }());
         IO.BaseIO = BaseIO;
-    })(IO = Gentyl.IO || (Gentyl.IO = {}));
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var IO;
     (function (IO) {
         var Port = (function () {
@@ -743,7 +743,7 @@ var Gentyl;
                 _super.call(this, label);
                 this.host = host;
                 this.complete = complete;
-                this.gate = new Gentyl.Util.Gate(this.handle, this);
+                this.gate = new Jungle.Util.Gate(this.handle, this);
                 this.returned = false;
             }
             GatedPort.prototype.addTributary = function (tributary) {
@@ -770,30 +770,30 @@ var Gentyl;
             return GatedPort;
         }(Port));
         IO.GatedPort = GatedPort;
-    })(IO = Gentyl.IO || (Gentyl.IO = {}));
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var Inv;
     (function (Inv) {
         function retract(obj, arg) {
             return arg;
         }
         Inv.retract = retract;
-    })(Inv = Gentyl.Inv || (Gentyl.Inv = {}));
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+    })(Inv = Jungle.Inv || (Jungle.Inv = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var Inv;
     (function (Inv) {
         function selectNone() {
             return [];
         }
         Inv.selectNone = selectNone;
-    })(Inv = Gentyl.Inv || (Gentyl.Inv = {}));
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+    })(Inv = Jungle.Inv || (Jungle.Inv = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var Inv;
     (function (Inv) {
         function pass(x) {
@@ -803,28 +803,28 @@ var Gentyl;
         function abstain(x) {
         }
         Inv.abstain = abstain;
-    })(Inv = Gentyl.Inv || (Gentyl.Inv = {}));
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
-    var LinkNode = (function (_super) {
-        __extends(LinkNode, _super);
-        function LinkNode(crown, formspec) {
+    })(Inv = Jungle.Inv || (Jungle.Inv = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var LinkCell = (function (_super) {
+        __extends(LinkCell, _super);
+        function LinkCell(crown, formspec) {
             _super.call(this, crown, formspec);
         }
-        LinkNode.prototype.constructIO = function (iospec) {
-            return new Gentyl.IO.LinkIO();
+        LinkCell.prototype.constructIO = function (iospec) {
+            return new Jungle.IO.LinkIO();
         };
-        LinkNode.prototype.prepareChild = function (prepargs, child, k) {
+        LinkCell.prototype.prepareChild = function (prepargs, child, k) {
             var pchild = _super.prototype.prepareChild.call(this, prepargs, child, k);
             pchild.enshell();
             return pchild;
         };
-        return LinkNode;
-    }(Gentyl.BaseNode));
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+        return LinkCell;
+    }(Jungle.BaseCell));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var IO;
     (function (IO) {
         var LinkIO = (function () {
@@ -844,30 +844,30 @@ var Gentyl;
             return LinkIO;
         }());
         IO.LinkIO = LinkIO;
-    })(IO = Gentyl.IO || (Gentyl.IO = {}));
-})(Gentyl || (Gentyl = {}));
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
 (function () {
     var root = this;
     var define = define || undefined;
     if (typeof exports !== 'undefined') {
         if (typeof module !== 'undefined' && module.exports) {
-            exports = module.exports = Gentyl;
+            exports = module.exports = Jungle;
         }
-        exports.Gentyl = Gentyl;
+        exports.Jungle = Jungle;
     }
     else if (typeof define !== 'undefined' && define.amd) {
-        define('Gentyl', (function () { return root.Gentyl = Gentyl; })());
+        define('Jungle', (function () { return root.Jungle = Jungle; })());
     }
     else {
-        root.Gentyl = Gentyl;
+        root.Jungle = Jungle;
     }
 }).call(this);
-var Gentyl;
-(function (Gentyl) {
+var Jungle;
+(function (Jungle) {
     function isBundle(object) {
         return object instanceof Object && "form" in object && "state" in object && "node" in object;
     }
-    Gentyl.isBundle = isBundle;
+    Jungle.isBundle = isBundle;
     var ObjectFunctionCache = (function () {
         function ObjectFunctionCache() {
             this.functions = {};
@@ -883,12 +883,12 @@ var Gentyl;
         return ObjectFunctionCache;
     }());
     var liveCache = new ObjectFunctionCache();
-    function deformulate(fromNode) {
-        var rNode = fromNode;
+    function deformulate(fromCell) {
+        var rCell = fromCell;
         var preform = {
-            r: rNode.form.resolver,
-            c: rNode.form.carrier,
-            x: rNode.ctx.declaration
+            r: rCell.form.resolver,
+            c: rCell.form.carrier,
+            x: rCell.ctx.declaration
         };
         var exForm = {};
         for (var k in preform) {
@@ -902,7 +902,7 @@ var Gentyl;
         }
         return exForm;
     }
-    Gentyl.deformulate = deformulate;
+    Jungle.deformulate = deformulate;
     function reformulate(formRef) {
         var recovered = {};
         for (var k in formRef) {
@@ -910,7 +910,7 @@ var Gentyl;
         }
         return recovered;
     }
-    Gentyl.reformulate = reformulate;
+    Jungle.reformulate = reformulate;
     var Reconstruction = (function (_super) {
         __extends(Reconstruction, _super);
         function Reconstruction(bundle) {
@@ -922,20 +922,20 @@ var Gentyl;
                     return bundle;
                 }
             }
-            var node = Gentyl.Util.typeCaseSplitF(debundle)(bundle.node);
-            var form = Gentyl.reformulate(bundle.form);
+            var node = Jungle.Util.typeCaseSplitF(debundle)(bundle.node);
+            var form = Jungle.reformulate(bundle.form);
             var state = bundle.state;
-            _super.call(this, node, Gentyl.Util.melder(form, state));
+            _super.call(this, node, Jungle.Util.melder(form, state));
         }
         return Reconstruction;
-    }(Gentyl.BaseNode));
-    Gentyl.Reconstruction = Reconstruction;
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+    }(Jungle.BaseCell));
+    Jungle.Reconstruction = Reconstruction;
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     function cleanCrown(crown) {
         function clean(gem) {
-            if (gem instanceof Gentyl.IO.GatedPort) {
+            if (gem instanceof Jungle.IO.GatedPort) {
                 if (!gem.allHome()) {
                     throw Error("Crown still contains unreturned ");
                 }
@@ -945,49 +945,49 @@ var Gentyl;
                 return gem;
             }
         }
-        return Gentyl.Util.typeCaseSplitF(clean)(crown);
+        return Jungle.Util.typeCaseSplitF(clean)(crown);
     }
-    var ResolutionNode = (function (_super) {
-        __extends(ResolutionNode, _super);
-        function ResolutionNode() {
+    var ResolutionCell = (function (_super) {
+        __extends(ResolutionCell, _super);
+        function ResolutionCell() {
             _super.apply(this, arguments);
         }
-        ResolutionNode.prototype.constructForm = function () {
-            return new Gentyl.GForm(this);
+        ResolutionCell.prototype.constructForm = function () {
+            return new Jungle.GForm(this);
         };
-        ResolutionNode.prototype.constructIO = function (iospec) {
-            return new Gentyl.IO.ResolveIO(this, iospec);
+        ResolutionCell.prototype.constructIO = function (iospec) {
+            return new Jungle.IO.ResolveIO(this, iospec);
         };
-        ResolutionNode.prototype.constructCore = function (crown, form) {
-            return new ResolutionNode(crown, form);
+        ResolutionCell.prototype.constructCore = function (crown, form) {
+            return new ResolutionCell(crown, form);
         };
-        ResolutionNode.prototype.resolveArray = function (array, resolveArgs, selection) {
+        ResolutionCell.prototype.resolveArray = function (array, resolveArgs, selection) {
             if (selection instanceof Array) {
                 var resolution = [];
                 for (var i = 0; i < selection.length; i++) {
-                    resolution[i] = this.resolveNode(array[selection[i]], resolveArgs, true);
+                    resolution[i] = this.resolveCell(array[selection[i]], resolveArgs, true);
                 }
                 return resolution;
             }
             else {
-                return this.resolveNode(array[selection], resolveArgs, true);
+                return this.resolveCell(array[selection], resolveArgs, true);
             }
         };
-        ResolutionNode.prototype.resolveObject = function (node, resolveArgs, selection) {
+        ResolutionCell.prototype.resolveObject = function (node, resolveArgs, selection) {
             var resolution;
             if (selection instanceof Array) {
                 resolution = {};
                 for (var i = 0; i < selection.length; i++) {
                     var k = selection[i];
-                    resolution[k] = this.resolveNode(node[k], resolveArgs, true);
+                    resolution[k] = this.resolveCell(node[k], resolveArgs, true);
                 }
             }
             else {
-                resolution = this.resolveNode(node[selection], resolveArgs, true);
+                resolution = this.resolveCell(node[selection], resolveArgs, true);
             }
             return resolution;
         };
-        ResolutionNode.prototype.resolveNode = function (node, resolveArgs, selection) {
+        ResolutionCell.prototype.resolveCell = function (node, resolveArgs, selection) {
             var cut = false;
             if (!selection) {
                 cut = true;
@@ -999,10 +999,10 @@ var Gentyl;
                 return cut ? [] : this.resolveArray(node, resolveArgs, selection);
             }
             else if (typeof (node) === "object") {
-                if (node instanceof Gentyl.BaseNode) {
+                if (node instanceof Jungle.BaseCell) {
                     if (!cut) {
                         var resolved = node.resolve(resolveArgs);
-                        if (resolved instanceof Gentyl.IO.GatedPort) {
+                        if (resolved instanceof Jungle.IO.GatedPort) {
                             if (!resolved.returned) {
                                 this.deplexer.addTributary(resolved);
                             }
@@ -1019,7 +1019,7 @@ var Gentyl;
                 return cut ? null : node;
             }
         };
-        ResolutionNode.prototype.proceed = function (received) {
+        ResolutionCell.prototype.proceed = function (received) {
             switch (this.resolveCache.stage) {
                 case 'resolve-carry': {
                     this.resolveCache.carried = received;
@@ -1043,11 +1043,11 @@ var Gentyl;
                 }
             }
         };
-        ResolutionNode.prototype.resolve = function (resolveArgs) {
+        ResolutionCell.prototype.resolve = function (resolveArgs) {
             Object.freeze(resolveArgs);
             if (!this.prepared) {
                 var pr = this.prepare();
-                if (pr instanceof Gentyl.IO.GatedPort) {
+                if (pr instanceof Jungle.IO.GatedPort) {
                     return pr;
                 }
             }
@@ -1055,7 +1055,7 @@ var Gentyl;
                 var sInpHook = this.io.specialInput;
                 var sInpResult = sInpHook.tractor.call(this.ctx.exposed, resolveArgs);
                 var sResult;
-                if (sInpResult != Gentyl.IO.HALT && (sInpHook.eager || sInpResult !== undefined)) {
+                if (sInpResult != Jungle.IO.HALT && (sInpHook.eager || sInpResult !== undefined)) {
                     this.io.specialGate = true;
                     sResult = this.resolve(sInpResult);
                     this.io.specialGate = false;
@@ -1086,9 +1086,9 @@ var Gentyl;
                 }
             }
         };
-        ResolutionNode.prototype.resolveSelect = function () {
+        ResolutionCell.prototype.resolveSelect = function () {
             this.resolveCache.stage = 'resolve-select';
-            var resolvedNode;
+            var resolvedCell;
             if (this.crown != undefined) {
                 var selection = this.form.selector.call(this.ctx.exposed, Object.keys(this.crown), this.resolveCache.resolveArgs);
                 if (this.deplexer.allHome()) {
@@ -1103,9 +1103,9 @@ var Gentyl;
                 return this.resolveReturn();
             }
         };
-        ResolutionNode.prototype.resolveCrown = function () {
+        ResolutionCell.prototype.resolveCrown = function () {
             this.resolveCache.stage = 'resolve-crown';
-            var resolvedCrown = this.resolveNode(this.crown, this.resolveCache.carried, this.resolveCache.selection);
+            var resolvedCrown = this.resolveCell(this.crown, this.resolveCache.carried, this.resolveCache.selection);
             this.resolveCache.resolvedCrown = resolvedCrown;
             if (this.deplexer.allHome()) {
                 this.resolveCache.resolvedCrown = cleanCrown(resolvedCrown);
@@ -1115,7 +1115,7 @@ var Gentyl;
                 return this.deplexer;
             }
         };
-        ResolutionNode.prototype.resolveReturn = function () {
+        ResolutionCell.prototype.resolveReturn = function () {
             this.resolveCache.stage = 'resolve-return';
             var result = this.form.resolver.call(this.ctx.exposed, this.resolveCache.resolvedCrown, this.resolveCache.resolveArgs, this.resolveCache.carried);
             if (this.deplexer.allHome()) {
@@ -1126,18 +1126,18 @@ var Gentyl;
                 return this.deplexer;
             }
         };
-        ResolutionNode.prototype.resolveComplete = function () {
+        ResolutionCell.prototype.resolveComplete = function () {
             this.engaged = false;
             var dispached = this.io.dispatchResult(this.resolveCache.resolvedValue);
             this.deplexer.deposit = dispached;
             return dispached;
         };
-        return ResolutionNode;
-    }(Gentyl.BaseNode));
-    Gentyl.ResolutionNode = ResolutionNode;
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+        return ResolutionCell;
+    }(Jungle.BaseCell));
+    Jungle.ResolutionCell = ResolutionCell;
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     (function (LabelTypes) {
         LabelTypes[LabelTypes["PASSIVE"] = 0] = "PASSIVE";
         LabelTypes[LabelTypes["TRIG"] = 1] = "TRIG";
@@ -1148,8 +1148,8 @@ var Gentyl;
         LabelTypes[LabelTypes["TRIGATER"] = 6] = "TRIGATER";
         LabelTypes[LabelTypes["ENTRIGATE"] = 7] = "ENTRIGATE";
         LabelTypes[LabelTypes["ENTRIGATER"] = 8] = "ENTRIGATER";
-    })(Gentyl.LabelTypes || (Gentyl.LabelTypes = {}));
-    var LabelTypes = Gentyl.LabelTypes;
+    })(Jungle.LabelTypes || (Jungle.LabelTypes = {}));
+    var LabelTypes = Jungle.LabelTypes;
     var TrigateLabelTypesMap = {
         '': { '': LabelTypes.PASSIVE, '_': LabelTypes.GATE, '__': LabelTypes.GATER },
         '_': { '': LabelTypes.TRIG, '_': LabelTypes.TRIGATE, '__': LabelTypes.TRIGATER },
@@ -1174,8 +1174,8 @@ var Gentyl;
         }
         GForm.prototype.parse = function (formObj) {
             var ctxdeclare = formObj.x || "";
-            this.carrier = formObj.c || Gentyl.Util.identity;
-            this.resolver = formObj.r || Gentyl.Util.identity;
+            this.carrier = formObj.c || Jungle.Util.identity;
+            this.resolver = formObj.r || Jungle.Util.identity;
             this.selector = formObj.s || function (keys, carg) { return true; };
             this.preparator = formObj.p || function (x) { };
             var hookIORegex = /^(_{0,2})([a-zA-Z]+(?:\w*[a-zA-Z])?|\$)(_{0,2})$/;
@@ -1207,22 +1207,22 @@ var Gentyl;
                     if (label === '$') {
                         var hook = { label: label, tractor: formObj[k], orientation: undefined, host: this.host, eager: undefined };
                         if (labelType === LabelTypes.TRIG) {
-                            hook.orientation = Gentyl.IO.Orientation.INPUT;
+                            hook.orientation = Jungle.IO.Orientation.INPUT;
                             hook.eager = false;
                             specialInHook = hook;
                         }
                         else if (labelType === LabelTypes.ENTRIG) {
-                            hook.orientation = Gentyl.IO.Orientation.INPUT;
+                            hook.orientation = Jungle.IO.Orientation.INPUT;
                             hook.eager = true;
                             specialInHook = hook;
                         }
                         else if (labelType === LabelTypes.GATE) {
-                            hook.orientation = Gentyl.IO.Orientation.OUTPUT;
+                            hook.orientation = Jungle.IO.Orientation.OUTPUT;
                             hook.eager = false;
                             specialOutHook = hook;
                         }
                         else if (labelType === LabelTypes.GATER) {
-                            hook.orientation = Gentyl.IO.Orientation.OUTPUT;
+                            hook.orientation = Jungle.IO.Orientation.OUTPUT;
                             hook.eager = true;
                             specialOutHook = hook;
                         }
@@ -1233,23 +1233,23 @@ var Gentyl;
                     else if (formVal instanceof Function) {
                         var hook = { label: label, tractor: formObj[k], orientation: undefined, host: this.host, eager: undefined };
                         if (labelType === LabelTypes.PASSIVE) {
-                            props.push({ key: label, type: Gentyl.CTXPropertyTypes.BOUND, value: formVal });
+                            props.push({ key: label, type: Jungle.CTXPropertyTypes.BOUND, value: formVal });
                             continue;
                         }
                         else if (labelType === LabelTypes.TRIG) {
-                            hook.orientation = Gentyl.IO.Orientation.INPUT, hook.eager = false;
+                            hook.orientation = Jungle.IO.Orientation.INPUT, hook.eager = false;
                         }
                         else if (labelType === LabelTypes.ENTRIG) {
-                            hook.orientation = Gentyl.IO.Orientation.INPUT, hook.eager = true;
+                            hook.orientation = Jungle.IO.Orientation.INPUT, hook.eager = true;
                         }
                         else if (labelType === LabelTypes.GATE) {
-                            hook.orientation = Gentyl.IO.Orientation.OUTPUT, hook.eager = false;
+                            hook.orientation = Jungle.IO.Orientation.OUTPUT, hook.eager = false;
                         }
                         else if (labelType === LabelTypes.GATER) {
-                            hook.orientation = Gentyl.IO.Orientation.OUTPUT, hook.eager = true;
+                            hook.orientation = Jungle.IO.Orientation.OUTPUT, hook.eager = true;
                         }
                         else if (labelType === LabelTypes.TRIGATE) {
-                            hook.orientation = Gentyl.IO.Orientation.MIXED, hook.eager = false;
+                            hook.orientation = Jungle.IO.Orientation.MIXED, hook.eager = false;
                         }
                         else if (labelType === LabelTypes.TRIGATER) {
                             console.warn("This label configuration doesn't make sense for functions");
@@ -1258,62 +1258,62 @@ var Gentyl;
                             console.warn("This label configuration doesn't make sense for functions");
                         }
                         else if (labelType === LabelTypes.ENTRIGATER) {
-                            hook.orientation = Gentyl.IO.Orientation.MIXED, hook.eager = true;
+                            hook.orientation = Jungle.IO.Orientation.MIXED, hook.eager = true;
                         }
                         hooks.push(hook);
                     }
-                    else if (Gentyl.Util.isPrimative(formVal)) {
-                        var hookI = { label: label, tractor: null, orientation: Gentyl.IO.Orientation.INPUT, host: this.host, eager: undefined };
-                        var hookO = { label: label, tractor: null, orientation: Gentyl.IO.Orientation.OUTPUT, host: this.host, eager: true };
+                    else if (Jungle.Util.isPrimative(formVal)) {
+                        var hookI = { label: label, tractor: null, orientation: Jungle.IO.Orientation.INPUT, host: this.host, eager: undefined };
+                        var hookO = { label: label, tractor: null, orientation: Jungle.IO.Orientation.OUTPUT, host: this.host, eager: true };
                         var I = false;
                         var O = false;
                         if (labelType === LabelTypes.PASSIVE) {
-                            props.push({ type: Gentyl.CTXPropertyTypes.NORMAL, key: label, value: formVal });
+                            props.push({ type: Jungle.CTXPropertyTypes.NORMAL, key: label, value: formVal });
                             continue;
                         }
                         else if (labelType === LabelTypes.TRIG) {
-                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: hookI, original: k });
+                            props.push({ type: Jungle.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: hookI, original: k });
                             hookI.eager = false;
                             I = true;
                         }
                         else if (labelType === LabelTypes.ENTRIG) {
-                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: hookI, original: k });
+                            props.push({ type: Jungle.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: hookI, original: k });
                             hookI.eager = true;
                             I = true;
                         }
                         else if (labelType === LabelTypes.GATE) {
-                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: hookO, original: k });
+                            props.push({ type: Jungle.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: hookO, original: k });
                             hookO.eager = false;
                             O = true;
                         }
                         else if (labelType === LabelTypes.GATER) {
-                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: hookO, original: k });
+                            props.push({ type: Jungle.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: hookO, original: k });
                             hookO.eager = true;
                             O = true;
                         }
                         else if (labelType === LabelTypes.TRIGATE) {
-                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: [hookI, hookO], original: k });
+                            props.push({ type: Jungle.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: [hookI, hookO], original: k });
                             hookI.eager = true;
                             hookO.eager = false;
                             O = true;
                             I = true;
                         }
                         else if (labelType === LabelTypes.TRIGATER) {
-                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: [hookI, hookO], original: k });
+                            props.push({ type: Jungle.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: [hookI, hookO], original: k });
                             hookI.eager = true;
                             hookO.eager = true;
                             O = true;
                             I = true;
                         }
                         else if (labelType === LabelTypes.ENTRIGATE) {
-                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: [hookI, hookO], original: k });
+                            props.push({ type: Jungle.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: [hookI, hookO], original: k });
                             hookI.eager = false;
                             hookO.eager = false;
                             O = true;
                             I = true;
                         }
                         else if (labelType === LabelTypes.ENTRIGATER) {
-                            props.push({ type: Gentyl.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: [hookI, hookO], original: k });
+                            props.push({ type: Jungle.CTXPropertyTypes.HOOK, key: label, value: formVal, reference: [hookI, hookO], original: k });
                             hookI.eager = false;
                             hookO.eager = true;
                             O = true;
@@ -1331,7 +1331,7 @@ var Gentyl;
                     }
                     else {
                         if (labelType === LabelTypes.PASSIVE) {
-                            props.push({ type: Gentyl.CTXPropertyTypes.NORMAL, key: label, value: formVal });
+                            props.push({ type: Jungle.CTXPropertyTypes.NORMAL, key: label, value: formVal });
                             continue;
                         }
                         throw new Error("Unsupported form value type label: " + label + ", label-type:" + labelType + ", value-type:" + typeof (formVal));
@@ -1344,23 +1344,23 @@ var Gentyl;
             return { iospec: { hooks: hooks, specialIn: specialInHook, specialOut: specialOutHook }, contextspec: { properties: props, declaration: ctxdeclare } };
         };
         GForm.prototype.consolidate = function (io, ctx) {
-            var consolidated = Gentyl.Util.melder({
+            var consolidated = Jungle.Util.melder({
                 r: this.resolver,
                 c: this.carrier,
                 p: this.preparator,
                 d: this.depreparator,
                 s: this.selector,
                 x: ctx.declaration,
-            }, Gentyl.Util.melder(io.extract(), ctx.extract(), void 0, void 0, false));
+            }, Jungle.Util.melder(io.extract(), ctx.extract(), void 0, void 0, false));
             return consolidated;
         };
         GForm.RFormProps = ["x", "p", "d", "c", "r", "s", "prepare", "destroy", "carry", "resolve", "select"];
         return GForm;
-    }(Gentyl.BaseForm));
-    Gentyl.GForm = GForm;
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+    }(Jungle.BaseForm));
+    Jungle.GForm = GForm;
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var IO;
     (function (IO) {
         function orientationChange(child, node) {
@@ -1444,10 +1444,10 @@ var Gentyl;
             ResolveIO.prototype.reorient = function () {
                 var inverted = false;
                 var upperOrientation;
-                if (!Gentyl.Util.isPrimative(child)) {
+                if (!Jungle.Util.isPrimative(child)) {
                     for (var _i = 0, _a = this.host.crown; _i < _a.length; _i++) {
                         var child = _a[_i];
-                        if (child instanceof Gentyl.ResolutionNode) {
+                        if (child instanceof Jungle.ResolutionCell) {
                             child = child;
                             child.io.reorient();
                             var upo = child.io.orientation;
@@ -1487,19 +1487,19 @@ var Gentyl;
                     var _a = child.io.collect(), hooks = _a.hooks, shells = _a.shells;
                     return { hooks: accumulated.hooks.concat(hooks), shells: accumulated.shells.concat(shells) };
                 };
-                if (!Gentyl.Util.isVanillaObject(this.host.crown) && !Gentyl.Util.isVanillaArray(this.host.crown)) {
-                    if (this.host.crown instanceof Gentyl.ResolutionNode) {
+                if (!Jungle.Util.isVanillaObject(this.host.crown) && !Jungle.Util.isVanillaArray(this.host.crown)) {
+                    if (this.host.crown instanceof Jungle.ResolutionCell) {
                         accumulated = accumulator(this.host.crown, null, accumulated);
                     }
                 }
                 else {
                     for (var k in this.host.crown) {
                         var child = this.host.crown[k];
-                        if (child instanceof Gentyl.ResolutionNode) {
+                        if (child instanceof Jungle.ResolutionCell) {
                             child = child;
                             accumulated = accumulator(child, k, accumulated);
                         }
-                        else if (child instanceof Gentyl.BaseNode) {
+                        else if (child instanceof Jungle.BaseCell) {
                             child = child;
                             if (child.io.shell != undefined) {
                                 accumulated.shells.push(child.io.shell);
@@ -1574,10 +1574,10 @@ var Gentyl;
             return ResolveIO;
         }());
         IO.ResolveIO = ResolveIO;
-    })(IO = Gentyl.IO || (Gentyl.IO = {}));
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var IO;
     (function (IO) {
         var ResolveInputPort = (function (_super) {
@@ -1648,10 +1648,10 @@ var Gentyl;
             return ResolveOutputPort;
         }(IO.Port));
         IO.ResolveOutputPort = ResolveOutputPort;
-    })(IO = Gentyl.IO || (Gentyl.IO = {}));
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var IO;
     (function (IO) {
         var HookShell = (function () {
@@ -1733,7 +1733,7 @@ var Gentyl;
                         break;
                     }
                     case IO.Orientation.MIXED: {
-                        scanDomain = Gentyl.Util.collapseValues(this.sources).concat(Gentyl.Util.collapseValues(this.sinks));
+                        scanDomain = Jungle.Util.collapseValues(this.sources).concat(Jungle.Util.collapseValues(this.sinks));
                         break;
                     }
                 }
@@ -1756,10 +1756,10 @@ var Gentyl;
             return HookShell;
         }());
         IO.HookShell = HookShell;
-    })(IO = Gentyl.IO || (Gentyl.IO = {}));
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var Terminal = (function () {
         function Terminal(type) {
             this.type = type;
@@ -1769,10 +1769,10 @@ var Gentyl;
         };
         return Terminal;
     }());
-    Gentyl.Terminal = Terminal;
-})(Gentyl || (Gentyl = {}));
-var Gentyl;
-(function (Gentyl) {
+    Jungle.Terminal = Terminal;
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var Util;
     (function (Util) {
         function identity(x) {
@@ -2232,5 +2232,5 @@ var Gentyl;
             return Gate;
         }());
         Util.Gate = Gate;
-    })(Util = Gentyl.Util || (Gentyl.Util = {}));
-})(Gentyl || (Gentyl = {}));
+    })(Util = Jungle.Util || (Jungle.Util = {}));
+})(Jungle || (Jungle = {}));

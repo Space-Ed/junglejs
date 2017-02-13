@@ -1,4 +1,4 @@
-namespace Gentyl{
+namespace Jungle{
 
     export namespace IO {
 
@@ -100,7 +100,7 @@ namespace Gentyl{
             deposit:any;
             returned:any;
 
-            constructor(label:any, public host:BaseNode, public complete:(...args:any[])=>any){
+            constructor(label:any, public host:BaseCell, public complete:(...args:any[])=>any){
                 super(label);
                 this.gate = new Util.Gate(this.handle, this);
                 this.returned = false;

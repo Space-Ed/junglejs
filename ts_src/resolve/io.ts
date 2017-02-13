@@ -1,8 +1,8 @@
-namespace Gentyl {
+namespace Jungle {
     export namespace IO{
 
         export interface Hook {
-            host:ResolutionNode,
+            host:ResolutionCell,
             label:string,
             tractor:Function,
             orientation:Orientation,
@@ -49,7 +49,7 @@ namespace Gentyl {
             //the conformant array of ports
             shell:HookShell;
 
-            constructor(public host:ResolutionNode, iospec){
+            constructor(public host:ResolutionCell, iospec){
                 var {hooks, specialIn, specialOut} = iospec;
 
                 this.isShellBase = false;
@@ -165,8 +165,8 @@ namespace Gentyl {
 
                 if(!Util.isPrimative(child)){
                     for (var child of this.host.crown){
-                        if (child instanceof ResolutionNode){
-                            child = <ResolutionNode> child;
+                        if (child instanceof ResolutionCell){
+                            child = <ResolutionCell> child;
                             child.io.reorient();
 
                             var upo = child.io.orientation;
@@ -215,25 +215,25 @@ namespace Gentyl {
                 };
 
                 const accumulator = function(child, k, accumulated : {hooks:Hook[], shells:Shell[]}) : {hooks:Hook[], shells:Shell[]}{
-                    child = <ResolutionNode> child;
+                    child = <ResolutionCell> child;
                     let {hooks, shells} = child.io.collect();
                     return {hooks: accumulated.hooks.concat(hooks), shells: accumulated.shells.concat(shells)};
                 }
 
                 //singular case handling
                 if (!Util.isVanillaObject(this.host.crown) && !Util.isVanillaArray(this.host.crown)){
-                    if(this.host.crown instanceof ResolutionNode){
+                    if(this.host.crown instanceof ResolutionCell){
                         accumulated = accumulator(this.host.crown, null, accumulated);
                     }
                 }else{
 
                     for (var k in this.host.crown){
                         let child = this.host.crown[k];
-                        if(child instanceof ResolutionNode){
-                            child = <ResolutionNode> child;
+                        if(child instanceof ResolutionCell){
+                            child = <ResolutionCell> child;
                             accumulated = accumulator(child, k, accumulated);
-                        }else if (child instanceof BaseNode){
-                            child = <BaseNode> child;
+                        }else if (child instanceof BaseCell){
+                            child = <BaseCell> child;
 
                             //on other node
                             if(child.io.shell != undefined){

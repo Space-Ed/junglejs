@@ -1,4 +1,4 @@
-namespace Gentyl {
+namespace Jungle {
 
     export enum LabelTypes {
         PASSIVE, TRIG, ENTRIG, GATE, GATER, TRIGATE, TRIGATER, ENTRIGATE, ENTRIGATER
@@ -30,7 +30,7 @@ namespace Gentyl {
          resolver:(obj, arg)=>any;
          selector:(keys, arg)=>any;
 
-         constructor(host:ResolutionNode){
+         constructor(host:ResolutionCell){
              super(host);
          }
 
@@ -38,8 +38,8 @@ namespace Gentyl {
 
              var ctxdeclare =  formObj.x || "";
 
-             this.carrier = formObj.c || Gentyl.Util.identity;
-             this.resolver = formObj.r || Gentyl.Util.identity;
+             this.carrier = formObj.c || Jungle.Util.identity;
+             this.resolver = formObj.r || Jungle.Util.identity;
              this.selector = formObj.s || function(keys, carg){return true}
              this.preparator = formObj.p || function(x){};
 

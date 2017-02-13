@@ -1,4 +1,4 @@
-namespace Gentyl{
+namespace Jungle{
     export namespace IO {
         export class HookShell implements Shell {
 

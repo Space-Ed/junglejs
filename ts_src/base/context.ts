@@ -1,4 +1,4 @@
-namespace Gentyl {
+namespace Jungle {
     export enum ASSOCMODE {
         INHERIT,
         SHARE,
@@ -49,7 +49,7 @@ namespace Gentyl {
         originals:any;
         cache:any;
 
-        constructor(private host:BaseNode, contextspec:ContextSpec){
+        constructor(private host:BaseCell, contextspec:ContextSpec){
             var {properties, declaration} = contextspec;
             this.declaration = declaration;
 

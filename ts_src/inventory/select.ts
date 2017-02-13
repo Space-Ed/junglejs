@@ -1,5 +1,5 @@
 
-namespace Gentyl.Inv {
+namespace Jungle.Inv {
 
     export function selectNone (){
         return []

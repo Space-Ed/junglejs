@@ -1,18 +1,18 @@
-namespace Gentyl {
+namespace Jungle {
 
     /**
-     * Crete a G-Node in a Generic way
+     * Crete a G-Cell in a Generic way
      * @param:component
      */
     export function G(components:Object, form){
-        return new ResolutionNode(components, form)
+        return new ResolutionCell(components, form)
     }
 
     /**
      * Alias to create a functional G-node,
      */
     export function F(func, components){
-        return new ResolutionNode(components, {r:func})
+        return new ResolutionCell(components, {r:func})
     }
 
     export function R(reconstructionBundle){

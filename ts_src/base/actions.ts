@@ -1,8 +1,8 @@
-namespace Gentyl {
+namespace Jungle {
     export namespace Actions {
         export class Component {
 
-            constructor(private host:BaseNode){
+            constructor(private host:BaseCell){
 
             }
             /**

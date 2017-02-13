@@ -1,5 +1,5 @@
-var gentyl = require('../dist/gentyl')
-var G = gentyl.G;
+var junglejs = require('../dist/junglejs')
+var G = junglejs.G;
 
 describe("A context labelled node",function(){
 
@@ -53,7 +53,7 @@ describe("A context labelled node",function(){
             dice:5
         }).prepare();
 
-        expect(function(){gentyl.Util.deeplyEqualsThrow(g.resolve(), {c1:5})}).not.toThrowError()
+        expect(function(){junglejs.Util.deeplyEqualsThrow(g.resolve(), {c1:5})}).not.toThrowError()
     })
 
     it('will always choose the closest to the tip possible',function(){

@@ -24,12 +24,12 @@
 
     if (typeof exports !== 'undefined') {
         if (typeof module !== 'undefined' && module.exports) {
-            exports = module.exports = Gentyl;
+            exports = module.exports = Jungle;
         }
-        exports.Gentyl = Gentyl;
+        exports.Jungle = Jungle;
     } else if (typeof define !== 'undefined' && define.amd) {
-        define('Gentyl', (function() { return root.Gentyl = Gentyl; })() );
+        define('Jungle', (function() { return root.Jungle = Jungle; })() );
     } else {
-        root.Gentyl = Gentyl;
+        root.Jungle = Jungle;
     }
 }).call(this)

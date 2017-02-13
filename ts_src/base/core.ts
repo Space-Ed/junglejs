@@ -1,13 +1,13 @@
-namespace Gentyl {
+namespace Jungle {
 
-    export class BaseNode{
+    export class BaseCell{
         crown:any;
         ctx:GContext;
         form:BaseForm;
         io:IO.IOComponent;
         act:Actions.Component;
 
-        parent:BaseNode;
+        parent:BaseCell;
         depth:number;
 
         deplexer:IO.GatedPort;
@@ -15,11 +15,11 @@ namespace Gentyl {
         engaged:boolean;
 
         isRoot:boolean;
-        root:BaseNode;
+        root:BaseCell;
         prepared:boolean;
 
         //internal replication
-        ancestor:BaseNode;
+        ancestor:BaseCell;
         isAncestor:boolean;
 
         constructor(components:any, form:FormSpec = {}){
@@ -63,16 +63,16 @@ namespace Gentyl {
         }
 
         protected constructCore(crown, form){
-            return new BaseNode(crown, form)
+            return new BaseCell(crown, form)
         }
 
         inductComponent(component):any{
             var c
-            if (component instanceof BaseNode){
+            if (component instanceof BaseCell){
                 c = component
                 //c.setParent(this);
             }else if (component instanceof Object){
-                c = new ResolutionNode(component)
+                c = new ResolutionCell(component)
                 //c.setParent(this);
             }else {
                 c = component
@@ -86,7 +86,7 @@ namespace Gentyl {
         /**
          * setup the state tree, recursively preparing the contexts
          */
-        public prepare(prepargs=null):BaseNode|IO.GatedPort{
+        public prepare(prepargs=null):BaseCell|IO.GatedPort{
 
 
             this.deplexer = new IO.GatedPort('prepare', this, this.complete);
@@ -141,7 +141,7 @@ namespace Gentyl {
             }
         }
 
-        public complete():BaseNode{
+        public complete():BaseCell{
             this.deplexer.deposit = this
             this.deplexer.returned = true;
 
@@ -158,15 +158,15 @@ namespace Gentyl {
             return this;
         }
 
-        protected prepareChild(prepargs, child, k):BaseNode{
-            if(child instanceof BaseNode){
+        protected prepareChild(prepargs, child, k):BaseCell{
+            if(child instanceof BaseCell){
 
-                var replica:(BaseNode|IO.GatedPort) = child.replicate();
+                var replica:(BaseCell|IO.GatedPort) = child.replicate();
 
-                (<BaseNode>replica).setParent(this, k);
+                (<BaseCell>replica).setParent(this, k);
 
                 //once all child preparations return
-                replica = (<BaseNode>replica).prepare(prepargs);
+                replica = (<BaseCell>replica).prepare(prepargs);
 
                 //
                 if(replica instanceof IO.GatedPort){
@@ -177,7 +177,7 @@ namespace Gentyl {
                     return (<IO.GatedPort>replica).host;
                 }else{
                     //the child is not async let it be
-                    return (<BaseNode>replica);
+                    return (<BaseCell>replica);
                 }
 
             }else{
@@ -185,17 +185,17 @@ namespace Gentyl {
             }
         }
 
-        protected setParent(parentNode:BaseNode, dereferent:string|number){
+        protected setParent(parentCell:BaseCell, dereferent:string|number){
 
             //append to path
-            this.ctx.path = parentNode.ctx.path.concat(dereferent);
+            this.ctx.path = parentCell.ctx.path.concat(dereferent);
 
-            this.parent = parentNode;
+            this.parent = parentCell;
             this.isRoot = false;
             this.depth = this.parent.depth + 1;
         }
 
-        public replicate():BaseNode{
+        public replicate():BaseCell{
             if(this.prepared){
                 //this node is prepared so we will be creating a new based off the ancestor;
                 return this.ancestor.replicate()
@@ -213,7 +213,7 @@ namespace Gentyl {
             }
         }
 
-        public getParent(toDepth = 1):BaseNode{
+        public getParent(toDepth = 1):BaseCell{
             if (this.parent == undefined){
                 throw new Error("parent not set, or exceeding getParent depth")
             }else if (toDepth  == 1 ){
@@ -223,11 +223,11 @@ namespace Gentyl {
             }
         }
 
-        public getRoot():BaseNode{
+        public getRoot():BaseCell{
             return this.isRoot ? this : this.getParent().getRoot();
         }
 
-        public getNominal(label):BaseNode{
+        public getNominal(label):BaseCell{
             if(this.ctx.label == label){
                 return this;
             }else{
@@ -249,7 +249,7 @@ namespace Gentyl {
             Util.typeCaseSplitF(function(thing, dereferent){
                 if(thing instanceof Terminal){
                     collection.push({node:locale, term:thing, deref:dereferent})
-                }else if(recursive && thing instanceof BaseNode){
+                }else if(recursive && thing instanceof BaseCell){
                     thing.terminalScan(true, collection, locale=thing)
                 }//else primitives and non recursion ignored
             })(this.crown);
@@ -266,7 +266,7 @@ namespace Gentyl {
             Util.typeCaseSplitF(function(thing){
                 if(thing instanceof Terminal){
                     result = false;  //falsify result when terminal found
-                }else if(recursive && thing instanceof BaseNode){
+                }else if(recursive && thing instanceof BaseCell){
                     thing.checkComplete(true)
                 }//else primitives and non recursion ignored
             })(this.crown);
@@ -278,7 +278,7 @@ namespace Gentyl {
 
         bundle():Bundle{
             function bundler(node){
-                if(node instanceof BaseNode){
+                if(node instanceof BaseCell){
                     var product = node.bundle()
                     return product
                 }else{
@@ -286,11 +286,11 @@ namespace Gentyl {
                 }
             }
 
-            var recurrentNodeBundle = Util.typeCaseSplitF(bundler, bundler, null)(this.crown)
+            var recurrentCellBundle = Util.typeCaseSplitF(bundler, bundler, null)(this.crown)
 
             var product = {
-                node:recurrentNodeBundle,
-                form:Gentyl.deformulate(this),
+                node:recurrentCellBundle,
+                form:Jungle.deformulate(this),
                 state:this.ctx.extract()
             }
             return product;

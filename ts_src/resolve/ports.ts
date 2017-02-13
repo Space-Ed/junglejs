@@ -1,4 +1,4 @@
-namespace Gentyl {
+namespace Jungle {
     export namespace IO {
         /**
          * This class handles dispersing over all the hosts with a label like

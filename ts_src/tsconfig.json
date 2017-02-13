@@ -14,7 +14,7 @@
         "noLib": false,
         "preserveConstEnums": true,
         "suppressImplicitAnyIndexErrors": true,
-        "outFile": "../dist/gentyl.js"
+        "outFile": "../dist/junglejs.js"
     },
     "exclude": [
         "node_modules",
