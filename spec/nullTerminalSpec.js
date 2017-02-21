@@ -1,6 +1,6 @@
-var junglejs = require('../dist/junglejs')
-var G = junglejs.G;
-var T = junglejs.T;
+var jungle = require('../dist/jungle')
+var G = jungle.G;
+var T = jungle.T;
 
 /*
 

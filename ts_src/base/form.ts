@@ -7,9 +7,10 @@ namespace Jungle {
         p?:(arg)=>void;
         d?:(arg)=>void;
         x?:string;
-        links?:string[];
-        ports?:string[];
+        link?:string[];
+        port?:string[];
         lf?:(porta, portb)=>any;
+        dl?:(porta, portb)=>any;
     }
 
     export interface FormResult {
@@ -62,64 +63,5 @@ namespace Jungle {
 
      }
 
-     export interface IOLinkSpec{
-         ports:any;
-         linkFunciton:(a,b)=>void;
-         links:string[]
-     }
-
-     export class LForm extends BaseForm {
-
-         parse(formObj:FormSpec):{iospec:IOLinkSpec, contextspec:ContextSpec} {
-
-             var ctxdeclare =  formObj.x || "";
-             this.preparator = formObj.p || function(x){};
-
-             var links = formObj.links || [];
-             var linkf = formObj.lf || function(a, b){}
-
-            var ports = formObj.ports || [];
-            var context = {};
-            var specialInHook;
-            var specialOutHook;
-
-            var portlabels = {};
-            var labels = {};
-            var contextprops:PropertySpec[] = []
-
-            //create port intermediate representation
-            var linkPortRegex = /^(_?)([a-zA-Z](?:\w*[a-zA-Z])?)(_?)$/
-            for (let i = 0; i < ports.length; i++) {
-                let pmatch = ports[i].match(linkPortRegex);
-
-                if(pmatch){
-                    let inp = pmatch[1], label = pmatch[2], out = pmatch[3];
-
-                    if(inp){
-                        portlabels[label] = {label:label, direction:IO.Orientation.INPUT}
-                    }
-                    if(out){
-                        portlabels[label] = {label:label, direction:IO.Orientation.OUTPUT}
-                    }
-                }
-            }
-
-            //Forbid the use of underscores
-            var linkPropRegex = /^[a-zA-Z](?:\w*[a-zA-Z])?$/;
-            for (var k in formObj){
-                if(GForm.RFormProps.indexOf(k) > -1) continue;
-
-                if(k.match(linkPropRegex)){
-                    contextprops.push({key:k, type:CTXPropertyTypes.NORMAL, value:formObj[k]})
-                }else{
-                    throw new Error("Invalid property for link context, use ports")
-                }
-            }
-
-
-            return {iospec:{ports:portlabels, links:links, linkFunciton:linkf}, contextspec:{properties:contextprops, declaration:ctxdeclare}}
-
-        }
-     }
 
 }

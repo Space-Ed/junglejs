@@ -1,15 +1,17 @@
 module Jungle {
 
-
-
-    class LinkCell extends BaseCell{
+    export class LinkCell extends BaseCell{
 
         constructor(crown, formspec){
             super(crown, formspec)
         }
 
         constructIO(iospec):IO.IOComponent{
-            return new IO.LinkIO()
+            return new IO.LinkIO(this, iospec)
+        }
+
+        constructForm():LinkForm{
+            return new LinkForm(this);
         }
 
         protected prepareChild(prepargs, child, k){

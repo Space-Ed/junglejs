@@ -262,6 +262,29 @@ namespace Jungle{
             }
         }
 
+        export function flattenObject(obj, depth=-1, values=[]) {
+
+            for(let k in obj){
+                let v = obj[k];
+                if(isVanillaObject(v) && (depth >= 0 || depth >= -1)){
+                    flattenObject(v, depth -1, values);
+                }else{
+                    values.push(v);
+                }
+            }
+            return values;
+        }
+
+        export function mapObject(obj, func:(key, value)=>any){
+            let mapped = {};
+
+            for(let k in obj){
+                let v = obj[k];
+                mapped[k] = func(k, v);
+            }
+            return mapped
+        }
+
         export function isPrimative(thing){
             return thing == undefined || typeof(thing) !== 'object';
         }

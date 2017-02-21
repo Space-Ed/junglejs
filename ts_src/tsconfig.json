@@ -14,7 +14,7 @@
         "noLib": false,
         "preserveConstEnums": true,
         "suppressImplicitAnyIndexErrors": true,
-        "outFile": "../dist/junglejs.js"
+        "outFile": "../dist/jungle.js"
     },
     "exclude": [
         "node_modules",
@@ -38,6 +38,7 @@
         "./base/form.ts",
         "./base/io.ts",
         "./base/ports.ts",
+        "./base/shell.ts",
         "./inventory/io.ts",
         "./inventory/resolver.ts",
         "./inventory/select.ts",

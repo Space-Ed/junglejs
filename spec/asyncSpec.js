@@ -1,4 +1,4 @@
-var Jungle = require("../dist/junglejs.js");
+var Jungle = require("../dist/jungle.js");
 var G = Jungle.G;
 
 const fs = require('fs');

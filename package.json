@@ -1,8 +1,8 @@
 {
-  "name": "junglejs",
+  "name": "jungle-organic",
   "version": "0.0.1",
   "description": "The organic programming framework",
-  "main": "./dist/junglejs.js",
+  "main": "./dist/jungle.js",
   "scripts": {
     "test": "jasmine"
   },

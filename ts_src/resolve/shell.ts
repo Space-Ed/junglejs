@@ -1,6 +1,6 @@
 namespace Jungle{
     export namespace IO {
-        export class HookShell implements Shell {
+        export class HookShell extends BaseShell implements Shell {
 
             //map - array - hook
             inputHooks:any;
@@ -13,6 +13,8 @@ namespace Jungle{
                  * transform this node into a BaseShell, the kind that has the functions and
                  */
             constructor(public base:ResolveIO, midrantHooks:Hook[], subshells:Shell[]) {
+
+                    super([]);
 
                     this.sources = {};
                     this.sinks = {};
@@ -107,47 +109,7 @@ namespace Jungle{
                 }
             }
 
-            designate(designator:PortDesignator): (ResolveInputPort|ResolveOutputPort)[]{
-                let scanDomain;
 
-                //a hold for
-                const designation:(ResolveInputPort|ResolveOutputPort)[]= [];
-
-                switch(designator.direction){
-                    case Orientation.NEUTRAL:{
-                        return [];
-                    }
-                    case Orientation.INPUT:{
-                        scanDomain = this.sinks; break;
-                    }
-                    case Orientation.OUTPUT:{
-                        scanDomain = this.sources; break;
-                    }
-                    case Orientation.MIXED:{
-                        scanDomain = Util.collapseValues(this.sources).concat(Util.collapseValues(this.sinks)) ; break;
-                    }
-                }
-
-                for(let portlabel in scanDomain){
-                    let port = scanDomain[portlabel];
-
-                    if(port.designate(designator)){
-                        designation.push(port)
-                    }
-                }
-
-                return designation;
-            }
-
-            dress(designator:PortDesignator, coat:OutputCoat){
-
-                designator.direction = Orientation.OUTPUT;
-                let designation = this.designate(designator);
-                for(let k in designation){
-                    let outport = <ResolveOutputPort>designation[k];
-                    outport.dress(coat);
-                }
-            }
         }
     }
 }

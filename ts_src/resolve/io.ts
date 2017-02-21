@@ -25,7 +25,7 @@ namespace Jungle {
             || (child1 === Orientation.INPUT && child2 === Orientation.OUTPUT)
         }
 
-        export class ResolveIO implements IOComponent{
+        export class ResolveIO extends BaseIO implements IOComponent{
             //the internal collection of io ports
             hooks:Hook[];
             orientation:Orientation;
@@ -48,8 +48,10 @@ namespace Jungle {
 
             //the conformant array of ports
             shell:HookShell;
+            host:ResolutionCell;
 
-            constructor(public host:ResolutionCell, iospec){
+            constructor(host:ResolutionCell, iospec){
+                super(host, iospec);
                 var {hooks, specialIn, specialOut} = iospec;
 
                 this.isShellBase = false;
@@ -270,30 +272,6 @@ namespace Jungle {
                 }
             }
 
-            /*
-                scan the whole shell's output ports to ascribe the callbacks using a unified format
-            */
-            dress(designation:any, coat:OutputCoat){
-                let designator: PortDesignator = {
-                    direction:Orientation.OUTPUT,
-                    type:DesignationTypes.MATCH,
-                    data:undefined,
-                }
-
-                //rudimentary parse of wildcards
-                if(typeof(designation) === 'string'){
-                    if(designation === '*'){
-                        designator.type = DesignationTypes.ALL;
-                    }else{
-                        designator.type = DesignationTypes.REGEX;
-                        designator.data = designation;
-                    }
-                }else{
-                    throw new Error("Invalid Designator: string required")
-                }
-
-                this.shell.dress(designator, coat);
-            }
 
 
             dispatchResult(result:any){

@@ -31,6 +31,10 @@ namespace Jungle{
                     case DesignationTypes.FUNC:{
                         return designator.data(this);
                     }
+                    case DesignationTypes.MATCH:{
+                        console.log("match designation label: ", this.label, ' designation', designator.data)
+                        return this.label === designator.data;
+                    }
                     default:
                         return false;
                 }

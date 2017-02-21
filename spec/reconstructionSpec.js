@@ -1,4 +1,4 @@
-var G = require("../dist/junglejs.js");
+var G = require("../dist/jungle.js");
 var g = G.G;
 
 describe("bundle creation",function(){

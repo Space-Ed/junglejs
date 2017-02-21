@@ -51,7 +51,7 @@ namespace Jungle {
         }
 
         protected constructIO(iospec):IO.IOComponent{
-            return new IO.BaseIO()
+            return new IO.BaseIO(this, iospec)
         }
 
         protected constructContext(contextspec){

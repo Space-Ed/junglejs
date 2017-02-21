@@ -23,4 +23,8 @@ namespace Jungle {
         return new Terminal(type)
     }
 
+    export function L(crown, form){
+        return new LinkCell(crown, form)
+    }
+
 }

@@ -1,7 +1,7 @@
-/// <reference path="../../dist/junglejs.d.ts"/>
+/// <reference path="../../dist/jungle.d.ts"/>
 /// <reference path="../../typings/globals/jasmine/index.d.ts"/>
 
-var G = require("../dist/junglejs.js");
+var G = require("../dist/jungle.js");
 var g = G.G;
 
 describe("operationality", function () {

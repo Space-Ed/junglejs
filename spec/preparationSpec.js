@@ -1,6 +1,6 @@
 
-var junglejs = require('../dist/junglejs.js');
-var G = junglejs.G;
+var jungle = require('../dist/jungle.js');
+var G = jungle.G;
 
 describe("preparation",function(){
     var g;
@@ -32,7 +32,7 @@ describe("preparation",function(){
     })
 
     it("should be deeply prepared",function(){
-        expect(g.crown instanceof junglejs.ResolutionCell).toBe(true)
+        expect(g.crown instanceof jungle.ResolutionCell).toBe(true)
     })
 
     it("should set properties with preparator",function(){
