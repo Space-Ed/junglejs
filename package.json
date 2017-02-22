@@ -1,6 +1,6 @@
 {
   "name": "jungle-organic",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "The organic programming framework",
   "main": "./dist/jungle.js",
   "scripts": {
