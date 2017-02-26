@@ -519,18 +519,7 @@ var Jungle;
                 }
                 this.prepare();
             }
-            var resolveOutCache;
-            var srccb = this.io.shell.sources.$.callback;
-            this.io.shell.sources.$.callback = function (output) {
-                resolveOutCache = output;
-                srccb.call(this, output);
-            };
-            this.io.shell.sinks.$.handle(arg);
-            if (!this.deplexer.allHome()) {
-                resolveOutCache = this.deplexer;
-            }
-            this.io.shell.sources.$.callback = srccb;
-            return resolveOutCache;
+            return null;
         };
         return BaseCell;
     }());

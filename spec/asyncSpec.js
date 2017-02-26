@@ -159,7 +159,7 @@ describe("asynchronous tractors", function(){
             ]);
         })
 
-        it('should return gate when any tractor performs a lock', function(done){
+        fit('should return gate when any tractor performs a lock', function(done){
             var labels = ['r','s','c', 'rc', 'rsc', 'sc', 'rs'];
 
             function recur(i){
@@ -186,7 +186,7 @@ describe("asynchronous tractors", function(){
             recur(0);
         });
 
-        it('should return gate if any object child locks', function(){
+        fit('should return gate if any object child locks', function(){
 
             var labels = ['c', 'k', 'z', 'cz'];
 
@@ -201,6 +201,7 @@ describe("asynchronous tractors", function(){
                 expect(gp.returned).toBe(false, 'not returned');
 
                 setTimeout(function () {
+
                     expect(gp.deposit.a).toBe("ICR", labels[i]);
                     expect(gp.deposit.b).toBe("ICD", labels[i]);
                     expect(gp.returned).toBe(true);
@@ -210,7 +211,7 @@ describe("asynchronous tractors", function(){
                     }else{
                         recur(i+1);
                     }
-                },150);
+                },200);
             }
 
             recur(0);
