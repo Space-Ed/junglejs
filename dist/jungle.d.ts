@@ -267,6 +267,7 @@ declare module Jungle {
         constructIO(iospec: any): IO.IOComponent;
         constructForm(): LinkForm;
         protected prepareChild(prepargs: any, child: any, k: any): BaseCell;
+        resolve(resarg: any): void;
     }
 }
 declare namespace Jungle {
@@ -445,6 +446,24 @@ declare namespace Jungle {
             constructor(base: ResolveIO, midrantHooks: Hook[], subshells: Shell[]);
             addMidrantHook(hook: Hook): void;
             addShell(shell: Shell): void;
+        }
+    }
+}
+declare module Jungle {
+    class ResourceCell extends BaseCell {
+        constructor(formspec: any);
+        protected constructForm(): any;
+        protected constructIO(iospec: any): IO.IOComponent;
+        protected constructContext(contextspec: any): any;
+        protected constructActions(): any;
+        protected constructCore(crown: any, form: any): ResourceCell;
+    }
+}
+declare namespace Jungle {
+    namespace IO {
+        class ResourceIO {
+        }
+        class ResourceShell {
         }
     }
 }

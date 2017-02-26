@@ -64,7 +64,7 @@ namespace Jungle{
             /**
              * Bring the subshell forward,
              - subsume the uncommon sinks
-             - retrofuse
+             - retrofuse the overlapping
              */
             addShell(shell:Shell){
 

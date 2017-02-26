@@ -519,7 +519,18 @@ var Jungle;
                 }
                 this.prepare();
             }
-            return null;
+            var resolveOutCache;
+            var srccb = this.io.shell.sources.$.callback;
+            this.io.shell.sources.$.callback = function (output) {
+                resolveOutCache = output;
+                srccb.call(this, output);
+            };
+            this.io.shell.sinks.$.handle(arg);
+            if (!this.deplexer.allHome()) {
+                resolveOutCache = this.deplexer;
+            }
+            this.io.shell.sources.$.callback = srccb;
+            return resolveOutCache;
         };
         return BaseCell;
     }());
@@ -872,6 +883,9 @@ var Jungle;
             var pchild = _super.prototype.prepareChild.call(this, prepargs, child, k);
             pchild.enshell();
             return pchild;
+        };
+        LinkCell.prototype.resolve = function (resarg) {
+            _super.prototype.resolve.call(this, resarg);
         };
         return LinkCell;
     }(Jungle.BaseCell));
@@ -1921,6 +1935,50 @@ var Jungle;
             return HookShell;
         }(IO.BaseShell));
         IO.HookShell = HookShell;
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var ResourceCell = (function (_super) {
+        __extends(ResourceCell, _super);
+        function ResourceCell(formspec) {
+            _super.call(this, null, formspec);
+        }
+        ResourceCell.prototype.constructForm = function () {
+            return new Jungle.BaseForm(this);
+        };
+        ResourceCell.prototype.constructIO = function (iospec) {
+            return new Jungle.IO.BaseIO(this, iospec);
+        };
+        ResourceCell.prototype.constructContext = function (contextspec) {
+            return new Jungle.GContext(this, contextspec);
+        };
+        ResourceCell.prototype.constructActions = function () {
+            return new Jungle.Actions.Component(this);
+        };
+        ResourceCell.prototype.constructCore = function (crown, form) {
+            return new ResourceCell(form);
+        };
+        return ResourceCell;
+    }(Jungle.BaseCell));
+    Jungle.ResourceCell = ResourceCell;
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var IO;
+    (function (IO) {
+        var ResourceIO = (function () {
+            function ResourceIO() {
+            }
+            return ResourceIO;
+        }());
+        IO.ResourceIO = ResourceIO;
+        var ResourceShell = (function () {
+            function ResourceShell() {
+            }
+            return ResourceShell;
+        }());
+        IO.ResourceShell = ResourceShell;
     })(IO = Jungle.IO || (Jungle.IO = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
