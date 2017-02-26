@@ -20,6 +20,10 @@ module Jungle {
 
             return pchild
         }
+
+        resolve(resarg){
+            super.resolve(resarg);         
+        }
     }
 
 }

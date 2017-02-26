@@ -261,7 +261,7 @@ namespace Jungle {
                             this.shell.sinks[k].handle(input);
                         }).bind(this);
                     }
-                    //recover the output sources
+                    //aliased the output sources
                     for(let k in this.shell.sources){
                         this.outputs[k] = this.shell.sources[k];
                     }
