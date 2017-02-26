@@ -519,7 +519,8 @@ var Jungle;
                 }
                 this.prepare();
             }
-            return null;
+            var resolveOutCache;
+            return resolveOutCache;
         };
         return BaseCell;
     }());

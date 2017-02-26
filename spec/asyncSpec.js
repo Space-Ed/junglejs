@@ -116,7 +116,15 @@ describe("asynchronous tractors", function(){
     describe("resolve", function(){
         var g, g2, g1;
 
-        function timeout(label, returnValueOrFunc, labelArg, funcArgs, timeout){
+        /*
+         a higher order function whose product function returns a certain value after a timeout
+           label: how to select the phase of operation c, s or r;
+           returnValueOrFunction: the value to return or means to derive from a designated value;
+           label Arg: means to choose which argument is the key to match on arg 1;
+           funcArgs: the indicies of the tractor passed to the value derivation;
+           timeout: the time (ms) after which the lock is released and value [is derived and] returned;
+         */
+        function timeout(marker, returnValueOrFunc, markerArg, funcArgs, timeout){
 
             let rf = (returnValueOrFunc instanceof Function ) ? returnValueOrFunc : function(){return returnValueOrFunc}
 
@@ -129,7 +137,7 @@ describe("asynchronous tractors", function(){
                 }
                 let rvinner = rf.apply(this, args);
 
-                if(arguments[labelArg].indexOf(label) != -1 ){
+                if(arguments[markerArg].indexOf(marker) != -1 ){
                     let unlock = this.gate.lock();
                     setTimeout(function(){
                         unlock(rvinner);
@@ -160,11 +168,12 @@ describe("asynchronous tractors", function(){
         })
 
         fit('should return gate when any tractor performs a lock', function(done){
-            var labels = ['r','s','c', 'rc', 'rsc', 'sc', 'rs'];
+            var activatedMarkers = ['r','s','c', 'rc', 'rsc', 'sc', 'rs'];
+
 
             function recur(i){
                 expect(g.engaged).toBe(false);
-                var gp = g.resolve(labels[i]);
+                var gp = g.resolve(activatedMarkers[i]);
 
                 expect(g.deplexer.gate).toBe(g.ctx.exposed.gate, "should be the same gate as prepped")
                 expect(gp === g.deplexer).toBe(true, "should return the deplexer");
@@ -173,26 +182,26 @@ describe("asynchronous tractors", function(){
                 expect(gp.returned).toBe(false, 'not returned');
 
                 setTimeout(function () {
-                    expect(gp.deposit).toBe("ICR", labels[i]);
+                    expect(gp.deposit).toBe("ICR", activatedMarkers[i]);
                     expect(gp.returned).toBe(true);
 
-                    if(i === labels.length-1){
+                    if(i === activatedMarkers.length-1){
                         done();
                     }else{
                         recur(i+1);
                     }
-                },50);
+                },250);
             }
             recur(0);
         });
 
-        fit('should return gate if any object child locks', function(){
+        fit('should return gate if any object child locks', function(done){
 
-            var labels = ['c', 'k', 'z', 'cz'];
+            var activatedMarkers = ['c', 'k', 'z', 'cz'];
 
             function recur(i){
                 expect(g2.engaged).toBe(false);
-                var gp = g2.resolve(labels[i]);
+                var gp = g2.resolve(activatedMarkers[i]);
 
                 expect(g2.deplexer.gate).toBe(g2.ctx.exposed.gate, "should be the same gate as prepped")
                 expect(gp === g2.deplexer).toBe(true, "should return the deplexer");
@@ -201,17 +210,16 @@ describe("asynchronous tractors", function(){
                 expect(gp.returned).toBe(false, 'not returned');
 
                 setTimeout(function () {
-
-                    expect(gp.deposit.a).toBe("ICR", labels[i]);
-                    expect(gp.deposit.b).toBe("ICD", labels[i]);
+                    expect(gp.deposit.b).toBe("ICD", activatedMarkers[i]);
+                    expect(gp.deposit.a).toBe("ICR", activatedMarkers[i]);
                     expect(gp.returned).toBe(true);
 
-                    if(i === labels.length-1){
+                    if(i === activatedMarkers.length-1){
                         done();
                     }else{
                         recur(i+1);
                     }
-                },200);
+                },500);
             }
 
             recur(0);
