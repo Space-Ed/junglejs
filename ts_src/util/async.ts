@@ -6,96 +6,164 @@ namespace Jungle {
             results = [];
             index   = 0;
             leashed = {};
+            error:{
+                message:string;
+                key:string|number;
+            }
 
             catchCallback;
             thenCallback;
 
             future:Junction;
+
+            fried:boolean;
             blocked:boolean;
-            propagated:any;
+            cleared:boolean;
+            residue:any;
+            feedfree:boolean
 
             constructor(){
                 this.awaits  = {};
                 this.results = [];
                 this.index   = 0;
                 this.blocked = false;
+                this.cleared = false;
+                this.feedfree = true;
+                this.fried = false;
             }
 
             //phase complete;
             private proceedThen(){
-                if (!this.blocked){
-                    let propagate = this.thenCallback !== undefined
-                        ? this.thenCallback(this.results, this.propagated)
-                        : this.propagated;
+                this.cleared = true;
 
-                    //if then flows into another then
-                    if(this.future){
-                        this.future.unleash(propagate);
-                    }
+                let propagate
+                if (this.thenCallback !== undefined){
+                    if(this.residue !== undefined) {this.results['residue'] = this.residue}
+                    propagate = this.thenCallback(this.results);
+                }else{
+                    propagate = this.residue;
+                }
+
+                //removal of cleared awaits
+                this.awaits = undefined;
+
+                //if then flows into another then
+                this.future.unleash(propagate);
+
+            }
+
+            private feedPropagated(released){
+                this.residue = released;
+                this.feedfree = true;
+
+                if(this.isReady()){
+                    this.proceedThen();
+                }
+            }
+
+            private unleash(propagated){
+
+                if( propagated instanceof Junction){
+                    this.feedfree = false;
+                    propagated.then(this.feedPropagated.bind(this))
+                }else{
+                    this.residue = propagated;
+                }
+
+                this.blocked = false;
+
+                //the last act may proceed
+                for(let key in this.leashed){
+                    this.leashed[key]();
+                }
+
+                delete this.leashed;
+
+                //proceed when
+                if(this.isReady()){
+                    this.proceedThen();
                 }
             }
 
             private proceedCatch(error){
-                throw new Error(`Error caught in junction, arriving from...`)
+                if( this.catchCallback !== undefined){
+                    this.catchCallback(error);
+                }else if ( this.future !== undefined){
+                    this.future.proceedCatch(error);
+                }else{
+                    throw new Error(`Error raised from hold, arriving from ${error.key} with message ${error.message}`);
+                }
             }
 
-            private fastForward():Junction{
+            private frontier():Junction{
                 if(this.future){
-                    return this.future.fastForward();
+                    return this.future.frontier();
                 }else{
                     return this
                 }
+            }
+
+            private isReady(){
+                return this.allDone() && this.isPresent() && this.hasFuture() && this.feedfree && !this.fried;
+            }
+
+            private isPresent(){
+                return !(this.blocked || this.cleared);
+            }
+
+            private hasFuture(){
+                return this.future != undefined;
             }
 
             private allDone(){
                 return Object.keys(this.awaits).length === 0;
             }
 
-            private draw(returnkey):((returned:any)=>Junction)[]{
-                this.awaits[returnkey] = returnkey;
-
-                return [(function(res){
-                    this.results[returnkey] = res;
-                    delete this.awaits[returnkey];
-                    if(this.allDone()){
-                        this.proceedThen(); //proceed from awaited
-                    }
-                    return this;
-                }).bind(this), (function(err){
-                    //Default value, sideways reports, thrown error
-                    this.proceedCatch();
-
-                    return this;
-                }).bind(this)]
-            }
-
-            private unleash(pastValue){
-                this.propagated = pastValue;
-                this.blocked = false;
-
-                for(let key in this.leashed){
-                    this.leashed[key]();
+            public hold(returnkey):((result:any) => any)[]{
+                if(returnkey === 'residue'){
+                    throw new Error("Unable to use keyword 'residue' for a hold key")
                 }
 
-                delete this.leashed;
+                let frontier = this.frontier();
+
+                let accessor = returnkey || frontier.index++;
+                frontier.awaits[accessor] = accessor;
+
+                return [
+                    (function(res){
+                        frontier.results[accessor] = res;
+                        delete frontier.awaits[accessor];
+
+                        if(frontier.isReady()){
+                            frontier.proceedThen(); //proceed from awaited
+                        }
+                    }),
+                    (function(err){
+                        frontier.fried = true;
+                        frontier.error = {
+                            message:err, key:accessor
+                        };
+                        delete frontier.awaits[accessor];
+                        //Default value, sideways reports, thrown error
+                        if (frontier.fried && frontier.hasFuture()){
+                            frontier.proceedCatch(frontier.error);
+                        }
+                    })
+                ]
             }
 
             await(act:(done:(returned:any)=>Junction, raise:(message:string)=>void)=>any, label?):Junction {
-                if(this.future){
-                    return this.future.await(act, label);
+                let frontier = this.frontier()
+
+                let [done, raise] = frontier.hold(label);
+
+                if(frontier.blocked){
+                    frontier.leashed[label] = act.bind(null, done, raise);
                 }else{
-                    let key = label || this.index++;
-                    let [doner, raiser] = this.draw(key);
-
-                    if(this.blocked){
-                        this.leashed[key] = act.bind(null, doner, raiser);
-                    }else{
-                        act(doner, raiser);
-                    }
-
-                    return this;
+                    act(done, raise);
                 }
 
+                return frontier;
             }
 
             merge(upstream:Junction, label?){
@@ -105,32 +173,34 @@ namespace Jungle {
                 }, label)
             }
 
-            then(callback:(results:any)=>void):Junction{
-                if(this.future){
-                    return this.future.then(callback);
-                }else{
-                    this.future = new Junction();
-                    this.future.blocked = true;
+            then(callback:(results:any, residue)=>void):Junction{
+                let frontier = this.frontier();
 
-                    this.thenCallback = callback;
+                frontier.future = new Junction();
+                frontier.future.blocked = true;
 
-                    if(this.allDone()){
-                        this.proceedThen(); //proceed from
-                    }
+                frontier.thenCallback = callback;
 
-                    return this.future;
-
+                if(frontier.isReady()){
+                    frontier.proceedThen();
                 }
 
-
+                return frontier.future;
             }
 
             catch(callback:Function):Junction{
-                this.catchCallback = callback;
-                return this;
+                let frontier = this.frontier();
+
+                frontier.future = new Junction();
+                frontier.future.blocked = true;
+                frontier.catchCallback = callback;
+
+                if (frontier.fried && frontier.hasFuture()){
+                    frontier.proceedCatch(frontier.error);
+                }
+
+                return frontier.future;
             }
-
-
 
         }
 

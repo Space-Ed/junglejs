@@ -2,8 +2,8 @@
 
 var Util = require("../dist/jungle.js").Util;
 
-describe("junction", function(){
-    let j1, o, callout, countout;
+fdescribe("junction", function(){
+    let j1, o, callout, countout
 
     function doneIn(time){
         return function(done, raise){
@@ -11,10 +11,17 @@ describe("junction", function(){
         }
     }
 
+    function raiser(done, raise){
+        raise("Error")
+    }
+
     beforeEach(function(){
+        jasmine.DEFAULT_TIMEOUT_INTERVAL = 1000;
+
         o = {c:0, cb(){}};
-        callout = function(res, prop){
-            o.cb(res, prop);
+        callout = function(res){
+            let prop = res?res.residue:null;
+            o.cb(res);
             return prop};
         countout = function(number){
             return function(res){
@@ -26,9 +33,13 @@ describe("junction", function(){
         j1 = new Util.Junction();
     });
 
+    afterEach(function(){
+        jasmine.DEFAULT_TIMEOUT_INTERVAL = 2000;
+    })
+
     it('should return empty if then called before await', function(){
         j1.then(callout);
-        expect(o.cb).toHaveBeenCalledWith([], undefined);
+        expect(o.cb).toHaveBeenCalledWith([]);
     });
 
     it('should return a result when they are awaited and immediate', function(){
@@ -37,7 +48,7 @@ describe("junction", function(){
         });
 
         j1.then(callout);
-        expect(o.cb).toHaveBeenCalledWith(["Immediate return"], undefined);
+        expect(o.cb).toHaveBeenCalledWith(["Immediate return"]);
     });
 
     it('should return with multiple instant awaits',function(){
@@ -61,7 +72,7 @@ describe("junction", function(){
         expect(o.cb).not.toHaveBeenCalled();
 
         setTimeout(function(){
-            expect(o.cb).toHaveBeenCalledWith(['laters'], undefined);
+            expect(o.cb).toHaveBeenCalledWith(['laters']);
             done();
         },100);
     })
@@ -69,7 +80,9 @@ describe("junction", function(){
     it('chains of then propagating', function(){
         j1.then(function(){return 1}).then(callout).then(callout).then(callout);
         expect(o.cb.calls.count()).toEqual(3);
-        expect(o.cb.calls.allArgs()).toEqual([ [ [  ], 1 ], [ [  ], 1 ], [ [  ], 1 ] ] );
+        o.cb.calls.allArgs().forEach(arg=>{
+            expect(arg[0].residue).toEqual(1);
+        })
     });
 
     it('asynchronous chains of then propagating', function(done){
@@ -77,10 +90,7 @@ describe("junction", function(){
             .await(doneIn(20))
             .then(callout)
             .await(doneIn(20))
-            .then(callout).then(function(){
-                expect(o.cb).not.toHaveBeenCalled();
-            });
-
+            .then(callout);
 
         setTimeout(function(){
             expect(o.cb.calls.count()).toEqual(1);
@@ -88,9 +98,12 @@ describe("junction", function(){
 
         setTimeout(function(){
             expect(o.cb.calls.count()).toEqual(2);
-            expect(o.cb.calls.allArgs()).toEqual([ [ [undefined], 1 ], [ [undefined], 1 ] ]);
+            (o.cb.calls.allArgs()).forEach(arg=>{
+                expect(arg[0].residue).toEqual(1);
+            })
             done();
         },50)
+
     });
 
     it('merge other junctions', function(done){
@@ -142,15 +155,49 @@ describe("junction", function(){
         },100);
     });
 
-    it('should be the same to say then after than to chain it',function(){
+    it('should be the same to say then after than to chain it',function(done){
         j1.await(doneIn(10));
-        j1.then(callout);
-        j1.await(doneIn(10))
-        j1.then(callout).then(function(){
-            expect(o.cb.calls.count()).toBe(2)
-        });
+        j1.then(callout).then(callout);
+        j1.await(doneIn(10));
+        j1.then(callout).then(callout);
 
+        setTimeout(function(){
+            expect(o.cb.calls.count()).toBe(2);
+        },15)
 
+        setTimeout(function(){
+            expect(o.cb.calls.count()).toBe(4);
+            done();
+        },30)
+    });
+
+    it('should allow calling of draw to contribute to the next',function(done){
+        j1  .await(doneIn(20))
+            .then(callout);
+
+        //draw now falls on the next
+        let [mydone, raise] = j1.hold();
+        setTimeout(mydone, 40);
+
+        j1  .then(callout)
+
+        setTimeout(function(){
+            expect(o.cb.calls.count()).toEqual(1);
+        },30);
+
+        setTimeout(function(){
+            expect(o.cb.calls.count()).toEqual(2);
+            done();
+        },50);
+
+    });
+
+    it('should catch an error',function(){
+        var j2 = j1.await(raiser).catch(callout);
+
+        expect(j2).toBe(j1.future)
+
+        expect(o.cb.calls.first().args[0]).toEqual({message:"Error", key:0})
     })
 
 })
