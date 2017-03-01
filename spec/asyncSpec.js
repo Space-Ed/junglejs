@@ -124,7 +124,7 @@ describe("asynchronous tractors", function(){
            funcArgs: the indicies of the tractor passed to the value derivation;
            timeout: the time (ms) after which the lock is released and value [is derived and] returned;
          */
-        function timeout(marker, returnValueOrFunc, markerArg, funcArgs, timeout){
+        function markerTestedTimeout(marker, returnValueOrFunc, markerArg, funcArgs, timeout){
 
             let rf = (returnValueOrFunc instanceof Function ) ? returnValueOrFunc : function(){return returnValueOrFunc}
 
@@ -148,28 +148,37 @@ describe("asynchronous tractors", function(){
             }
         }
 
+        function repeatedTimeout(dofunc, checkfunc, repeatTime){
+            setTimeout(function(){
+                if(checkfunc()){
+                    dofunc();
+                }else{
+                    repeatedTimeout(dofunc, checkfunc, repeatTime);
+                }
+            },repeatTime)
+        }
+
         beforeEach(function(){
-            g = G("I",{
-                c:timeout('c', 'C', 0,[], 10),
-                s:timeout('s', true, 1,[], 10),
-                r:timeout('r', function(o,a,c){return o+c+'R'}, 1, [0,1,2],10)
+            g = G("Terminal",{
+                c:markerTestedTimeout('c', 'Carried', 0,[], 10),
+                s:markerTestedTimeout('s', true, 1,[], 10),
+                r:markerTestedTimeout('r', function(o,a,c){return o+c+'Resolved'}, 1, [0,1,2],10)
             }).prepare();
 
-            g1 = G("I",{
-                c:timeout('k', 'C', 0,[], 10),
-                s:timeout('z', true, 1,[], 10),
-                r:timeout('d', function(o,a,c){return o+c+'D'}, 1, [0,1,2],10)
-            })
+            g1 = G("Terminal",{
+                c:markerTestedTimeout('k', 'Carried', 0,[], 10),
+                s:markerTestedTimeout('z', true, 1,[], 10),
+                r:markerTestedTimeout('d', function(o,a,c){return o+c+'DifferentlyResolved'}, 1, [0,1,2],10)
+            }).prepare();
 
             g2 = G([
                 g,
                 g1
-            ]);
+            ]).prepare();
         })
 
-        fit('should return gate when any tractor performs a lock', function(done){
+        it('should return gate when any tractor performs a lock', function(done){
             var activatedMarkers = ['r','s','c', 'rc', 'rsc', 'sc', 'rs'];
-
 
             function recur(i){
                 expect(g.engaged).toBe(false);
@@ -181,8 +190,8 @@ describe("asynchronous tractors", function(){
                 expect(g.engaged).toBe(true, 'engaged');
                 expect(gp.returned).toBe(false, 'not returned');
 
-                setTimeout(function () {
-                    expect(gp.deposit).toBe("ICR", activatedMarkers[i]);
+                repeatedTimeout(function () {
+                    expect(gp.deposit).toBe("TerminalCarriedResolved", activatedMarkers[i]);
                     expect(gp.returned).toBe(true);
 
                     if(i === activatedMarkers.length-1){
@@ -190,28 +199,35 @@ describe("asynchronous tractors", function(){
                     }else{
                         recur(i+1);
                     }
+                },function(){
+                    return !g.engaged;
                 },250);
             }
+
             recur(0);
         });
 
-        fit('should return gate if any object child locks', function(done){
+        it('should return gate if any object child locks', function(done){
 
             var activatedMarkers = ['c', 'k', 'z', 'cz'];
 
             function recur(i){
                 expect(g2.engaged).toBe(false);
+
                 var gp = g2.resolve(activatedMarkers[i]);
 
                 expect(g2.deplexer.gate).toBe(g2.ctx.exposed.gate, "should be the same gate as prepped")
+
                 expect(gp === g2.deplexer).toBe(true, "should return the deplexer");
                 expect(gp.label).toBe('resolve');
                 expect(g2.engaged).toBe(true, 'engaged');
                 expect(gp.returned).toBe(false, 'not returned');
 
-                setTimeout(function () {
-                    expect(gp.deposit.b).toBe("ICD", activatedMarkers[i]);
-                    expect(gp.deposit.a).toBe("ICR", activatedMarkers[i]);
+                repeatedTimeout(function () {
+
+                    console.log("deposit or value at marker " + activatedMarkers[i], gp.deposit.label);
+
+                    expect(gp.deposit).toBe(["TerminalCarriedResolved", "TerminalCarriedDifferentlyResolved"], activatedMarkers[i]);
                     expect(gp.returned).toBe(true);
 
                     if(i === activatedMarkers.length-1){
@@ -219,7 +235,9 @@ describe("asynchronous tractors", function(){
                     }else{
                         recur(i+1);
                     }
-                },500);
+                },function(){
+                    return !g.engaged;
+                },50);
             }
 
             recur(0);
