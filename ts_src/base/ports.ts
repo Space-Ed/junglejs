@@ -91,60 +91,6 @@ namespace Jungle{
             }
         }
 
-        /*
-            the kind of port used as a "promise but in a consistent form"
-
-            the port uses a gate to determine when its handler is fired so it is a proxy for
-
-            the port is returned to the
-        */
-        export class GatedPort extends Port{
-
-            gate:Util.Gate;
-            deposit:any;
-            returned:any;
-
-            constructor(label:any, public host:BaseCell, public complete:(...args:any[])=>any){
-                super(label);
-                this.gate = new Util.Gate(this.handle, this);
-                this.returned = false;
-            }
-
-            addTributary(tributary:GatedPort){
-                /** when the child calls the gate it unlocks, potentially passing data up the chain
-                */
-
-                var unlock = this.gate.lock();
-                tributary.callback = unlock
-
-            }
-
-            /**
-             * Called by the gate callback in this case
-             */
-            handle(input){
-                //deposit is set within
-                this.complete.call(this.host, input);
-                this.returned = true;
-
-                super.handle(this.deposit);
-            }
-
-            allHome(){
-                return this.gate.allUnlocked()
-            }
-
-            reset(label:string, completer:(...args)=>any){
-                this.label = label;
-                this.complete = completer;
-                this.callbackContext = undefined;
-                this.callback = undefined;
-                this.returned = false;
-                this.deposit = undefined;
-                this.gate.reset();
-            }
-
-        }
 
 
     }

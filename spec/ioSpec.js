@@ -226,7 +226,7 @@ describe("input-output", function(){
 
             for (let i = 0; i < versions.length; i++) {
 
-                let cb = function(x){console.log("FUCK")};
+                let cb = function(x){console.log("cant call it")};
                 let ctx = {}
 
                 let g = versions[i]
@@ -239,7 +239,7 @@ describe("input-output", function(){
                 //routing through special io
                 let res = g.resolve(inputs[i]);
 
-                if(res instanceof Jungle.IO.GatedPort){
+                if(res instanceof Jungle.Util.Junction){
                     console.log(`resolve not returned input ${inputs[i]}, expected result: ${results[i]}`)
                 }
 

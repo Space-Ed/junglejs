@@ -19,7 +19,7 @@ describe("nullTerminals", function(){
     })
 
     it("should permit single null value to be prepared and resolved",function(){
-        var g2 = G(null).prepare()
+        var g2 = G(undefined).prepare()
         expect(g2.resolve()).toBeUndefined();
     })
 

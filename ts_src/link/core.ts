@@ -14,15 +14,27 @@ module Jungle {
             return new LinkForm(this);
         }
 
-        protected prepareChild(prepargs, child, k){
-            var pchild = super.prepareChild(prepargs, child, k)
-            pchild.enshell();
+        protected prepareChild(prepargs, handle, child, k){
+            if(child instanceof BaseCell){
+                var replica = child.replicate();
 
-            return pchild
+                (<any>replica).setParent(this, k);
+
+                replica.prepare(prepargs);
+
+                //enshell happens after
+                let aftershell = new Util.Junction().merge(replica,false).then(function(replica){
+                    replica.enshell();
+                    return replica
+                });
+                handle.merge(aftershell, k);
+            }else{
+                handle.merge(child, k);
+            }
         }
 
         resolve(resarg){
-            super.resolve(resarg);         
+            super.resolve(resarg);
         }
     }
 

@@ -6,7 +6,6 @@ var g = G.G;
 
 describe("operationality", function () {
 
-
     it("should be present", function () {
         expect(g).not.toBeUndefined();
     });
@@ -43,7 +42,7 @@ describe("operationality", function () {
 
     it("should generate from changing context properties", function(){
         var gen = g({
-                inc:2
+                inc:1
             },{
                 r(obj, args){
                     this.prop += obj.inc;
@@ -53,9 +52,10 @@ describe("operationality", function () {
             }
         )
 
-        expect(gen.resolve()).toEqual(2);
-
-        expect(gen.resolve()).toEqual(4);
+        var res = gen.resolve();
+        expect(res).toEqual(1);
+        res = gen.resolve();
+        expect(res).toEqual(2);
 
     })
 

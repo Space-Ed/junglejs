@@ -81,14 +81,12 @@ declare namespace Jungle {
         act: Actions.Component;
         parent: BaseCell;
         depth: number;
-        deplexer: IO.GatedPort;
-        async: boolean;
-        engaged: boolean;
         isRoot: boolean;
         root: BaseCell;
         prepared: boolean;
         ancestor: BaseCell;
         isAncestor: boolean;
+        junction: Util.Junction;
         constructor(components: any, form?: FormSpec);
         protected constructForm(): BaseForm;
         protected constructIO(iospec: any): IO.IOComponent;
@@ -96,9 +94,9 @@ declare namespace Jungle {
         protected constructActions(): Actions.Component;
         protected constructCore(crown: any, form: any): BaseCell;
         inductComponent(component: any): any;
-        prepare(prepargs?: any): BaseCell | IO.GatedPort;
-        complete(): BaseCell;
-        protected prepareChild(prepargs: any, child: any, k: any): BaseCell;
+        prepare(prepargs?: any): BaseCell;
+        completePrepare(): void;
+        protected prepareChild(prepargs: any, handle: any, child: any, k: any): void;
         protected setParent(parentCell: BaseCell, dereferent: string | number): void;
         replicate(): BaseCell;
         getParent(toDepth?: number): BaseCell;
@@ -218,18 +216,6 @@ declare namespace Jungle {
             prepareContext(outputContext: any): void;
             handle(input: any): void;
         }
-        class GatedPort extends Port {
-            host: BaseCell;
-            complete: (...args: any[]) => any;
-            gate: Util.Gate;
-            deposit: any;
-            returned: any;
-            constructor(label: any, host: BaseCell, complete: (...args: any[]) => any);
-            addTributary(tributary: GatedPort): void;
-            handle(input: any): void;
-            allHome(): boolean;
-            reset(label: string, completer: (...args) => any): void;
-        }
     }
 }
 declare namespace Jungle {
@@ -266,7 +252,7 @@ declare module Jungle {
         constructor(crown: any, formspec: any);
         constructIO(iospec: any): IO.IOComponent;
         constructForm(): LinkForm;
-        protected prepareChild(prepargs: any, child: any, k: any): BaseCell;
+        protected prepareChild(prepargs: any, handle: any, child: any, k: any): void;
         resolve(resarg: any): void;
     }
 }
@@ -329,28 +315,25 @@ declare namespace Jungle {
 }
 declare namespace Jungle {
     class ResolutionCell extends BaseCell {
-        resolveCache: {
-            stage: string;
-            resolveArgs: any;
-            carried: any;
-            selection: any;
-            resolvedCrown: any;
-            resolvedValue: any;
-        };
         io: IO.ResolveIO;
         form: GForm;
+        resolveCache: {
+            args: any;
+            carried: any;
+            selection: any;
+            crowned: any;
+            reduced: any;
+        };
         protected constructForm(): GForm;
         protected constructIO(iospec: any): IO.ResolveIO;
         protected constructCore(crown: any, form: any): ResolutionCell;
-        private resolveArray(array, resolveArgs, selection);
-        private resolveObject(node, resolveArgs, selection);
-        private resolveCell(node, resolveArgs, selection);
-        proceed(received: any): void;
+        private resolveDenizen(handle, args, denizen, reference);
+        private resolveCell(handle, node, carriedArgs, selection);
         resolve(resolveArgs: any): any;
-        resolveSelect(): any;
-        resolveCrown(): any;
-        resolveReturn(): any;
-        resolveComplete(): any;
+        resolveCarryThen(results: any, handle: any): any;
+        resolveCrownThen(results: any, handle: any): any;
+        resolveReduceThen(results: any, handle: any): any;
+        resolveCompleteThen(results: any, handle: any): any;
     }
 }
 declare namespace Jungle {
@@ -502,6 +485,50 @@ declare namespace Jungle {
         function typeCaseSplitF(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;
         function typeCaseSplitM(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => void;
         function collapseValues(obj: any): any[];
+    }
+}
+declare namespace Jungle {
+    namespace Util {
+        class Junction {
+            private resultNature;
+            awaits: any;
+            index: number;
+            silentAwaits: boolean[];
+            silentIndex: number;
+            residue: any;
+            leashed: any;
+            error: {
+                message: string;
+                key: string | number;
+            };
+            catchCallback: any;
+            thenCallback: any;
+            future: Junction;
+            fried: boolean;
+            blocked: boolean;
+            cleared: boolean;
+            thenkey: boolean | string | number;
+            constructor();
+            private proceedThen();
+            private unleash(propagated);
+            private proceedCatch(error);
+            private successor();
+            private frontier();
+            realize(): any;
+            private isClean();
+            private isIdle();
+            private isReady();
+            private isTampered();
+            private isPresent();
+            private hasFuture();
+            private allDone();
+            hold(returnkey?: any): ((result?: any) => any)[];
+            _hold(returnkey?: any): ((result?: any) => any)[];
+            await(act: (done: (returned: any) => Junction, raise: (message: string) => void) => any, label?: any): Junction;
+            merge(upstream: any, label?: any): Junction;
+            then(callback: (results: any, residue: any, handle: Junction) => void, thenkey?: any): Junction;
+            catch(callback: Function): Junction;
+        }
         class Gate {
             callback: any;
             context: any;
@@ -511,6 +538,7 @@ declare namespace Jungle {
             constructor(callback?: any, context?: any);
             lock(): (arg) => void;
             reset(): void;
+            isClean(): boolean;
             allUnlocked(): boolean;
         }
     }

@@ -1,8 +1,13 @@
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 var Jungle;
 (function (Jungle) {
     function G(components, form) {
@@ -75,18 +80,18 @@ var Jungle;
 })(Jungle || (Jungle = {}));
 var Jungle;
 (function (Jungle) {
+    var ASSOCMODE;
     (function (ASSOCMODE) {
         ASSOCMODE[ASSOCMODE["INHERIT"] = 0] = "INHERIT";
         ASSOCMODE[ASSOCMODE["SHARE"] = 1] = "SHARE";
         ASSOCMODE[ASSOCMODE["TRACK"] = 2] = "TRACK";
-    })(Jungle.ASSOCMODE || (Jungle.ASSOCMODE = {}));
-    var ASSOCMODE = Jungle.ASSOCMODE;
+    })(ASSOCMODE = Jungle.ASSOCMODE || (Jungle.ASSOCMODE = {}));
+    var CTXPropertyTypes;
     (function (CTXPropertyTypes) {
         CTXPropertyTypes[CTXPropertyTypes["NORMAL"] = 0] = "NORMAL";
         CTXPropertyTypes[CTXPropertyTypes["BOUND"] = 1] = "BOUND";
         CTXPropertyTypes[CTXPropertyTypes["HOOK"] = 2] = "HOOK";
-    })(Jungle.CTXPropertyTypes || (Jungle.CTXPropertyTypes = {}));
-    var CTXPropertyTypes = Jungle.CTXPropertyTypes;
+    })(CTXPropertyTypes = Jungle.CTXPropertyTypes || (Jungle.CTXPropertyTypes = {}));
     var GContext = (function () {
         function GContext(host, contextspec) {
             this.host = host;
@@ -313,11 +318,10 @@ var Jungle;
     var BaseCell = (function () {
         function BaseCell(components, form) {
             if (form === void 0) { form = {}; }
-            this.async = false;
             this.depth = 0;
             this.isRoot = true;
             this.prepared = false;
-            this.engaged = false;
+            this.junction = new Jungle.Util.Junction();
             this.form = this.constructForm();
             var _a = this.form.parse(form), iospec = _a.iospec, contextspec = _a.contextspec;
             this.ctx = this.constructContext(contextspec);
@@ -355,10 +359,8 @@ var Jungle;
             return c;
         };
         BaseCell.prototype.prepare = function (prepargs) {
+            var _this = this;
             if (prepargs === void 0) { prepargs = null; }
-            this.deplexer = new Jungle.IO.GatedPort('prepare', this, this.complete);
-            this.ctx.exposed.gate = this.deplexer.gate;
-            this.engaged = true;
             if (this.isAncestor) {
                 throw Error("Ancestors cannot be prepared for resolution");
             }
@@ -366,54 +368,42 @@ var Jungle;
             this.ancestor.isAncestor = true;
             if (!this.prepared) {
                 this.ctx.prepare();
-                this.form.preparator.call(this.ctx.exposed, prepargs);
-                this.io.prepare(prepargs);
-                this.crown = Jungle.Util.typeCaseSplitF(this.prepareChild.bind(this, prepargs))(this.crown);
-                if (this.async) {
-                    if (this.deplexer.allHome()) {
-                        this.complete();
-                    }
-                    return this.deplexer;
-                }
-                else {
-                    if (!this.deplexer.allHome()) {
-                        return this.deplexer;
-                    }
-                    return this.complete();
-                }
+                this.junction
+                    .then(function (results, handle) {
+                    _this.ctx.exposed.handle = handle;
+                    _this.form.preparator.call(_this.ctx.exposed, prepargs);
+                }).then(function (results, handle) {
+                    Jungle.Util.typeCaseSplitF(function (child, k) { return _this.prepareChild(prepargs, handle, child, k); })(_this.crown);
+                }, false).then(function (results, handle) {
+                    console.log("recovered result from handle:", results);
+                    _this.crown = results;
+                    _this.completePrepare();
+                    return _this;
+                }, false);
+                return this.junction.realize();
             }
             else {
                 this.ancestor = this.replicate();
                 this.ancestor.isAncestor = true;
+                return this;
             }
         };
-        BaseCell.prototype.complete = function () {
-            this.deplexer.deposit = this;
-            this.deplexer.returned = true;
-            this.engaged = false;
+        BaseCell.prototype.completePrepare = function () {
             this.prepared = true;
             if (this.isRoot) {
                 this.enshell();
             }
-            return this;
         };
-        BaseCell.prototype.prepareChild = function (prepargs, child, k) {
+        BaseCell.prototype.prepareChild = function (prepargs, handle, child, k) {
+            var mergekey = k === undefined ? false : k;
             if (child instanceof BaseCell) {
                 var replica = child.replicate();
                 replica.setParent(this, k);
-                replica = replica.prepare(prepargs);
-                if (replica instanceof Jungle.IO.GatedPort) {
-                    if (!replica.returned) {
-                        this.deplexer.addTributary(replica);
-                    }
-                    return replica.host;
-                }
-                else {
-                    return replica;
-                }
+                var prepared = replica.prepare(prepargs);
+                handle.merge(prepared, mergekey);
             }
             else {
-                return child;
+                handle.merge(child, mergekey);
             }
         };
         BaseCell.prototype.setParent = function (parentCell, dereferent) {
@@ -428,7 +418,6 @@ var Jungle;
             }
             else {
                 var repl = this.constructCore(this.crown, this.form.consolidate(this.io, this.ctx));
-                repl.async = this.async;
                 if (this.isAncestor) {
                     repl.ancestor = this;
                 }
@@ -514,13 +503,7 @@ var Jungle;
             return this;
         };
         BaseCell.prototype.resolve = function (arg) {
-            if (!this.prepared) {
-                if (this.engaged) {
-                }
-                this.prepare();
-            }
-            var resolveOutCache;
-            return resolveOutCache;
+            return null;
         };
         return BaseCell;
     }());
@@ -591,20 +574,20 @@ var Jungle;
             return this.host;
         }
         IO.host = host;
+        var Orientation;
         (function (Orientation) {
             Orientation[Orientation["INPUT"] = 0] = "INPUT";
             Orientation[Orientation["OUTPUT"] = 1] = "OUTPUT";
             Orientation[Orientation["NEUTRAL"] = 2] = "NEUTRAL";
             Orientation[Orientation["MIXED"] = 3] = "MIXED";
-        })(IO.Orientation || (IO.Orientation = {}));
-        var Orientation = IO.Orientation;
+        })(Orientation = IO.Orientation || (IO.Orientation = {}));
+        var DesignationTypes;
         (function (DesignationTypes) {
             DesignationTypes[DesignationTypes["ALL"] = 0] = "ALL";
             DesignationTypes[DesignationTypes["MATCH"] = 1] = "MATCH";
             DesignationTypes[DesignationTypes["REGEX"] = 2] = "REGEX";
             DesignationTypes[DesignationTypes["FUNC"] = 3] = "FUNC";
-        })(IO.DesignationTypes || (IO.DesignationTypes = {}));
-        var DesignationTypes = IO.DesignationTypes;
+        })(DesignationTypes = IO.DesignationTypes || (IO.DesignationTypes = {}));
         var BaseIO = (function () {
             function BaseIO(host, iospec) {
                 this.host = host;
@@ -719,39 +702,6 @@ var Jungle;
             return Port;
         }());
         IO.Port = Port;
-        var GatedPort = (function (_super) {
-            __extends(GatedPort, _super);
-            function GatedPort(label, host, complete) {
-                _super.call(this, label);
-                this.host = host;
-                this.complete = complete;
-                this.gate = new Jungle.Util.Gate(this.handle, this);
-                this.returned = false;
-            }
-            GatedPort.prototype.addTributary = function (tributary) {
-                var unlock = this.gate.lock();
-                tributary.callback = unlock;
-            };
-            GatedPort.prototype.handle = function (input) {
-                this.complete.call(this.host, input);
-                this.returned = true;
-                _super.prototype.handle.call(this, this.deposit);
-            };
-            GatedPort.prototype.allHome = function () {
-                return this.gate.allUnlocked();
-            };
-            GatedPort.prototype.reset = function (label, completer) {
-                this.label = label;
-                this.complete = completer;
-                this.callbackContext = undefined;
-                this.callback = undefined;
-                this.returned = false;
-                this.deposit = undefined;
-                this.gate.reset();
-            };
-            return GatedPort;
-        }(Port));
-        IO.GatedPort = GatedPort;
     })(IO = Jungle.IO || (Jungle.IO = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
@@ -861,7 +811,7 @@ var Jungle;
     var LinkCell = (function (_super) {
         __extends(LinkCell, _super);
         function LinkCell(crown, formspec) {
-            _super.call(this, crown, formspec);
+            return _super.call(this, crown, formspec) || this;
         }
         LinkCell.prototype.constructIO = function (iospec) {
             return new Jungle.IO.LinkIO(this, iospec);
@@ -869,10 +819,20 @@ var Jungle;
         LinkCell.prototype.constructForm = function () {
             return new Jungle.LinkForm(this);
         };
-        LinkCell.prototype.prepareChild = function (prepargs, child, k) {
-            var pchild = _super.prototype.prepareChild.call(this, prepargs, child, k);
-            pchild.enshell();
-            return pchild;
+        LinkCell.prototype.prepareChild = function (prepargs, handle, child, k) {
+            if (child instanceof Jungle.BaseCell) {
+                var replica = child.replicate();
+                replica.setParent(this, k);
+                replica.prepare(prepargs);
+                var aftershell = new Jungle.Util.Junction().merge(replica, false).then(function (replica) {
+                    replica.enshell();
+                    return replica;
+                });
+                handle.merge(aftershell, k);
+            }
+            else {
+                handle.merge(child, k);
+            }
         };
         LinkCell.prototype.resolve = function (resarg) {
             _super.prototype.resolve.call(this, resarg);
@@ -886,7 +846,7 @@ var Jungle;
     var LinkForm = (function (_super) {
         __extends(LinkForm, _super);
         function LinkForm() {
-            _super.apply(this, arguments);
+            return _super !== null && _super.apply(this, arguments) || this;
         }
         LinkForm.prototype.parse = function (formObj) {
             var ctxdeclare = formObj.x || "";
@@ -944,10 +904,11 @@ var Jungle;
         var LinkIO = (function (_super) {
             __extends(LinkIO, _super);
             function LinkIO(host, spec) {
-                _super.call(this, host, spec);
-                this.spec = spec;
-                this.linkmap = {};
-                this.linker = spec.linkFunciton;
+                var _this = _super.call(this, host, spec) || this;
+                _this.spec = spec;
+                _this.linkmap = {};
+                _this.linker = spec.linkFunciton;
+                return _this;
             }
             LinkIO.prototype.enshell = function () {
                 this.shell = new IO.BaseShell(this.spec.ports);
@@ -1136,6 +1097,7 @@ var Jungle;
     var Reconstruction = (function (_super) {
         __extends(Reconstruction, _super);
         function Reconstruction(bundle) {
+            var _this = this;
             function debundle(bundle) {
                 if (isBundle(bundle)) {
                     return new Reconstruction(bundle);
@@ -1147,7 +1109,8 @@ var Jungle;
             var node = Jungle.Util.typeCaseSplitF(debundle)(bundle.node);
             var form = Jungle.reformulate(bundle.form);
             var state = bundle.state;
-            _super.call(this, node, Jungle.Util.melder(form, state));
+            _this = _super.call(this, node, Jungle.Util.melder(form, state)) || this;
+            return _this;
         }
         return Reconstruction;
     }(Jungle.BaseCell));
@@ -1155,24 +1118,10 @@ var Jungle;
 })(Jungle || (Jungle = {}));
 var Jungle;
 (function (Jungle) {
-    function cleanCrown(crown) {
-        function clean(gem) {
-            if (gem instanceof Jungle.IO.GatedPort) {
-                if (!gem.allHome()) {
-                    throw Error("Crown still contains unreturned ");
-                }
-                return gem.deposit;
-            }
-            else {
-                return gem;
-            }
-        }
-        return Jungle.Util.typeCaseSplitF(clean)(crown);
-    }
     var ResolutionCell = (function (_super) {
         __extends(ResolutionCell, _super);
         function ResolutionCell() {
-            _super.apply(this, arguments);
+            return _super !== null && _super.apply(this, arguments) || this;
         }
         ResolutionCell.prototype.constructForm = function () {
             return new Jungle.GForm(this);
@@ -1183,33 +1132,19 @@ var Jungle;
         ResolutionCell.prototype.constructCore = function (crown, form) {
             return new ResolutionCell(crown, form);
         };
-        ResolutionCell.prototype.resolveArray = function (array, resolveArgs, selection) {
-            if (selection instanceof Array) {
-                var resolution = [];
-                for (var i = 0; i < selection.length; i++) {
-                    resolution[i] = this.resolveCell(array[selection[i]], resolveArgs, true);
-                }
-                return resolution;
+        ResolutionCell.prototype.resolveDenizen = function (handle, args, denizen, reference) {
+            var mergekey = reference === undefined ? false : reference;
+            if (denizen instanceof Jungle.BaseCell && denizen !== undefined) {
+                var denizenArg = args === undefined ? undefined : args[reference];
+                var resolved = denizen.resolve(denizenArg);
+                handle.merge(resolved, mergekey);
             }
             else {
-                return this.resolveCell(array[selection], resolveArgs, true);
+                console.log("merging denizen", denizen);
+                handle.merge(denizen, mergekey);
             }
         };
-        ResolutionCell.prototype.resolveObject = function (node, resolveArgs, selection) {
-            var resolution;
-            if (selection instanceof Array) {
-                resolution = {};
-                for (var i = 0; i < selection.length; i++) {
-                    var k = selection[i];
-                    resolution[k] = this.resolveCell(node[k], resolveArgs, true);
-                }
-            }
-            else {
-                resolution = this.resolveCell(node[selection], resolveArgs, true);
-            }
-            return resolution;
-        };
-        ResolutionCell.prototype.resolveCell = function (node, resolveArgs, selection) {
+        ResolutionCell.prototype.resolveCell = function (handle, node, carriedArgs, selection) {
             var cut = false;
             if (!selection) {
                 cut = true;
@@ -1217,61 +1152,15 @@ var Jungle;
             else if (selection === true && node instanceof Object) {
                 selection = Object.keys(node);
             }
-            if (node instanceof Array) {
-                return cut ? [] : this.resolveArray(node, resolveArgs, selection);
-            }
-            else if (typeof (node) === "object") {
-                if (node instanceof Jungle.BaseCell) {
-                    if (!cut) {
-                        var resolved = node.resolve(resolveArgs);
-                        if (resolved instanceof Jungle.IO.GatedPort) {
-                            if (!resolved.returned) {
-                                this.deplexer.addTributary(resolved);
-                            }
-                            return this.deplexer;
-                        }
-                        return resolved;
-                    }
-                }
-                else {
-                    return cut ? {} : this.resolveObject(node, resolveArgs, selection);
-                }
-            }
-            else {
-                return cut ? null : node;
-            }
-        };
-        ResolutionCell.prototype.proceed = function (received) {
-            switch (this.resolveCache.stage) {
-                case 'resolve-carry': {
-                    this.resolveCache.carried = received;
-                    this.resolveSelect();
-                    break;
-                }
-                case 'resolve-select': {
-                    this.resolveCache.selection = received;
-                    this.resolveCrown();
-                    break;
-                }
-                case 'resolve-crown': {
-                    this.resolveCache.resolvedCrown = cleanCrown(this.resolveCache.resolvedCrown);
-                    this.resolveReturn();
-                    break;
-                }
-                case 'resolve-return': {
-                    this.resolveCache.resolvedValue = received;
-                    this.resolveComplete();
-                    break;
-                }
-            }
+            var projectedCrown = this.crown;
+            var core = this;
+            var splitf = core.resolveDenizen.bind(core, handle, carriedArgs);
+            Jungle.Util.typeCaseSplitF(splitf)(projectedCrown);
         };
         ResolutionCell.prototype.resolve = function (resolveArgs) {
             Object.freeze(resolveArgs);
             if (!this.prepared) {
                 var pr = this.prepare();
-                if (pr instanceof Jungle.IO.GatedPort) {
-                    return pr;
-                }
             }
             if (this.io.isShellBase && !this.io.specialGate) {
                 var sInpHook = this.io.specialInput;
@@ -1289,69 +1178,39 @@ var Jungle;
             }
             else {
                 this.resolveCache = {
-                    stage: 'resolve-carry',
-                    resolveArgs: resolveArgs,
-                    carried: undefined,
-                    selection: undefined,
-                    resolvedCrown: undefined,
-                    resolvedValue: undefined
+                    args: resolveArgs,
+                    carried: null,
+                    crowned: null,
+                    selection: null,
+                    reduced: null
                 };
-                this.deplexer.reset("resolve", this.proceed);
-                this.engaged = true;
-                var carried = this.form.carrier.call(this.ctx.exposed, resolveArgs);
-                if (this.deplexer.allHome()) {
-                    this.resolveCache.carried = carried;
-                    return this.resolveSelect();
-                }
-                else {
-                    return this.deplexer;
-                }
+                this.junction
+                    .then(this.resolveCarryThen.bind(this), false)
+                    .then(this.resolveCrownThen.bind(this), false)
+                    .then(this.resolveReduceThen.bind(this), false)
+                    .then(this.resolveCompleteThen.bind(this), false);
+                return this.junction.realize();
             }
         };
-        ResolutionCell.prototype.resolveSelect = function () {
-            this.resolveCache.stage = 'resolve-select';
-            var resolvedCell;
-            if (this.crown != undefined) {
-                var selection = this.form.selector.call(this.ctx.exposed, Object.keys(this.crown), this.resolveCache.resolveArgs);
-                if (this.deplexer.allHome()) {
-                    this.resolveCache.selection = selection;
-                    return this.resolveCrown();
-                }
-                else {
-                    return this.deplexer;
-                }
-            }
-            else {
-                return this.resolveReturn();
-            }
+        ResolutionCell.prototype.resolveCarryThen = function (results, handle) {
+            this.ctx.exposed.handle = handle;
+            return this.form.carrier.call(this.ctx.exposed, this.resolveCache.args);
         };
-        ResolutionCell.prototype.resolveCrown = function () {
-            this.resolveCache.stage = 'resolve-crown';
-            var resolvedCrown = this.resolveCell(this.crown, this.resolveCache.carried, this.resolveCache.selection);
-            this.resolveCache.resolvedCrown = resolvedCrown;
-            if (this.deplexer.allHome()) {
-                this.resolveCache.resolvedCrown = cleanCrown(resolvedCrown);
-                return this.resolveReturn();
-            }
-            else {
-                return this.deplexer;
-            }
+        ResolutionCell.prototype.resolveCrownThen = function (results, handle) {
+            console.log("crown results:", results);
+            this.resolveCache.carried = results;
+            return this.resolveCell(handle, this.crown, this.resolveCache.carried, true);
         };
-        ResolutionCell.prototype.resolveReturn = function () {
-            this.resolveCache.stage = 'resolve-return';
-            var result = this.form.resolver.call(this.ctx.exposed, this.resolveCache.resolvedCrown, this.resolveCache.resolveArgs, this.resolveCache.carried);
-            if (this.deplexer.allHome()) {
-                this.resolveCache.resolvedValue = result;
-                return this.resolveComplete();
-            }
-            else {
-                return this.deplexer;
-            }
+        ResolutionCell.prototype.resolveReduceThen = function (results, handle) {
+            console.log("reduce results:", results);
+            this.resolveCache.crowned = results;
+            this.ctx.exposed.handle = handle;
+            return this.form.resolver.call(this.ctx.exposed, this.resolveCache.crowned, this.resolveCache.args, this.resolveCache.carried);
         };
-        ResolutionCell.prototype.resolveComplete = function () {
-            this.engaged = false;
-            var dispached = this.io.dispatchResult(this.resolveCache.resolvedValue);
-            this.deplexer.deposit = dispached;
+        ResolutionCell.prototype.resolveCompleteThen = function (results, handle) {
+            console.log("final results:", results);
+            this.resolveCache.reduced = results;
+            var dispached = this.io.dispatchResult(this.resolveCache.reduced);
             return dispached;
         };
         return ResolutionCell;
@@ -1360,6 +1219,7 @@ var Jungle;
 })(Jungle || (Jungle = {}));
 var Jungle;
 (function (Jungle) {
+    var LabelTypes;
     (function (LabelTypes) {
         LabelTypes[LabelTypes["PASSIVE"] = 0] = "PASSIVE";
         LabelTypes[LabelTypes["TRIG"] = 1] = "TRIG";
@@ -1370,8 +1230,7 @@ var Jungle;
         LabelTypes[LabelTypes["TRIGATER"] = 6] = "TRIGATER";
         LabelTypes[LabelTypes["ENTRIGATE"] = 7] = "ENTRIGATE";
         LabelTypes[LabelTypes["ENTRIGATER"] = 8] = "ENTRIGATER";
-    })(Jungle.LabelTypes || (Jungle.LabelTypes = {}));
-    var LabelTypes = Jungle.LabelTypes;
+    })(LabelTypes = Jungle.LabelTypes || (Jungle.LabelTypes = {}));
     var TrigateLabelTypesMap = {
         '': { '': LabelTypes.PASSIVE, '_': LabelTypes.GATE, '__': LabelTypes.GATER },
         '_': { '': LabelTypes.TRIG, '_': LabelTypes.TRIGATE, '__': LabelTypes.TRIGATER },
@@ -1392,7 +1251,7 @@ var Jungle;
     var GForm = (function (_super) {
         __extends(GForm, _super);
         function GForm(host) {
-            _super.call(this, host);
+            return _super.call(this, host) || this;
         }
         GForm.prototype.parse = function (formObj) {
             var ctxdeclare = formObj.x || "";
@@ -1576,9 +1435,9 @@ var Jungle;
             }, Jungle.Util.melder(io.extract(), ctx.extract(), void 0, void 0, false));
             return consolidated;
         };
-        GForm.RFormProps = ["x", "p", "d", "c", "r", "s", "prepare", "destroy", "carry", "resolve", "select"];
         return GForm;
     }(Jungle.BaseForm));
+    GForm.RFormProps = ["x", "p", "d", "c", "r", "s", "prepare", "destroy", "carry", "resolve", "select"];
     Jungle.GForm = GForm;
 })(Jungle || (Jungle = {}));
 var Jungle;
@@ -1601,14 +1460,15 @@ var Jungle;
         var ResolveIO = (function (_super) {
             __extends(ResolveIO, _super);
             function ResolveIO(host, iospec) {
-                _super.call(this, host, iospec);
+                var _this = _super.call(this, host, iospec) || this;
                 var hooks = iospec.hooks, specialIn = iospec.specialIn, specialOut = iospec.specialOut;
-                this.isShellBase = false;
-                this.specialGate = false;
-                this.orientation = IO.Orientation.NEUTRAL;
-                this.inputs = {};
-                this.outputs = {};
-                this.initialiseHooks(hooks, specialIn, specialOut);
+                _this.isShellBase = false;
+                _this.specialGate = false;
+                _this.orientation = IO.Orientation.NEUTRAL;
+                _this.inputs = {};
+                _this.outputs = {};
+                _this.initialiseHooks(hooks, specialIn, specialOut);
+                return _this;
             }
             ResolveIO.prototype.prepare = function () {
             };
@@ -1734,7 +1594,7 @@ var Jungle;
                     this.specialInput = this.specialInput || { tractor: IO.passing, label: '$', host: this.host, orientation: IO.Orientation.INPUT, eager: true };
                     this.specialOutput = this.specialOutput || { tractor: IO.passing, label: '$', host: this.host, orientation: IO.Orientation.OUTPUT, eager: true };
                     this.shell = new IO.HookShell(this, accumulated.hooks, accumulated.shells);
-                    var _loop_1 = function(k_1) {
+                    var _loop_1 = function (k_1) {
                         this_1.inputs[k_1] = (function (input) {
                             this.shell.sinks[k_1].handle(input);
                         }).bind(this_1);
@@ -1790,13 +1650,14 @@ var Jungle;
                 for (var _i = 1; _i < arguments.length; _i++) {
                     shells[_i - 1] = arguments[_i];
                 }
-                _super.call(this, label);
-                this.callback = this.handleInput;
-                this.callbackContext = this;
+                var _this = _super.call(this, label) || this;
+                _this.callback = _this.handleInput;
+                _this.callbackContext = _this;
                 for (var _a = 0, shells_1 = shells; _a < shells_1.length; _a++) {
                     var shell = shells_1[_a];
-                    this.addShell(shell);
+                    _this.addShell(shell);
                 }
+                return _this;
             }
             ResolveInputPort.prototype.handleInput = function (input) {
                 for (var _i = 0, _a = this.shells; _i < _a.length; _i++) {
@@ -1824,8 +1685,9 @@ var Jungle;
         var SpecialInputPort = (function (_super) {
             __extends(SpecialInputPort, _super);
             function SpecialInputPort(base) {
-                _super.call(this, '$');
-                this.base = base;
+                var _this = _super.call(this, '$') || this;
+                _this.base = base;
+                return _this;
             }
             SpecialInputPort.prototype.handleInput = function (input) {
                 var hook = this.base.specialInput;
@@ -1843,7 +1705,7 @@ var Jungle;
         var ResolveOutputPort = (function (_super) {
             __extends(ResolveOutputPort, _super);
             function ResolveOutputPort(label) {
-                _super.call(this, label);
+                return _super.call(this, label) || this;
             }
             ResolveOutputPort.prototype.handle = function (input) {
                 _super.prototype.handle.call(this, input);
@@ -1860,28 +1722,29 @@ var Jungle;
         var HookShell = (function (_super) {
             __extends(HookShell, _super);
             function HookShell(base, midrantHooks, subshells) {
-                _super.call(this, []);
-                this.base = base;
-                this.sources = {};
-                this.sinks = {};
-                this.inputHooks = {};
-                this.outputHooks = {};
+                var _this = _super.call(this, []) || this;
+                _this.base = base;
+                _this.sources = {};
+                _this.sinks = {};
+                _this.inputHooks = {};
+                _this.outputHooks = {};
                 for (var _i = 0, midrantHooks_1 = midrantHooks; _i < midrantHooks_1.length; _i++) {
                     var hook = midrantHooks_1[_i];
-                    this.addMidrantHook(hook);
+                    _this.addMidrantHook(hook);
                 }
-                for (var label in this.inputHooks) {
-                    this.sinks[label] = new IO.ResolveInputPort(label, this);
+                for (var label in _this.inputHooks) {
+                    _this.sinks[label] = new IO.ResolveInputPort(label, _this);
                 }
-                for (var label in this.outputHooks) {
-                    this.sources[label] = new IO.ResolveOutputPort(label);
+                for (var label in _this.outputHooks) {
+                    _this.sources[label] = new IO.ResolveOutputPort(label);
                 }
                 for (var _a = 0, subshells_1 = subshells; _a < subshells_1.length; _a++) {
                     var shell = subshells_1[_a];
-                    this.addShell(shell);
+                    _this.addShell(shell);
                 }
-                this.sinks['$'] = new IO.SpecialInputPort(this.base);
-                this.sources['$'] = new IO.ResolveOutputPort('$');
+                _this.sinks['$'] = new IO.SpecialInputPort(_this.base);
+                _this.sources['$'] = new IO.ResolveOutputPort('$');
+                return _this;
             }
             HookShell.prototype.addMidrantHook = function (hook) {
                 hook.host.io.base = this.base;
@@ -1932,7 +1795,7 @@ var Jungle;
     var ResourceCell = (function (_super) {
         __extends(ResourceCell, _super);
         function ResourceCell(formspec) {
-            _super.call(this, null, formspec);
+            return _super.call(this, null, formspec) || this;
         }
         ResourceCell.prototype.constructForm = function () {
             return new Jungle.BaseForm(this);
@@ -2009,7 +1872,7 @@ var Jungle;
         function range() {
             var args = [];
             for (var _i = 0; _i < arguments.length; _i++) {
-                args[_i - 0] = arguments[_i];
+                args[_i] = arguments[_i];
             }
             var beg, end, step;
             switch (args.length) {
@@ -2439,6 +2302,265 @@ var Jungle;
             return valArr;
         }
         Util.collapseValues = collapseValues;
+    })(Util = Jungle.Util || (Jungle.Util = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var Util;
+    (function (Util) {
+        var JResultNatures;
+        (function (JResultNatures) {
+            JResultNatures[JResultNatures["Single"] = 0] = "Single";
+            JResultNatures[JResultNatures["Keyed"] = 1] = "Keyed";
+            JResultNatures[JResultNatures["Indexed"] = 2] = "Indexed";
+            JResultNatures[JResultNatures["Appended"] = 3] = "Appended";
+            JResultNatures[JResultNatures["Uninferred"] = 4] = "Uninferred";
+        })(JResultNatures || (JResultNatures = {}));
+        var WAITING = "WAIT";
+        var Junction = (function () {
+            function Junction() {
+                this.leashed = [];
+                this.silentIndex = 0;
+                this.silentAwaits = [];
+                this.resultNature = JResultNatures.Uninferred;
+                this.blocked = false;
+                this.cleared = false;
+                this.fried = false;
+            }
+            Junction.prototype.proceedThen = function () {
+                this.cleared = true;
+                if (this.thenCallback !== undefined) {
+                    var propagate = void 0, handle = void 0;
+                    handle = new Junction();
+                    var future_1 = this.future;
+                    propagate = this.thenCallback(this.awaits, handle);
+                    if (handle.isClean()) {
+                        future_1.unleash(propagate);
+                    }
+                    else {
+                        handle.then(function (result, handle) {
+                            future_1.unleash(result);
+                        });
+                    }
+                }
+                else {
+                    this.future.unleash(this.awaits);
+                }
+            };
+            Junction.prototype.unleash = function (propagated) {
+                var _a = this._hold(this.thenkey), release = _a[0], raise = _a[1];
+                this.blocked = false;
+                for (var i = 0; i < this.leashed.length; i++) {
+                    this.leashed[i]();
+                }
+                delete this.leashed;
+                release(propagated);
+            };
+            Junction.prototype.proceedCatch = function (error) {
+                if (this.catchCallback !== undefined) {
+                    this.catchCallback(error);
+                }
+                else if (this.future !== undefined) {
+                    this.future.proceedCatch(error);
+                }
+                else {
+                    throw new Error("Error raised from hold, arriving from " + error.key + " with message " + error.message);
+                }
+            };
+            Junction.prototype.successor = function () {
+                if (this.cleared || !this.hasFuture()) {
+                    return this;
+                }
+                else {
+                    return this.future.successor();
+                }
+            };
+            Junction.prototype.frontier = function () {
+                if (this.future) {
+                    return this.future.frontier();
+                }
+                else {
+                    return this;
+                }
+            };
+            Junction.prototype.realize = function () {
+                if (this.isIdle()) {
+                    return this.awaits;
+                }
+                else {
+                    if (this.hasFuture()) {
+                        return this.future.realize();
+                    }
+                    else {
+                        return this;
+                    }
+                }
+            };
+            Junction.prototype.isClean = function () {
+                return !this.hasFuture() && !this.isTampered() && this.isPresent();
+            };
+            Junction.prototype.isIdle = function () {
+                return this.allDone() && this.isPresent();
+            };
+            Junction.prototype.isReady = function () {
+                return this.allDone() && this.isPresent() && this.hasFuture() && !this.fried;
+            };
+            Junction.prototype.isTampered = function () {
+                return !(this.silentAwaits.length <= 1 && this.resultNature === JResultNatures.Uninferred);
+            };
+            Junction.prototype.isPresent = function () {
+                return !(this.blocked || this.cleared);
+            };
+            Junction.prototype.hasFuture = function () {
+                return this.future != undefined;
+            };
+            Junction.prototype.allDone = function () {
+                var awaitingAnySilent = false;
+                this.silentAwaits.forEach(function (swaiting) { awaitingAnySilent = swaiting || awaitingAnySilent; });
+                var awaitingAny;
+                if (this.resultNature === JResultNatures.Single) {
+                    awaitingAny = this.awaits === WAITING;
+                }
+                else {
+                    awaitingAny = Util.typeCaseSplitR(function (thing, key) {
+                        return thing === WAITING;
+                    })(this.awaits, false, function (a, b, k) { return a || b; });
+                }
+                return this.cleared || (!awaitingAny && !awaitingAnySilent);
+            };
+            Junction.prototype.hold = function (returnkey) {
+                return this.frontier()._hold(returnkey);
+            };
+            Junction.prototype._hold = function (returnkey) {
+                var _this = this;
+                var accessor, silent = false;
+                if (returnkey === true) {
+                    if (this.resultNature === JResultNatures.Uninferred) {
+                        this.resultNature = JResultNatures.Appended;
+                        this.awaits = [];
+                        this.index = 0;
+                    }
+                    if (this.resultNature !== JResultNatures.Appended) {
+                        throw new Error("Cannot combine appended result with other");
+                    }
+                    ;
+                    accessor = this.index;
+                    this.awaits[accessor] = WAITING;
+                    this.index++;
+                }
+                else if (returnkey === false) {
+                    if (this.resultNature === JResultNatures.Uninferred) {
+                        this.resultNature = JResultNatures.Single;
+                    }
+                    if (this.awaits !== undefined) {
+                        throw new Error("Single result feed from : hold(false) is unable to recieve any more results");
+                    }
+                    this.awaits = WAITING;
+                }
+                else if (typeof (returnkey) === 'string') {
+                    if (this.resultNature === JResultNatures.Uninferred) {
+                        this.resultNature = JResultNatures.Keyed;
+                        this.awaits = {};
+                    }
+                    if (this.resultNature !== JResultNatures.Keyed) {
+                        throw new Error("cannot use hold(string) when it is used for something else");
+                    }
+                    accessor = returnkey;
+                    this.awaits[accessor] = WAITING;
+                }
+                else if (typeof (returnkey) === 'number') {
+                    if (this.resultNature === JResultNatures.Uninferred) {
+                        this.resultNature = JResultNatures.Indexed;
+                        this.awaits = [];
+                    }
+                    if (this.resultNature !== JResultNatures.Indexed) {
+                        throw new Error("cannot use hold(number) when it is used for something else");
+                    }
+                    accessor = returnkey;
+                    this.awaits[accessor] = WAITING;
+                }
+                else if (returnkey === undefined) {
+                    accessor = this.silentIndex;
+                    this.silentAwaits[this.silentIndex++] = true;
+                    silent = true;
+                }
+                else {
+                    throw new Error("Invalid hold argument, must be string, number, boolean or undefined");
+                }
+                return [
+                    (function (res) {
+                        if ((accessor !== undefined) && !silent) {
+                            _this.awaits[accessor] = res;
+                        }
+                        else if ((accessor !== undefined) && silent) {
+                            _this.silentAwaits[accessor] = false;
+                        }
+                        else if (accessor === undefined) {
+                            _this.awaits = res;
+                        }
+                        if (_this.isReady()) {
+                            _this.proceedThen();
+                        }
+                    }),
+                    (function (err) {
+                        _this.fried = true;
+                        _this.error = {
+                            message: err, key: accessor
+                        };
+                        if (_this.fried && _this.hasFuture()) {
+                            _this.proceedCatch(_this.error);
+                        }
+                    })
+                ];
+            };
+            Junction.prototype.await = function (act, label) {
+                var frontier = this.frontier();
+                var _a = frontier.hold(label), done = _a[0], raise = _a[1];
+                if (frontier.blocked) {
+                    frontier.leashed.push(act.bind(null, done, raise));
+                }
+                else {
+                    act(done, raise);
+                }
+                return frontier;
+            };
+            Junction.prototype.merge = function (upstream, label) {
+                var frontier = this.frontier();
+                if (upstream instanceof Junction) {
+                    return frontier.await(function (done, raise) {
+                        upstream.then(done);
+                        upstream.catch(raise);
+                    }, label);
+                }
+                else {
+                    frontier.hold(label)[0](upstream);
+                    return frontier;
+                }
+            };
+            Junction.prototype.then = function (callback, thenkey) {
+                var frontier = this.frontier();
+                frontier.future = new Junction();
+                frontier.future.thenkey = thenkey;
+                frontier.future.blocked = true;
+                frontier.thenCallback = callback;
+                if (frontier.isReady()) {
+                    frontier.proceedThen();
+                }
+                return frontier.future;
+            };
+            Junction.prototype.catch = function (callback) {
+                var frontier = this.frontier();
+                frontier.future = new Junction();
+                frontier.future.blocked = true;
+                frontier.catchCallback = callback;
+                if (frontier.fried && frontier.hasFuture()) {
+                    frontier.proceedCatch(frontier.error);
+                }
+                return frontier.future;
+            };
+            return Junction;
+        }());
+        Util.Junction = Junction;
         var Gate = (function () {
             function Gate(callback, context) {
                 this.callback = callback;
@@ -2462,6 +2584,9 @@ var Jungle;
             Gate.prototype.reset = function () {
                 this.locks = [];
                 this.locki = 0;
+            };
+            Gate.prototype.isClean = function () {
+                return this.locki === 0;
             };
             Gate.prototype.allUnlocked = function () {
                 return this.locks.filter(function (x) { return x; }).length === 0;

@@ -1,34 +1,17 @@
 namespace Jungle {
 
-    function cleanCrown(crown){
-        function clean(gem){
-            if(gem instanceof IO.GatedPort){
-                if(!gem.allHome()){
-                    throw Error("Crown still contains unreturned ")
-                }
-                return gem.deposit;
-            }else{
-                return gem;
-            }
-        }
-
-        return Util.typeCaseSplitF(clean)(crown)
-
-    }
 
     export class ResolutionCell extends BaseCell {
 
-        resolveCache:{
-            stage:string,
-            resolveArgs:any,
-            carried:any,
-            selection:any,
-            resolvedCrown:any,
-            resolvedValue:any
-        };
-
         io:IO.ResolveIO;
         form:GForm;
+        resolveCache:{
+            args:any,
+            carried:any,
+            selection:any,
+            crowned:any,
+            reduced:any
+        }
 
         protected constructForm(){
             return new GForm(this)
@@ -42,40 +25,22 @@ namespace Jungle {
             return new ResolutionCell(crown, form)
         }
 
-        private  resolveArray(array:any[],resolveArgs, selection):any[]{
-            //TODO:selector must produce index or array thereof
+        private resolveDenizen(handle, args, denizen, reference){
+            let mergekey = reference === undefined ? false : reference;
 
-            if(selection instanceof Array){
-                var resolution = []
-                for (var i = 0; i < selection.length; i++){
-                    resolution[i] = this.resolveCell(array[selection[i]], resolveArgs, true)
-                }
-                return resolution
-            }else {
-                return this.resolveCell(array[selection], resolveArgs, true)
-            }
-        }
 
-        private resolveObject(node, resolveArgs, selection):any{
-            let resolution
-            if(selection instanceof Array){
-                resolution  = {}
-
-                for (var i = 0; i < selection.length; i++){
-                    var k = selection[i];
-                    resolution[k] = this.resolveCell(node[k], resolveArgs, true);
-                }
+            if(denizen instanceof BaseCell && denizen !== undefined){
+                let denizenArg = args === undefined ? undefined : args[reference];
+                let resolved = denizen.resolve(denizenArg);
+                handle.merge(resolved, mergekey);
             }else{
-                resolution = this.resolveCell(node[selection], resolveArgs, true);
+                console.log("merging denizen", denizen)
+                handle.merge(denizen, mergekey);
             }
-
-
-
-            return resolution;
         }
 
         //main recursion
-        private  resolveCell(node, resolveArgs, selection):any{
+        private  resolveCell(handle:Util.Junction, node, carriedArgs, selection):any{
             //log("node to resolve: ", node)
 
             //cutting dictates that we select nothing and therefore will
@@ -87,63 +52,14 @@ namespace Jungle {
                 //select all
                 selection = Object.keys(node);
             }
-
             //at this stage cut determines primitives are nullified and objects empty
+            const projectedCrown = this.crown; //TODO: projection onto selected keys;
+            const core = this;
 
-            if (node instanceof Array){
-                return cut ? [] : this.resolveArray(node, resolveArgs, selection)
-            }
-            else if (typeof(node) === "object"){
-                if(node instanceof BaseCell){
-                    if(!cut){
-                        let resolved = node.resolve(resolveArgs);
+            //in here we have time to scan all Denizens and they will merge into the handle.
+            let splitf = core.resolveDenizen.bind(core, handle, carriedArgs)
 
-                        if(resolved instanceof IO.GatedPort){
-                            if(!resolved.returned){
-                                this.deplexer.addTributary(resolved);
-                            }
-                            return this.deplexer;
-                        }
-
-                        return resolved
-                    }
-
-                }else{
-                    return cut ? {} : this.resolveObject(node, resolveArgs, selection)
-                }
-            }
-            else{
-                //we have a primative
-                return cut ? null : node;
-            }
-        }
-
-        /*
-            the resolve compete callback, controls passing between stages;
-            must deposit the information passed to the next stage;
-        */
-        proceed(received){
-
-            //console.log('proceed reached stage '+ this.resolveCache.stage +' with: ', received)
-
-            switch(this.resolveCache.stage){
-                case 'resolve-carry': {
-                    this.resolveCache.carried = received;
-                    this.resolveSelect(); break
-
-                }case 'resolve-select':{
-                    this.resolveCache.selection = received;
-                    this.resolveCrown(); break
-
-                }case 'resolve-crown':{
-                    this.resolveCache.resolvedCrown = cleanCrown(this.resolveCache.resolvedCrown);
-                    this.resolveReturn();break
-
-                }case 'resolve-return':{
-                    this.resolveCache.resolvedValue = received;
-                    this.resolveComplete();break
-                }
-            }
+            Util.typeCaseSplitF(splitf)(projectedCrown);
         }
 
         resolve(resolveArgs){
@@ -153,11 +69,6 @@ namespace Jungle {
             //
             if(!this.prepared){
                 var pr = this.prepare();
-
-                //prepare does not return;
-                if(pr instanceof IO.GatedPort){
-                    return pr;
-                }
             }
 
             if (this.io.isShellBase && !this.io.specialGate){
@@ -179,91 +90,55 @@ namespace Jungle {
                 }
             }else{
 
-                // if(this.engaged){
-                //     //TODO: what to do when the node is busy getting prepared.
-                //     return this.deplexer;
-                // }else{
-                //     this.engaged = true;
-                // }
-
                 this.resolveCache = {
-                    stage:'resolve-carry',
-                    resolveArgs:resolveArgs,
-                    carried:undefined,
-                    selection:undefined,
-                    resolvedCrown:undefined,
-                    resolvedValue:undefined
+                    args:resolveArgs,
+                    carried:null,
+                    crowned:null,
+                    selection:null,
+                    reduced:null
                 }
-                //assuming deplex is free
-                this.deplexer.reset("resolve", this.proceed);
-                this.engaged = true;
 
-                var carried = this.form.carrier.call(this.ctx.exposed, resolveArgs);
+                //let [begin, raise] = this.junction.hold();
 
-                if(this.deplexer.allHome()){
-                    this.resolveCache.carried = carried;
-                    return this.resolveSelect();
-                }else{
-                    return this.deplexer //pass async handle out to be called when this resolve is done;
-                }
+                this.junction
+                    .then(this.resolveCarryThen.bind(this),false)
+                    .then(this.resolveCrownThen.bind(this),false)
+                    .then(this.resolveReduceThen.bind(this),false)
+                    .then(this.resolveCompleteThen.bind(this),false)
+
+                //begin();
+
+                return this.junction.realize();
+
+                //var selection = this.form.selector.call(this.ctx.exposed, Object.keys(this.crown), this.resolveCache.resolveArgs);
             }
         }
 
-        resolveSelect(){
-            this.resolveCache.stage = 'resolve-select';
-
-            var resolvedCell
-            if(this.crown != undefined){
-                var selection = this.form.selector.call(this.ctx.exposed, Object.keys(this.crown), this.resolveCache.resolveArgs);
-
-                if(this.deplexer.allHome()){
-                    this.resolveCache.selection = selection
-                    return this.resolveCrown();
-                }else{
-                    return this.deplexer;
-                }
-            }else{
-                return this.resolveReturn();
-            }
-
-
-
+        resolveCarryThen(results, handle){
+            //console.log("carry results:", results)
+            this.ctx.exposed.handle = handle;
+            return this.form.carrier.call(this.ctx.exposed, this.resolveCache.args);
         }
 
-        resolveCrown(){
-            this.resolveCache.stage = 'resolve-crown';
-            var resolvedCrown = this.resolveCell(this.crown, this.resolveCache.carried, this.resolveCache.selection)
-
-            this.resolveCache.resolvedCrown = resolvedCrown;
-            if(this.deplexer.allHome()){
-                this.resolveCache.resolvedCrown = cleanCrown(resolvedCrown);
-                return this.resolveReturn();
-            }else{
-                return this.deplexer //continue on done;
-            }
+        resolveCrownThen(results, handle){
+            console.log("crown results:", results)
+            this.resolveCache.carried = results;
+            return this.resolveCell(handle, this.crown,  this.resolveCache.carried, true);
         }
 
-        resolveReturn(){
-            this.resolveCache.stage = 'resolve-return';
-            //modifies the resolved context and returns the processed result
-            var result = this.form.resolver.call(this.ctx.exposed, this.resolveCache.resolvedCrown,  this.resolveCache.resolveArgs, this.resolveCache.carried);
-
-            if(this.deplexer.allHome()){
-                this.resolveCache.resolvedValue = result;
-                return this.resolveComplete();
-            }else{
-                return this.deplexer //continue on done;
-            }
+        resolveReduceThen(results, handle){
+            console.log("reduce results:", results)
+            this.resolveCache.crowned = results;
+            this.ctx.exposed.handle = handle;
+            return this.form.resolver.call(this.ctx.exposed,  this.resolveCache.crowned,   this.resolveCache.args,  this.resolveCache.carried);
         }
 
-        resolveComplete(){
-            this.engaged = false;
-            var dispached = this.io.dispatchResult(this.resolveCache.resolvedValue);
-            this.deplexer.deposit = dispached;
+        resolveCompleteThen(results, handle){
+            console.log("final results:", results)
+            this.resolveCache.reduced = results;
+            var dispached = this.io.dispatchResult(this.resolveCache.reduced);
             return dispached;
         }
     }
-
-
 
 }

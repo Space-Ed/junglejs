@@ -32,11 +32,17 @@ describe("preparation",function(){
     })
 
     it("should be deeply prepared",function(){
-        expect(g.crown instanceof jungle.ResolutionCell).toBe(true)
+        expect(g.crown instanceof jungle.ResolutionCell).toBe(true, "crown is instanceof Resolution cell")
+    })
+
+    it("should have set all exposed context properties", function(){
+        expect(g.ctx.exposed.creature).toEqual("summon!");
+        expect(g.ctx.exposed.apparation).toEqual("summon!");
+        expect(g.ctx.exposed.anteling).toEqual("summon!");
     })
 
     it("should set properties with preparator",function(){
-        expect(g.resolve()).toBe("summon!summon!summon!")
+        expect(g.resolve()).toBe("summon!summon!summon!", "Joins prepared args at varied depth")
     })
 
     it('should reprepare',function(){

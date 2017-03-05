@@ -5,6 +5,8 @@ const fs = require('fs');
 
 describe("asynchronous tractors", function(){
 
+    pending("Rehash of async system")
+
     describe(" (prepare )", function(){
         var g;
 
