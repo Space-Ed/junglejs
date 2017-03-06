@@ -28,13 +28,11 @@ namespace Jungle {
         private resolveDenizen(handle, args, denizen, reference){
             let mergekey = reference === undefined ? false : reference;
 
-
             if(denizen instanceof BaseCell && denizen !== undefined){
                 let denizenArg = args === undefined ? undefined : args[reference];
                 let resolved = denizen.resolve(denizenArg);
                 handle.merge(resolved, mergekey);
             }else{
-                console.log("merging denizen", denizen)
                 handle.merge(denizen, mergekey);
             }
         }
@@ -121,20 +119,17 @@ namespace Jungle {
         }
 
         resolveCrownThen(results, handle){
-            console.log("crown results:", results)
             this.resolveCache.carried = results;
             return this.resolveCell(handle, this.crown,  this.resolveCache.carried, true);
         }
 
         resolveReduceThen(results, handle){
-            console.log("reduce results:", results)
             this.resolveCache.crowned = results;
             this.ctx.exposed.handle = handle;
             return this.form.resolver.call(this.ctx.exposed,  this.resolveCache.crowned,   this.resolveCache.args,  this.resolveCache.carried);
         }
 
         resolveCompleteThen(results, handle){
-            console.log("final results:", results)
             this.resolveCache.reduced = results;
             var dispached = this.io.dispatchResult(this.resolveCache.reduced);
             return dispached;

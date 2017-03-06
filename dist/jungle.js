@@ -368,14 +368,13 @@ var Jungle;
             this.ancestor.isAncestor = true;
             if (!this.prepared) {
                 this.ctx.prepare();
-                this.junction
+                this.junction = this.junction
                     .then(function (results, handle) {
                     _this.ctx.exposed.handle = handle;
                     _this.form.preparator.call(_this.ctx.exposed, prepargs);
                 }).then(function (results, handle) {
                     Jungle.Util.typeCaseSplitF(function (child, k) { return _this.prepareChild(prepargs, handle, child, k); })(_this.crown);
                 }, false).then(function (results, handle) {
-                    console.log("recovered result from handle:", results);
                     _this.crown = results;
                     _this.completePrepare();
                     return _this;
@@ -827,7 +826,7 @@ var Jungle;
                 var aftershell = new Jungle.Util.Junction().merge(replica, false).then(function (replica) {
                     replica.enshell();
                     return replica;
-                });
+                }, false);
                 handle.merge(aftershell, k);
             }
             else {
@@ -965,7 +964,6 @@ var Jungle;
                 };
             };
             LinkIO.prototype.interpretLink = function (linkspec) {
-                console.log("Link interpret ", linkspec);
                 var sourceShells = {};
                 var sourceLabels = [];
                 if (linkspec.sourceCell === "*") {
@@ -994,11 +992,9 @@ var Jungle;
                     for (var _a = 0, sinkShells_1 = sinkShells; _a < sinkShells_1.length; _a++) {
                         var sinkSh = sinkShells_1[_a];
                         var sourcePorts = sourceShells[sourceLb].designate(linkspec.sourcePort);
-                        console.log("sourceP", sourcePorts);
                         for (var _b = 0, sourcePorts_1 = sourcePorts; _b < sourcePorts_1.length; _b++) {
                             var sourceP = sourcePorts_1[_b];
                             var sinkPorts = sinkSh.designate(linkspec.sinkPort);
-                            console.log("sinkP", sinkPorts);
                             for (var _c = 0, sinkPorts_1 = sinkPorts; _c < sinkPorts_1.length; _c++) {
                                 var sinkP = sinkPorts_1[_c];
                                 this.forgeLink(sourceLb, sourceP, sinkP);
@@ -1140,7 +1136,6 @@ var Jungle;
                 handle.merge(resolved, mergekey);
             }
             else {
-                console.log("merging denizen", denizen);
                 handle.merge(denizen, mergekey);
             }
         };
@@ -1197,18 +1192,15 @@ var Jungle;
             return this.form.carrier.call(this.ctx.exposed, this.resolveCache.args);
         };
         ResolutionCell.prototype.resolveCrownThen = function (results, handle) {
-            console.log("crown results:", results);
             this.resolveCache.carried = results;
             return this.resolveCell(handle, this.crown, this.resolveCache.carried, true);
         };
         ResolutionCell.prototype.resolveReduceThen = function (results, handle) {
-            console.log("reduce results:", results);
             this.resolveCache.crowned = results;
             this.ctx.exposed.handle = handle;
             return this.form.resolver.call(this.ctx.exposed, this.resolveCache.crowned, this.resolveCache.args, this.resolveCache.carried);
         };
         ResolutionCell.prototype.resolveCompleteThen = function (results, handle) {
-            console.log("final results:", results);
             this.resolveCache.reduced = results;
             var dispached = this.io.dispatchResult(this.resolveCache.reduced);
             return dispached;

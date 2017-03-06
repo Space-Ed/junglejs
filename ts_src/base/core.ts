@@ -100,7 +100,7 @@ namespace Jungle {
 
                 this.ctx.prepare();
                 //push to the journey
-                this.junction
+                this.junction = this.junction
                     .then((results: any, handle: Util.Junction)=>{
                         //prepare components
                         this.ctx.exposed.handle = handle;
@@ -109,11 +109,11 @@ namespace Jungle {
                         //prepare children, object, array, primative
                         Util.typeCaseSplitF((child, k)=>this.prepareChild(prepargs, handle, child, k))(this.crown);
                     },false).then((results: any, handle: Util.Junction) => {
-                        console.log("recovered result from handle:", results);
                         this.crown = results;
                         this.completePrepare();
                         return this;
                     },false);
+
 
                 return this.junction.realize();
 

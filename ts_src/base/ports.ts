@@ -32,7 +32,7 @@ namespace Jungle{
                         return designator.data(this);
                     }
                     case DesignationTypes.MATCH:{
-                        console.log("match designation label: ", this.label, ' designation', designator.data)
+                        //console.log("match designation label: ", this.label, ' designation', designator.data)
                         return this.label === designator.data;
                     }
                     default:

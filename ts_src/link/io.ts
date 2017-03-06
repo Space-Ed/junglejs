@@ -98,7 +98,7 @@ namespace Jungle {
             }
 
             private interpretLink(linkspec:LinkIR){
-                console.log("Link interpret ", linkspec)
+                //console.log("Link interpret ", linkspec)
 
                 let sourceShells  = {};
                 let sourceLabels = [];
@@ -122,10 +122,10 @@ namespace Jungle {
                 for(let sourceLb of sourceLabels){
                     for(let sinkSh of sinkShells){
                         let sourcePorts = (<BaseShell>sourceShells[sourceLb]).designate(linkspec.sourcePort);
-                        console.log("sourceP",sourcePorts)
+                        //console.log("sourceP",sourcePorts)
                         for(let sourceP of sourcePorts){
                             let sinkPorts = (<BaseShell>sinkSh).designate(linkspec.sinkPort);
-                            console.log("sinkP",sinkPorts)
+                            //console.log("sinkP",sinkPorts)
                             for(let sinkP of sinkPorts){
                                 this.forgeLink(sourceLb, sourceP, sinkP);
                             }
@@ -141,7 +141,7 @@ namespace Jungle {
             follow(sourceCell:string, source:Port, throughput){
                 var targeted = this.linkmap[sourceCell][source.label]
                 for(let sink of targeted){
-                    console.log(`Throughput of ${throughput} from source ${source.label} to ${sink.label}`)
+                    //console.log(`Throughput of ${throughput} from source ${source.label} to ${sink.label}`)
                     //TODO: functional throughput
                     sink.handle(throughput);
                 }

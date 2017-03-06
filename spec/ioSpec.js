@@ -207,7 +207,7 @@ describe("input-output", function(){
         it('should have dressed the root', function(){
 
             g2.io.enshell();
-            let cb = function(x){console.log("FUCK", this.store)};
+            let cb = function(x){console.log("Peace", this.store)};
             let ctx = {}
             g2.io.dress("*", {callback:cb,  context:ctx});
             let shell = g2.io.shell;

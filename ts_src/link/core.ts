@@ -23,10 +23,11 @@ module Jungle {
                 replica.prepare(prepargs);
 
                 //enshell happens after
-                let aftershell = new Util.Junction().merge(replica,false).then(function(replica){
+                let aftershell = new Util.Junction().merge(replica, false).then(function(replica){
                     replica.enshell();
                     return replica
-                });
+                }, false);
+
                 handle.merge(aftershell, k);
             }else{
                 handle.merge(child, k);
