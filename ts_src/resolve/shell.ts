@@ -14,7 +14,7 @@ namespace Jungle{
                  */
             constructor(public base:ResolveIO, midrantHooks:Hook[], subshells:Shell[]) {
 
-                    super([]);
+                    super(base, []);
 
                     this.sources = {};
                     this.sinks = {};

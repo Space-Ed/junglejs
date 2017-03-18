@@ -171,7 +171,6 @@ declare namespace Jungle {
             shell: Shell;
             enshell: () => Shell;
             dress: (designator: string, coat: OutputCoat) => void;
-            prepare: (parg) => void;
             extract: () => any;
         }
         enum DesignationTypes {
@@ -194,7 +193,6 @@ declare namespace Jungle {
             specialGate: boolean;
             shell: Shell;
             constructor(host: BaseCell, iospec: any);
-            prepare(parg: any): void;
             dress(designation: any, coat: OutputCoat): void;
             enshell(): Shell;
             extract(): any;
@@ -228,9 +226,9 @@ declare namespace Jungle {
             sinks: any;
             sources: any;
             base: IOComponent;
-            constructor(ports: PortSpec[]);
+            constructor(base: IOComponent, ports: PortSpec[]);
             invert(): BaseShell;
-            designate(designator: PortDesignator): (ResolveInputPort | ResolveOutputPort)[];
+            designate(designator: PortDesignator): Port[];
             dress(designator: PortDesignator, coat: OutputCoat): void;
         }
     }
@@ -271,20 +269,21 @@ declare namespace Jungle {
 }
 declare namespace Jungle {
     namespace IO {
-        class LinkIO extends BaseIO implements IOComponent {
+        class LinkIO extends BaseIO {
             private spec;
             shell: BaseShell;
             specialGate: boolean;
             lining: Shell;
             linkmap: any;
             linker: (porta, portb) => void;
+            emmissionGate: Util.Junction;
             constructor(host: LinkCell, spec: IOLinkSpec);
             enshell(): Shell;
             innerDress(): void;
             applyLinks(): void;
             private parseLink(link);
             private interpretLink(linkspec);
-            private forgeLink(sourceCell, sourcePort, sink, close?);
+            private forgeLink(sourceCell, sinkCell, sourcePort, sink, close?);
             follow(sourceCell: string, source: Port, throughput: any): void;
             prepare(parg: any): void;
             extract(): void;

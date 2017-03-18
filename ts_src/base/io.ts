@@ -45,7 +45,6 @@ namespace Jungle {
             shell:Shell;
             enshell:() => Shell;
             dress:(designator: string, coat:OutputCoat) => void;
-            prepare:(parg)=>void;
             extract:()=>any;
         }
 
@@ -70,11 +69,6 @@ namespace Jungle {
             shell:Shell;
 
             constructor(public host:BaseCell, iospec){
-
-            }
-
-            prepare(parg){
-
             }
 
             /*

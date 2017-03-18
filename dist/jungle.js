@@ -591,8 +591,6 @@ var Jungle;
             function BaseIO(host, iospec) {
                 this.host = host;
             }
-            BaseIO.prototype.prepare = function (parg) {
-            };
             BaseIO.prototype.dress = function (designation, coat) {
                 var designator = {
                     direction: Orientation.OUTPUT,
@@ -648,7 +646,6 @@ var Jungle;
                         return designator.data(this);
                     }
                     case IO.DesignationTypes.MATCH: {
-                        console.log("match designation label: ", this.label, ' designation', designator.data);
                         return this.label === designator.data;
                     }
                     default:
@@ -708,9 +705,10 @@ var Jungle;
     var IO;
     (function (IO) {
         var BaseShell = (function () {
-            function BaseShell(ports) {
-                this.sinks = {};
-                this.sources = {};
+            function BaseShell(base, ports) {
+                this.base = base;
+                this.sinks = { '$': new IO.Port('$') };
+                this.sources = { '$': new IO.Port('$') };
                 for (var _i = 0, ports_1 = ports; _i < ports_1.length; _i++) {
                     var portSpec = ports_1[_i];
                     switch (portSpec.direction) {
@@ -726,7 +724,7 @@ var Jungle;
                 }
             }
             BaseShell.prototype.invert = function () {
-                var inversion = new BaseShell([]);
+                var inversion = new BaseShell(this.base, []);
                 inversion.sinks = this.sources;
                 inversion.sources = this.sinks;
                 return inversion;
@@ -907,10 +905,11 @@ var Jungle;
                 _this.spec = spec;
                 _this.linkmap = {};
                 _this.linker = spec.linkFunciton;
+                _this.emmissionGate = new Jungle.Util.Junction();
                 return _this;
             }
             LinkIO.prototype.enshell = function () {
-                this.shell = new IO.BaseShell(this.spec.ports);
+                this.shell = new IO.BaseShell(this, this.spec.ports);
                 this.lining = this.shell.invert();
                 this.innerDress();
                 this.applyLinks();
@@ -943,7 +942,7 @@ var Jungle;
                 }
             };
             LinkIO.prototype.parseLink = function (link) {
-                var m = link.match(/(?:(\w+).)?(\w+)(\|?)(<?)([\+\-\!]?)([=\-])(>{1,2})(\|?)(?:(\w+).)?(\w+)/);
+                var m = link.match(/(?:(\w+|\*).)?(\w+|\*|\$)(\|?)(<?)([\+\-\!]?)([=\-])(>{1,2})(\|?)(?:(\w+|\*).)?(\w+|\*|\$)/);
                 if (!m) {
                     throw new Error("Unable to parse link description, expression " + link + " did not match regex");
                 }
@@ -959,61 +958,67 @@ var Jungle;
                     closeSource: false,
                     closeSink: false,
                     persistent: false,
-                    matching: false,
+                    matching: matching === "=",
                     propogation: LINK_FILTERS.NONE
                 };
             };
             LinkIO.prototype.interpretLink = function (linkspec) {
                 var sourceShells = {};
+                var sinkShells = {};
                 var sourceLabels = [];
+                var sinkLabels = [];
                 if (linkspec.sourceCell === "*") {
                     sourceShells = Jungle.Util.mapObject(this.host.crown, function (k, src) { sourceLabels.push(k); return src.io.shell; });
-                }
-                else if (linkspec.sourceCell in this.host.crown) {
-                    sourceShells[linkspec.sourceCell] = this.host.crown[linkspec.sourceCell].io.shell;
-                    sourceLabels = [linkspec.sourceCell];
                 }
                 else if (linkspec.sourceCell === '_') {
                     sourceShells['_'] = this.host.io.lining;
                     sourceLabels = ['_'];
                 }
-                var sinkShells = [];
-                if (linkspec.sinkCell === "*") {
-                    sinkShells = Jungle.Util.flattenObject(this.host.crown, 1).map(function (x) { return x.io.shell; });
+                else if (linkspec.sourceCell in this.host.crown) {
+                    sourceShells[linkspec.sourceCell] = this.host.crown[linkspec.sourceCell].io.shell;
+                    sourceLabels = [linkspec.sourceCell];
                 }
-                else if (linkspec.sinkCell in this.host.crown) {
-                    sinkShells = [this.host.crown[linkspec.sinkCell].io.shell];
+                if (linkspec.sinkCell === "*") {
+                    sinkShells = Jungle.Util.mapObject(this.host.crown, function (k, src) { sinkLabels.push(k); return src.io.shell; });
                 }
                 else if (linkspec.sinkCell === '_') {
-                    sinkShells = [this.host.io.lining];
+                    sinkShells['_'] = this.host.io.lining;
+                    sinkLabels = ['_'];
+                }
+                else if (linkspec.sinkCell in this.host.crown) {
+                    sinkShells[linkspec.sinkCell] = this.host.crown[linkspec.sinkCell].io.shell;
+                    sinkLabels = [linkspec.sinkCell];
                 }
                 for (var _i = 0, sourceLabels_1 = sourceLabels; _i < sourceLabels_1.length; _i++) {
                     var sourceLb = sourceLabels_1[_i];
-                    for (var _a = 0, sinkShells_1 = sinkShells; _a < sinkShells_1.length; _a++) {
-                        var sinkSh = sinkShells_1[_a];
+                    for (var _a = 0, sinkLabels_1 = sinkLabels; _a < sinkLabels_1.length; _a++) {
+                        var sinkLb = sinkLabels_1[_a];
                         var sourcePorts = sourceShells[sourceLb].designate(linkspec.sourcePort);
+                        var sinkPorts = sinkShells[sinkLb].designate(linkspec.sinkPort);
                         for (var _b = 0, sourcePorts_1 = sourcePorts; _b < sourcePorts_1.length; _b++) {
                             var sourceP = sourcePorts_1[_b];
-                            var sinkPorts = sinkSh.designate(linkspec.sinkPort);
                             for (var _c = 0, sinkPorts_1 = sinkPorts; _c < sinkPorts_1.length; _c++) {
                                 var sinkP = sinkPorts_1[_c];
-                                this.forgeLink(sourceLb, sourceP, sinkP);
+                                if (!linkspec.matching || sinkLb === sourceLb) {
+                                    this.forgeLink(sourceLb, sinkLb, sourceP, sinkP);
+                                }
                             }
                         }
                     }
                 }
             };
-            LinkIO.prototype.forgeLink = function (sourceCell, sourcePort, sink, close) {
+            LinkIO.prototype.forgeLink = function (sourceCell, sinkCell, sourcePort, sink, close) {
                 if (close === void 0) { close = false; }
                 this.linkmap[sourceCell][sourcePort.label].push(sink);
             };
             LinkIO.prototype.follow = function (sourceCell, source, throughput) {
                 var targeted = this.linkmap[sourceCell][source.label];
-                for (var _i = 0, targeted_1 = targeted; _i < targeted_1.length; _i++) {
-                    var sink = targeted_1[_i];
-                    console.log("Throughput of " + throughput + " from source " + source.label + " to " + sink.label);
-                    sink.handle(throughput);
-                }
+                this.emmissionGate.then(function (result, handle) {
+                    for (var _i = 0, targeted_1 = targeted; _i < targeted_1.length; _i++) {
+                        var sink = targeted_1[_i];
+                        sink.handle(throughput);
+                    }
+                });
             };
             LinkIO.prototype.prepare = function (parg) {
             };
@@ -1714,7 +1719,7 @@ var Jungle;
         var HookShell = (function (_super) {
             __extends(HookShell, _super);
             function HookShell(base, midrantHooks, subshells) {
-                var _this = _super.call(this, []) || this;
+                var _this = _super.call(this, base, []) || this;
                 _this.base = base;
                 _this.sources = {};
                 _this.sinks = {};

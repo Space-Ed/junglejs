@@ -18,7 +18,7 @@ namespace Jungle {
             propogation:LINK_FILTERS;
         }
 
-        export class LinkIO extends BaseIO implements IOComponent {
+        export class LinkIO extends BaseIO {
 
             shell:BaseShell;
             specialGate:boolean;
@@ -26,17 +26,19 @@ namespace Jungle {
             lining:Shell;
             linkmap:any;
             linker:(porta, portb)=>void;
+            emmissionGate:Util.Junction;
 
             constructor(host:LinkCell, private spec:IOLinkSpec){
                 super(host, spec);
 
                 this.linkmap = {};
                 this.linker = spec.linkFunciton;
+                this.emmissionGate = new Util.Junction();
 
             }
 
             enshell():Shell{
-                this.shell = new BaseShell(this.spec.ports);
+                this.shell = new BaseShell(<BaseIO>this, this.spec.ports);
                 this.lining = this.shell.invert();
                 this.innerDress();
                 this.applyLinks();
@@ -75,7 +77,8 @@ namespace Jungle {
             }
 
             private parseLink(link):LinkIR{
-                let m = link.match(/(?:(\w+).)?(\w+)(\|?)(<?)([\+\-\!]?)([=\-])(>{1,2})(\|?)(?:(\w+).)?(\w+)/);
+                let m = link.match(/(?:(\w+|\*).)?(\w+|\*|\$)(\|?)(<?)([\+\-\!]?)([=\-])(>{1,2})(\|?)(?:(\w+|\*).)?(\w+|\*|\$)/)
+
                 if(!m){throw new Error(`Unable to parse link description, expression ${link} did not match regex`)};
                 let [match, srcCell, srcPort, srcClose, viceVersa, filter, matching, persistent, snkClose, snkCell, snkPort] = m;
 
@@ -91,7 +94,7 @@ namespace Jungle {
                     closeSource:false,
                     closeSink:false,
                     persistent:false,
-                    matching:false,
+                    matching:matching==="=",
                     propogation:LINK_FILTERS.NONE
                 }
 
@@ -101,50 +104,66 @@ namespace Jungle {
                 //console.log("Link interpret ", linkspec)
 
                 let sourceShells  = {};
+                let sinkShells = {};
                 let sourceLabels = [];
+                let sinkLabels = [];
+
                 if(linkspec.sourceCell === "*"){
                     sourceShells = Util.mapObject(this.host.crown, function(k, src){sourceLabels.push(k); return src.io.shell});
-                }else if (linkspec.sourceCell in this.host.crown){
-                    sourceShells[linkspec.sourceCell] = this.host.crown[linkspec.sourceCell].io.shell; sourceLabels = [linkspec.sourceCell];
-                }else if(linkspec.sourceCell === '_'){
+                }
+                else if(linkspec.sourceCell === '_'){
                     sourceShells['_'] = (<LinkIO>this.host.io).lining; sourceLabels = ['_'];
                 }
+                else if (linkspec.sourceCell in this.host.crown){
+                    sourceShells[linkspec.sourceCell] = this.host.crown[linkspec.sourceCell].io.shell; sourceLabels = [linkspec.sourceCell];
+                }
 
-                let sinkShells = [];
                 if(linkspec.sinkCell === "*"){
-                    sinkShells = Util.flattenObject(this.host.crown, 1).map(function(x){return x.io.shell});
-                }else if(linkspec.sinkCell in this.host.crown){
-                    sinkShells = [this.host.crown[linkspec.sinkCell].io.shell];
-                }else if(linkspec.sinkCell === '_'){
-                    sinkShells = [(<LinkIO>this.host.io).lining];
+                    sinkShells = Util.mapObject(this.host.crown, function(k, src){sinkLabels.push(k); return src.io.shell});
+                }
+                else if(linkspec.sinkCell === '_'){
+                    sinkShells['_'] = (<LinkIO>this.host.io).lining;sinkLabels = ['_']
+                }
+                else if(linkspec.sinkCell in this.host.crown){
+                    sinkShells[linkspec.sinkCell] = this.host.crown[linkspec.sinkCell].io.shell; sinkLabels = [linkspec.sinkCell]
                 }
 
                 for(let sourceLb of sourceLabels){
-                    for(let sinkSh of sinkShells){
+                    for(let sinkLb of sinkLabels){
                         let sourcePorts = (<BaseShell>sourceShells[sourceLb]).designate(linkspec.sourcePort);
+                        let sinkPorts =   (<BaseShell> sinkShells[sinkLb]).designate(linkspec.sinkPort);
                         //console.log("sourceP",sourcePorts)
+                        //console.log("sinkP",sinkPorts)
+
                         for(let sourceP of sourcePorts){
-                            let sinkPorts = (<BaseShell>sinkSh).designate(linkspec.sinkPort);
-                            //console.log("sinkP",sinkPorts)
                             for(let sinkP of sinkPorts){
-                                this.forgeLink(sourceLb, sourceP, sinkP);
+                                if(!linkspec.matching || sinkLb === sourceLb){
+                                    this.forgeLink(sourceLb, sinkLb, sourceP, sinkP);
+                                }
                             }
                         }
                     }
                 }
             }
 
-            private forgeLink(sourceCell:string, sourcePort:Port, sink:Port, close=false){
+            private forgeLink(sourceCell:string, sinkCell:string, sourcePort:Port, sink:Port, close=false){
                 this.linkmap[sourceCell][sourcePort.label].push(sink)
             }
 
             follow(sourceCell:string, source:Port, throughput){
                 var targeted = this.linkmap[sourceCell][source.label]
-                for(let sink of targeted){
-                    //console.log(`Throughput of ${throughput} from source ${source.label} to ${sink.label}`)
-                    //TODO: functional throughput
-                    sink.handle(throughput);
-                }
+
+                //emmission blocking; each emmission tacks on the end, therefore proceeding by breadth rather than depth.
+                this.emmissionGate.then(
+                    (result, handle)=>{
+                        for(let sink of targeted){
+                            //console.log(`Throughput of ${throughput} from source ${source.label} to ${sink.label}`)
+                            sink.handle(throughput);
+                        }
+                    }
+                )
+
+
             }
 
             prepare(parg){

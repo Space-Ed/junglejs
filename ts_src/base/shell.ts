@@ -16,9 +16,10 @@ namespace Jungle {
 
             base:IOComponent;
 
-            constructor(ports:PortSpec[]){
-                this.sinks = {};
-                this.sources = {};
+            constructor(base:IOComponent, ports:PortSpec[]){
+                this.base = base;
+                this.sinks = {'$':new Port('$')};
+                this.sources = {'$': new Port('$')};
 
                 for(let portSpec of ports){
 
@@ -34,13 +35,13 @@ namespace Jungle {
             }
 
             invert():BaseShell{
-                let inversion = new BaseShell([]);
+                let inversion = new BaseShell(this.base, []);
                 inversion.sinks = this.sources;
                 inversion.sources = this.sinks;
                 return inversion;
             }
 
-            designate(designator:PortDesignator): (ResolveInputPort|ResolveOutputPort)[]{
+            designate(designator:PortDesignator): Port[]{
                 let scanDomain;
 
                 //a hold for

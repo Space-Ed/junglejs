@@ -9,10 +9,31 @@ describe("Link Cells", function () {
         o__(x){return x},
         r(obj, arg){return this.i}
     });
+    //
+    // var io2 = G(null, {
+    //     _passive:"default",
+    //     passive_(resout){
+    //         return resout;
+    //     },
+    //     __active:"default",
+    //     active__(resout){
+    //         return resout;
+    //     },
+    //     r(obj){
+    //         return this.passive+this.active
+    //     }
+    //
+    // })
 
-    var io2 = G(null, {
-        __i:0
-    })
+    function portResponseTest(cell, inp, outp, input, expected, count=1){
+        let spy = jasmine.createSpy();
+
+        cell.io.shell.sources[outp].callback = spy;
+        cell.io.shell.sinks[inp].handle(input);
+
+        expect(spy.calls.count()).toBe(count);
+        expect(spy).toHaveBeenCalledWith(expected);
+    }
 
     it("should direct link",function(){
 
@@ -25,42 +46,62 @@ describe("Link Cells", function () {
         })
 
         directLink.prepare();
-        directLink.io.shell.sources.ro.callback = function(){};
-        spyOn(directLink.io.shell.sources.ro, 'callback');
-        directLink.io.shell.sinks.ri.handle(1);
-        expect(directLink.io.shell.sources.ro.callback).toHaveBeenCalledWith(1);
+
+        portResponseTest(directLink, 'ri', 'ro', 1, 1);
 
     });
 
     it('should wildcard link',function(){
-        pending("real use of wildcards, deliberation on feedback and compaction")
-        var directLink = L({
+        var wildLink = L({
             a:io,
-            b:io
+            b:io,
+            c:io
         },{
             port:['_ri','ro_'],
-            link:['_.ri->*.i', '*.*=>_.o1', '*.*=>_.o2'],
+            link:['_.ri->*.i', '*.o->_.ro', '_.$->x.*'],
         })
 
-        directLink.prepare();
-        directLink.io.shell.sources.ro.callback = function(){};
-        spyOn(directLink.io.shell.sources.ro, 'callback');
-        directLink.io.shell.sinks.ri.handle(1);
-        expect(directLink.io.shell.sources.ro.callback).toHaveBeenCalledWith(1);
+        wildLink.prepare();
+
+        portResponseTest(wildLink, 'ri', 'ro', 1, 1, 3);
 
     })
 
-    it('should match link')
+    it('should match link', function(){
+        let matchLink = L({
+        },{
+            port:['_sig', 'sig_'],
+            link:['_.*->_.*']
+        })
 
-    it('should close link')
+        matchLink.prepare();
 
-    it('should propogate')
+        portResponseTest(matchLink, '$', '$', 1, 1, 1);
+        portResponseTest(matchLink, 'sig', 'sig', 1, 1, 1);
+    });
+
+    /*
+        a closed link is a link causing all future links to a port to be unmatchable
+    */
+    it('should close link',function(){
+        let closeLink = L({
+
+        },{
+
+        })
+    })
+
+    it('should propogate',function(){
+
+    })
 
     it('should antireflex')
 
     it('should have ommission defaults')
 
     it('should persistence link')
+
+    it('should chain link')
 
 
 })
