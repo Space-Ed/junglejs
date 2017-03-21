@@ -53,7 +53,7 @@ describe("A context labelled node",function(){
             dice:5
         }).prepare();
 
-        expect(function(){jungle.Util.deeplyEqualsThrow(g.resolve(), {c1:5})}).not.toThrowError()
+        jungle.Util.deeplyEqualsThrow(g.resolve(), {c1:[5]});
     })
 
     it('will always choose the closest to the tip possible',function(){

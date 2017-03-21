@@ -167,12 +167,12 @@ namespace Jungle{
             var seen = seen || []
 
             //circularity prevention
-            if(seen.indexOf(node1) || seen.indexOf(node2)){
+            if(seen.indexOf(node1) !== -1 || seen.indexOf(node2) !== -1){
                 return
             }
 
             if(typeof(node1) != typeof(node2)){
-                throw new Error(`nodes not same type, derefs: [${derefstack}]`)
+                throw new Error(`nodes not same type, derefs: [${derefstack}],  node1:${node1} of type ${typeof(node1)}, node2:${node2} of type ${typeof(node2)}`)
             }
             else if (node1 instanceof Object){
                 if(node1 === node2 && !allowIdentical){
@@ -187,7 +187,7 @@ namespace Jungle{
                         if(!(q in node1)){
                             throw new Error(`key ${k} in object2 but not object1, derefs:[${derefstack}]`)// key in node2 and not node1
                         }else{
-                            deeplyEqualsThrow(node1[q], node2[q], derefstack.concat(q), allowIdentical)
+                            deeplyEqualsThrow(node1[q], node2[q], derefstack.concat(q), seen.concat(node1, node2), allowIdentical)
                         }
                     }
                     return true; // no false flag
@@ -201,8 +201,8 @@ namespace Jungle{
             deeplyEquals(node1,node2,false)
         }
 
-        export function isDeepReplicaThrow(node1, node2, derefstack){
-            deeplyEqualsThrow(node1, node2, derefstack, null, false)
+        export function isDeepReplicaThrow(node1, node2){
+            deeplyEqualsThrow(node1, node2, undefined, undefined, false)
         }
 
         //merge, when there is a conflict, neither is taken

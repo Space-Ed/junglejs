@@ -13,31 +13,28 @@ describe("asynchronous tractors", function(){
         describe("asynchronously", function(){
 
             beforeEach(function(){
-                g = G({
-                    file:G(null,{
-                        p(parg){
+                g = G(null,{
+                    p(parg){
+                        this.handle.await(function(done, raise){
+                            fs.readFile(parg, function(err, data){
+                                if(err){
+                                    console.log(err)
+                                    raise(err)
+                                }else{
+                                    done(JSON.parse(data));
+                                }
+                            })
+                        },false).then(data =>{
+                            this.data = data;
+                        })
+                    },
 
-                            this.handle.await(function(done, raise){
-                                fs.readFile(parg, function(err, data){
-                                    if(err){
-                                        console.log(err)
-                                        raise(err)
-                                    }else{
-                                        this.data = JSON.parse(data);
-                                        done();
-                                    }
-                                })
-                            },false)
+                    r(){
+                        console.log("resolve", this.data);
+                        return this.data;
+                    },
 
-                        },
-                        r(){
-                            return this.data;
-                        },
-                        data:undefined
-
-                    })
-                },{
-
+                    data:undefined
                 })
             })
 
@@ -46,15 +43,19 @@ describe("asynchronous tractors", function(){
                 var junction = g.prepare("./spec/articles/data.json");
 
                 expect(g.ctx.exposed.data).toBeUndefined();
+
                 expect(junction instanceof Util.Junction).toBe(true, "return should be junction")
 
                 expect(junction.isIdle()).toBe(false, "junction is waiting for something");
 
-                junction.then((prepared)=>{
-                    expect(prepared.prepared).toBe(true)
+                g.resolve().then((resolved)=>{
 
-                    expect(function(){
-                        Jungle.Util.deeplyEqualsThrow(g.resolve(),
+                    console.log('complete prepare', resolved)
+
+                    expect(g.prepared).toBe(true);
+
+                    try{
+                        Jungle.Util.deeplyEqualsThrow(resolved,
                         {
                             "shallow":0,
                             "deep":{
@@ -64,9 +65,10 @@ describe("asynchronous tractors", function(){
                             "many":[
                                 "again","defined"
                             ]
-                        })
-                    }).not.toThrowError();
-
+                        });
+                    }catch(e){
+                        expect(false).toBe(true, e)
+                    }
                     done();
                 });
 
