@@ -2,6 +2,8 @@ var G = require("../dist/jungle.js");
 var g = G.G;
 
 describe("bundle creation",function(){
+    pending("reconstruction overview")
+
     beforeEach(function(){
         this.g = g({
             a:g({

@@ -275,6 +275,10 @@ declare namespace Jungle {
             specialGate: boolean;
             lining: Shell;
             linkmap: any;
+            closed: {
+                sinks: string[];
+                sources: string[];
+            };
             linker: (porta, portb) => void;
             emmissionGate: Util.Junction;
             constructor(host: LinkCell, spec: IOLinkSpec);
@@ -283,7 +287,9 @@ declare namespace Jungle {
             applyLinks(): void;
             private parseLink(link);
             private interpretLink(linkspec);
-            private forgeLink(sourceCell, sinkCell, sourcePort, sink, close?);
+            private checkLink(linkspec, sourceLabel, sinkLabel, sourceP, sinkP);
+            private filterCheck(sourceLabel, sinkLabel, linkspec);
+            private forgeLink(linkspec, sourceCell, sinkCell, sourcePort, sinkPort);
             follow(sourceCell: string, source: Port, throughput: any): void;
             prepare(parg: any): void;
             extract(): void;
@@ -466,7 +472,7 @@ declare namespace Jungle {
         function deeplyEquals(node1: any, node2: any, allowIdentical?: boolean): boolean;
         function deeplyEqualsThrow(node1: any, node2: any, derefstack: any, seen: any, allowIdentical?: boolean): boolean;
         function isDeepReplica(node1: any, node2: any): void;
-        function isDeepReplicaThrow(node1: any, node2: any, derefstack: any): void;
+        function isDeepReplicaThrow(node1: any, node2: any): void;
         function softAssoc(from: any, onto: any): void;
         function parassoc(from: any, onto: any): void;
         function assoc(from: any, onto: any): void;
@@ -539,6 +545,29 @@ declare namespace Jungle {
             reset(): void;
             isClean(): boolean;
             allUnlocked(): boolean;
+        }
+    }
+}
+declare namespace Jungle {
+    namespace Util {
+        function B(crown?: {}, form?: any): Blender;
+        class Blender {
+            crown: {};
+            static strictTypeReduce: boolean;
+            static defaultReduce(a: any, b: any): any;
+            static defaultMap(x: any): any;
+            block: boolean;
+            term: boolean;
+            reducer: (a, b) => any;
+            mapper: (a) => any;
+            constructor(crown?: {}, form?: any);
+            init(obj: any): Blender;
+            initChurn(inner: any, k: any): void;
+            dump(): any;
+            blend(obj: any): this;
+            private _blend(obj);
+            merge(income: any): {};
+            churn(inner: any, k: any): any;
         }
     }
 }

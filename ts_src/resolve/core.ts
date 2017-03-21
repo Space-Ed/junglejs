@@ -65,9 +65,9 @@ namespace Jungle {
             Object.freeze(resolveArgs)
 
             //
-            if(!this.prepared){
-                var pr = this.prepare();
-            }
+            // if(!this.prepared){
+            //     var pr = this.prepare();
+            // }
 
             if (this.io.isShellBase && !this.io.specialGate){
 

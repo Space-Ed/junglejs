@@ -9,7 +9,7 @@ describe("Link Cells", function () {
         o__(x){return x},
         r(obj, arg){return this.i}
     });
-    //
+
     // var io2 = G(null, {
     //     _passive:"default",
     //     passive_(resout){
@@ -22,8 +22,21 @@ describe("Link Cells", function () {
     //     r(obj){
     //         return this.passive+this.active
     //     }
-    //
     // })
+
+    var bufferFlush = G(null, {
+        _buffer(input){
+            this.pushed.push(input);
+            console.log("buffered",this.pushed)
+        },
+        __flush(){
+            return "HEY"
+        },
+        drain__(){
+            return this.pushed
+        },
+        pushed:[]
+    })
 
     function portResponseTest(cell, inp, outp, input, expected, count=1){
         let spy = jasmine.createSpy();
@@ -31,7 +44,7 @@ describe("Link Cells", function () {
         cell.io.shell.sources[outp].callback = spy;
         cell.io.shell.sinks[inp].handle(input);
 
-        expect(spy.calls.count()).toBe(count);
+        expect(spy.calls.count()).toBe(count, "Number of Calls match expected");
         expect(spy).toHaveBeenCalledWith(expected);
     }
 
@@ -85,14 +98,45 @@ describe("Link Cells", function () {
     */
     it('should close link',function(){
         let closeLink = L({
-
+            a:io,
+            b:io,
+            c:io,
+            d:bufferFlush
         },{
+            port:['_bufin'],
+            link:[
+                "_.$->d.flush",
+                '_.bufin->*.i',
+                'a.o->d.buffer',
+                'b.o->|d.buffer',
+                'c.o->d.buffer',
+                'd.drain->_.$'
+            ]
+        }).prepare();
 
-        })
+        closeLink.io.shell.sinks.bufin.handle(1);
+
+        portResponseTest(closeLink, '$', '$', 2, [1, 1], 1);
     })
 
-    it('should propogate',function(){
+    fit('should propogate in arrays',function(){
+        let propLink = L([
+            io, io, io
+        ],{
+            link:['_.$->0.i', '*.o+->*.i', '2.o->_.$']
+        }).prepare()
 
+        portResponseTest(propLink, '$', '$', "x","x",1);
+    })
+
+    fit('should propogate in reverse in arrays',function(){
+        let propLink = L([
+            io, io, io
+        ],{
+            link:['_.$->2.i', '*.o-->*.i', '0.o->_.$']
+        }).prepare()
+
+        portResponseTest(propLink, '$', '$', "x","x",1);
     })
 
     it('should antireflex')
@@ -103,5 +147,6 @@ describe("Link Cells", function () {
 
     it('should chain link')
 
+    it('should link to methods and properties')
 
 })

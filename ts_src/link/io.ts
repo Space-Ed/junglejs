@@ -25,7 +25,10 @@ namespace Jungle {
 
             lining:Shell;
             linkmap:any;
+            closed:{sinks:string[], sources:string[]};
+
             linker:(porta, portb)=>void;
+
             emmissionGate:Util.Junction;
 
             constructor(host:LinkCell, private spec:IOLinkSpec){
@@ -34,6 +37,7 @@ namespace Jungle {
                 this.linkmap = {};
                 this.linker = spec.linkFunciton;
                 this.emmissionGate = new Util.Junction();
+                this.closed = {sinks:[], sources:[]};
 
             }
 
@@ -91,11 +95,11 @@ namespace Jungle {
                     sourcePort:srcDesig,
                     sinkCell:snkCell,
                     sinkPort:snkDesig,
-                    closeSource:false,
-                    closeSink:false,
+                    closeSource:srcClose==='|',
+                    closeSink:snkClose==='|',
                     persistent:false,
                     matching:matching==="=",
-                    propogation:LINK_FILTERS.NONE
+                    propogation:filter !== ''?{'+':LINK_FILTERS.PROCEED,'-':LINK_FILTERS.DECEED, '!':LINK_FILTERS.ELSEWHERE}[filter]:LINK_FILTERS.NONE
                 }
 
             }
@@ -137,8 +141,8 @@ namespace Jungle {
 
                         for(let sourceP of sourcePorts){
                             for(let sinkP of sinkPorts){
-                                if(!linkspec.matching || sinkLb === sourceLb){
-                                    this.forgeLink(sourceLb, sinkLb, sourceP, sinkP);
+                                if(this.checkLink(linkspec, sourceLb, sinkLb, sourceP, sinkP)){
+                                    this.forgeLink(linkspec, sourceLb, sinkLb, sourceP, sinkP);
                                 }
                             }
                         }
@@ -146,8 +150,45 @@ namespace Jungle {
                 }
             }
 
-            private forgeLink(sourceCell:string, sinkCell:string, sourcePort:Port, sink:Port, close=false){
-                this.linkmap[sourceCell][sourcePort.label].push(sink)
+            private checkLink(linkspec:LinkIR, sourceLabel, sinkLabel, sourceP, sinkP){
+                let matched = (!linkspec.matching || sinkLabel === sourceLabel),
+                    openSource = (this.closed.sources.indexOf(sourceLabel) === -1),
+                    openSink = this.closed.sinks.indexOf(sinkLabel) === -1,
+                    unfiltered = this.filterCheck(sourceLabel, sinkLabel, linkspec)
+
+                return matched && openSource && openSink && unfiltered;
+            }
+
+            private filterCheck(sourceLabel, sinkLabel, linkspec:LinkIR){
+                let srcnum = Number(sourceLabel), snknum = Number(sinkLabel);
+                if(!isNaN(srcnum)&&!isNaN(snknum)&&linkspec.propogation!=LINK_FILTERS.NONE){
+                    if(linkspec.propogation == LINK_FILTERS.PROCEED){
+                        return srcnum === snknum -1;
+                    }else if(linkspec.propogation == LINK_FILTERS.DECEED){
+                        return srcnum === snknum +1;
+                    }else{
+                        return srcnum !== snknum;
+                    }
+                }else{
+                    if(LINK_FILTERS.ELSEWHERE){
+                        return sourceLabel !== sinkLabel; //Or perhaps feedback check, does the sink have in its source tree,the cell of the source label?
+                    }else{
+                        return true;
+                    }
+                }
+            }
+
+            private forgeLink(linkspec:LinkIR, sourceCell:string, sinkCell:string, sourcePort:Port, sinkPort:Port){
+
+                console.log(`link formation: source:${sourceCell}.${sourcePort.label}, sink:${sinkCell}.${sinkPort.label}, closed sinks ${this.closed.sinks}`)
+                this.linkmap[sourceCell][sourcePort.label].push(sinkPort)
+
+                if(linkspec.closeSink){
+                    this.closed.sinks.push(sinkCell);
+                }
+                if(linkspec.closeSource){
+                    this.closed.sources.push(sourceCell);
+                }
             }
 
             follow(sourceCell:string, source:Port, throughput){
@@ -157,7 +198,7 @@ namespace Jungle {
                 this.emmissionGate.then(
                     (result, handle)=>{
                         for(let sink of targeted){
-                            //console.log(`Throughput of ${throughput} from source ${source.label} to ${sink.label}`)
+                            console.log(`Throughput of ${throughput} from source ${sourceCell}.${source.label} to ${sink.label}`)
                             sink.handle(throughput);
                         }
                     }

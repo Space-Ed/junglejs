@@ -906,6 +906,7 @@ var Jungle;
                 _this.linkmap = {};
                 _this.linker = spec.linkFunciton;
                 _this.emmissionGate = new Jungle.Util.Junction();
+                _this.closed = { sinks: [], sources: [] };
                 return _this;
             }
             LinkIO.prototype.enshell = function () {
@@ -955,11 +956,11 @@ var Jungle;
                     sourcePort: srcDesig,
                     sinkCell: snkCell,
                     sinkPort: snkDesig,
-                    closeSource: false,
-                    closeSink: false,
+                    closeSource: srcClose === '|',
+                    closeSink: snkClose === '|',
                     persistent: false,
                     matching: matching === "=",
-                    propogation: LINK_FILTERS.NONE
+                    propogation: filter !== '' ? { '+': LINK_FILTERS.PROCEED, '-': LINK_FILTERS.DECEED, '!': LINK_FILTERS.ELSEWHERE }[filter] : LINK_FILTERS.NONE
                 };
             };
             LinkIO.prototype.interpretLink = function (linkspec) {
@@ -999,23 +1000,56 @@ var Jungle;
                             var sourceP = sourcePorts_1[_b];
                             for (var _c = 0, sinkPorts_1 = sinkPorts; _c < sinkPorts_1.length; _c++) {
                                 var sinkP = sinkPorts_1[_c];
-                                if (!linkspec.matching || sinkLb === sourceLb) {
-                                    this.forgeLink(sourceLb, sinkLb, sourceP, sinkP);
+                                if (this.checkLink(linkspec, sourceLb, sinkLb, sourceP, sinkP)) {
+                                    this.forgeLink(linkspec, sourceLb, sinkLb, sourceP, sinkP);
                                 }
                             }
                         }
                     }
                 }
             };
-            LinkIO.prototype.forgeLink = function (sourceCell, sinkCell, sourcePort, sink, close) {
-                if (close === void 0) { close = false; }
-                this.linkmap[sourceCell][sourcePort.label].push(sink);
+            LinkIO.prototype.checkLink = function (linkspec, sourceLabel, sinkLabel, sourceP, sinkP) {
+                var matched = (!linkspec.matching || sinkLabel === sourceLabel), openSource = (this.closed.sources.indexOf(sourceLabel) === -1), openSink = this.closed.sinks.indexOf(sinkLabel) === -1, unfiltered = this.filterCheck(sourceLabel, sinkLabel, linkspec);
+                return matched && openSource && openSink && unfiltered;
+            };
+            LinkIO.prototype.filterCheck = function (sourceLabel, sinkLabel, linkspec) {
+                var srcnum = Number(sourceLabel), snknum = Number(sinkLabel);
+                if (!isNaN(srcnum) && !isNaN(snknum) && linkspec.propogation != LINK_FILTERS.NONE) {
+                    if (linkspec.propogation == LINK_FILTERS.PROCEED) {
+                        return srcnum === snknum - 1;
+                    }
+                    else if (linkspec.propogation == LINK_FILTERS.DECEED) {
+                        return srcnum === snknum + 1;
+                    }
+                    else {
+                        return srcnum !== snknum;
+                    }
+                }
+                else {
+                    if (LINK_FILTERS.ELSEWHERE) {
+                        return sourceLabel !== sinkLabel;
+                    }
+                    else {
+                        return true;
+                    }
+                }
+            };
+            LinkIO.prototype.forgeLink = function (linkspec, sourceCell, sinkCell, sourcePort, sinkPort) {
+                console.log("link formation: source:" + sourceCell + "." + sourcePort.label + ", sink:" + sinkCell + "." + sinkPort.label + ", closed sinks " + this.closed.sinks);
+                this.linkmap[sourceCell][sourcePort.label].push(sinkPort);
+                if (linkspec.closeSink) {
+                    this.closed.sinks.push(sinkCell);
+                }
+                if (linkspec.closeSource) {
+                    this.closed.sources.push(sourceCell);
+                }
             };
             LinkIO.prototype.follow = function (sourceCell, source, throughput) {
                 var targeted = this.linkmap[sourceCell][source.label];
                 this.emmissionGate.then(function (result, handle) {
                     for (var _i = 0, targeted_1 = targeted; _i < targeted_1.length; _i++) {
                         var sink = targeted_1[_i];
+                        console.log("Throughput of " + throughput + " from source " + sourceCell + "." + source.label + " to " + sink.label);
                         sink.handle(throughput);
                     }
                 });
@@ -1159,9 +1193,6 @@ var Jungle;
         };
         ResolutionCell.prototype.resolve = function (resolveArgs) {
             Object.freeze(resolveArgs);
-            if (!this.prepared) {
-                var pr = this.prepare();
-            }
             if (this.io.isShellBase && !this.io.specialGate) {
                 var sInpHook = this.io.specialInput;
                 var sInpResult = sInpHook.tractor.call(this.ctx.exposed, resolveArgs);
@@ -2023,11 +2054,11 @@ var Jungle;
             if (allowIdentical === void 0) { allowIdentical = true; }
             var derefstack = derefstack || [];
             var seen = seen || [];
-            if (seen.indexOf(node1) || seen.indexOf(node2)) {
+            if (seen.indexOf(node1) !== -1 || seen.indexOf(node2) !== -1) {
                 return;
             }
             if (typeof (node1) != typeof (node2)) {
-                throw new Error("nodes not same type, derefs: [" + derefstack + "]");
+                throw new Error("nodes not same type, derefs: [" + derefstack + "],  node1:" + node1 + " of type " + typeof (node1) + ", node2:" + node2 + " of type " + typeof (node2));
             }
             else if (node1 instanceof Object) {
                 if (node1 === node2 && !allowIdentical) {
@@ -2044,7 +2075,7 @@ var Jungle;
                             throw new Error("key " + k + " in object2 but not object1, derefs:[" + derefstack + "]");
                         }
                         else {
-                            deeplyEqualsThrow(node1[q], node2[q], derefstack.concat(q), allowIdentical);
+                            deeplyEqualsThrow(node1[q], node2[q], derefstack.concat(q), seen.concat(node1, node2), allowIdentical);
                         }
                     }
                     return true;
@@ -2059,8 +2090,8 @@ var Jungle;
             deeplyEquals(node1, node2, false);
         }
         Util.isDeepReplica = isDeepReplica;
-        function isDeepReplicaThrow(node1, node2, derefstack) {
-            deeplyEqualsThrow(node1, node2, derefstack, null, false);
+        function isDeepReplicaThrow(node1, node2) {
+            deeplyEqualsThrow(node1, node2, undefined, undefined, false);
         }
         Util.isDeepReplicaThrow = isDeepReplicaThrow;
         function softAssoc(from, onto) {
@@ -2591,5 +2622,145 @@ var Jungle;
             return Gate;
         }());
         Util.Gate = Gate;
+    })(Util = Jungle.Util || (Jungle.Util = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var Util;
+    (function (Util) {
+        function B(crown, form) {
+            if (crown === void 0) { crown = {}; }
+            if (form === void 0) { form = {}; }
+            return new Blender(crown, form);
+        }
+        Util.B = B;
+        var Blender = (function () {
+            function Blender(crown, form) {
+                if (crown === void 0) { crown = {}; }
+                if (form === void 0) { form = {}; }
+                this.crown = crown;
+                if (form instanceof Function) {
+                    this.reducer = form;
+                }
+                else if (form.reducer instanceof Function) {
+                    this.reducer = form.reducer;
+                }
+                else {
+                    this.reducer = Blender.defaultReduce;
+                }
+                this.block = form.block || false;
+                this.term = form.term || false;
+                this.mapper = form.mapper || Blender.defaultMap;
+            }
+            Blender.defaultReduce = function (a, b) {
+                if (Blender.strictTypeReduce && (typeof (a) != typeof (b))) {
+                    var errmsg = "Expected melding to be the same type \n" +
+                        "existing: " + a + "\n" +
+                        "incoming: " + b + "\n";
+                    throw TypeError(errmsg);
+                }
+                return b === undefined ? a : b;
+            };
+            ;
+            Blender.defaultMap = function (x) {
+                return x;
+            };
+            Blender.prototype.init = function (obj) {
+                if (this.term === false) {
+                    Util.typeCaseSplitF(this.initChurn.bind(this))(obj);
+                }
+                else {
+                    this.crown = obj;
+                }
+                return this;
+            };
+            Blender.prototype.initChurn = function (inner, k) {
+                if (k === undefined) {
+                    this.crown = inner;
+                    this.term = true;
+                }
+                else if (k in this.crown) {
+                    var val = this.crown[k];
+                    if (val instanceof Blender) {
+                        val.init(inner);
+                    }
+                    else if (val instanceof Function) {
+                        this.crown[k] = B(undefined, val).init(inner);
+                    }
+                    else {
+                        this.crown[k] = B(this.crown[k], { mapper: this.mapper, reducer: this.reducer }).init(inner);
+                    }
+                }
+                else {
+                    this.crown[k] = B(undefined, { mapper: this.mapper, reducer: this.reducer }).init(inner);
+                }
+            };
+            Blender.prototype.dump = function () {
+                if (this.term) {
+                    return this.crown;
+                }
+                else {
+                    return Util.typeCaseSplitF(function (child) { return child.dump(); })(this.crown);
+                }
+            };
+            Blender.prototype.blend = function (obj) {
+                this._blend(obj);
+                return this;
+            };
+            Blender.prototype._blend = function (obj) {
+                var mapped = this.mapper(obj);
+                var reduced;
+                if (this.term) {
+                    reduced = this.reducer(this.crown, mapped);
+                    this.crown = reduced;
+                    console.log('updated reduced:', reduced);
+                }
+                else {
+                    reduced = this.merge(mapped);
+                    console.log('updated recursed:', reduced);
+                }
+                return reduced;
+            };
+            Blender.prototype.merge = function (income) {
+                var superkeys;
+                superkeys = Object.keys(this.crown || {});
+                superkeys = Object.keys(income || {}).reduce(function (collected, current, i, array) {
+                    return ((array.indexOf(current) === -1)
+                        ?
+                            collected.concat(current) : collected);
+                }, superkeys);
+                console.log('total keys', superkeys, "  income: ", income);
+                var result = this.crown instanceof Array ? [] : {};
+                for (var _i = 0, superkeys_1 = superkeys; _i < superkeys_1.length; _i++) {
+                    var key = superkeys_1[_i];
+                    if (income === undefined || income[key] === undefined) {
+                        result[key] = this.churn(undefined, key);
+                    }
+                    else {
+                        result[key] = this.churn(income[key], key);
+                    }
+                }
+                return result;
+            };
+            Blender.prototype.churn = function (inner, k) {
+                console.log("churn, inner:", inner, " , k:", k);
+                var churned;
+                if (inner === undefined) {
+                    churned = this.crown[k].dump();
+                }
+                else if (k in this.crown) {
+                    console.log('recursive blend', inner);
+                    churned = this.crown[k]._blend(inner);
+                }
+                else {
+                    this.crown[k] = B(undefined, { mapper: this.mapper, reducer: this.reducer }).init(inner);
+                    churned = this.crown[k].dump();
+                }
+                return churned;
+            };
+            return Blender;
+        }());
+        Blender.strictTypeReduce = false;
+        Util.Blender = Blender;
     })(Util = Jungle.Util || (Jungle.Util = {}));
 })(Jungle || (Jungle = {}));
