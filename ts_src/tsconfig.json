@@ -57,6 +57,7 @@
         "./resource/io.ts",
         "./terminal.ts",
         "./util.ts",
-        "./util/async.ts"
+        "./util/async.ts",
+        "./util/object.ts"
     ]
 }
