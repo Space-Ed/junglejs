@@ -1,13 +1,17 @@
 var Jungle = require('../dist/jungle.js');
 var signals = require('signals')
-var G = Jungle.G, I = Jungle.I, O = Jungle.O;
+var G = Jungle.G, I = Jungle.I, O = Jungle.O, R = Jungle.R;
 
 describe("input-output", function(){
     var g1;
 
-    beforeEach(function(){
-        g1 = G({
-            arc:G(null,{
+    describe("smorgasbord", function(){
+
+        beforeEach(function(){
+
+            g1 = G({
+                arc:G(undefined,{
+                    x:'arc',
                     _arc(input){
                         this.saved = input
                     },
@@ -19,140 +23,143 @@ describe("input-output", function(){
                     },
                     saved:null
                 }),
-            beam:G(null
-                ,{
-                    _beamin(inp){
-                        this.buffer.push(inp);
-                    },
-                    r(obj, arg){
-                        return this.buffer.pop() || obj
-                    },
-                    buffer:[]
-                }),
-            crux:G(
-                null
-                ,{
-                    __trigger(input){
-                        if(input <= 5){
-                            return Jungle.IO.HALT
+                beam:G(null
+                    ,{
+                        _beamin(inp){
+                            this.buffer.push(inp);
+                        },
+                        r(obj, arg){
+                            return this.buffer.pop() || obj
+                        },
+                        buffer:[]
+                    }),
+                    crux:G(
+                        null
+                        ,{
+                            __trigger(input){
+                                if(input <= 5){
+                                    return Jungle.IO.HALT
+                                }
+                            }
+                        })
+                    },{
+                        x:'_',
+                        beamout_(obj, arg){
+                            return obj.beam
                         }
-                    }
+                    })
                 })
-        },{
-            beamout_(obj, arg){
-                return obj.beam
-            }
-        })
-    })
 
-    it('should throw error when shelling unprepared', function(){
-        expect(function(){
-            g1.io.enshell()
-        }).toThrowError("unable to shell unprepared node")
-
-    })
-
-    it('should shell up', function(){
-        g1.prepare()
-        g1.io.enshell()
-    })
-
-    describe("prepared shell",function(){
-
-        beforeEach(function(){
-            g1.prepare()
-            g1.io.enshell()
-
-            //spyOn(this, 'outcatch')
+        it('should throw error when shelling unprepared', function(){
+            expect(function(){
+                g1.io.enshell()
+            }).toThrowError("unable to shell unprepared node")
 
         })
 
-
-        it("should allow me to call input label",function(){
-            g1.io.inputs.beamin("fallacies")
-        });
-
-        it('should modify state using input function',function(){
-            g1.io.inputs.arc("hello?")
-
-            expect(g1.crown.arc.ctx.exposed.saved).toBe("hello?")
-
+        it('should be reconstructable',function(){
+            let gb = g1.bundle();
+            Jungle.Util.deeplyEqualsThrow(gb, R(gb).bundle());
         })
-    })
 
-    describe('dressing',function(){
-
-        beforeEach(function(){
-            g1.prepare()
-            g1.io.enshell();
-            })
-
-        describe('with callbacks', function(){
-
-            var ctx, spyctx;
+        describe("prepared shell",function(){
 
             beforeEach(function(){
+                g1.prepare()
+                g1.io.enshell()
 
-                spyctx ={
-                    cb(){}
-                }
+                //spyOn(this, 'outcatch')
 
-                ctx = {
-                    cb(x){
-                        spyctx.cb(x);
-                    },
-                }
-
-                g1.io.dress("*", {callback:ctx.cb, context: ctx});
-            });
-
-            it('should be applied to all outputs', function(){
-                expect(g1.io.outputs.arc.callback).toBe(ctx.cb);
-                expect(g1.io.outputs.arc.callbackContext).toBe(ctx);
-                expect(g1.io.outputs.beamout.callback).toBe(ctx.cb);
-                expect(g1.io.outputs.beamout.callbackContext).toBe(ctx);
-                expect(g1.io.outputs.$.callback).toBe(ctx.cb);
-                expect(g1.io.outputs.$.callbackContext).toBe(ctx);
             })
 
 
-
-            it('should be triggered ',function(){
-                spyOn(spyctx, 'cb');
-                g1.io.inputs.beamin("Buckets");
-                expect(spyctx.cb).not.toHaveBeenCalled();
-                g1.io.inputs.trigger(2);
-                expect(spyctx.cb).not.toHaveBeenCalled();
-                g1.io.inputs.trigger(6);
-                expect(spyctx.cb).toHaveBeenCalledWith("Buckets");
+            it("should allow me to call input label",function(){
+                g1.io.inputs.beamin("fallacies")
             });
+
+            it('should modify state using input function',function(){
+                g1.io.inputs.arc("hello?")
+
+                expect(g1.crown.arc.ctx.exposed.saved).toBe("hello?")
+
+            })
         })
 
-        describe('with signals',function(){
+        describe('dressing',function(){
+
             beforeEach(function(){
-                g1.io.dress("*", {callback:'dispatch', context: signals.Signal})
-            });
+                g1.prepare()
+                g1.io.enshell();
+            })
 
-            it('should have a signal instance on outputs', function(){
-                expect(g1.io.outputs.arc.callbackContext instanceof signals.Signal).toBe(true)
-                expect(g1.io.outputs.beamout.callbackContext instanceof signals.Signal).toBe(true)
-            });
+            describe('with callbacks', function(){
 
-            it('should allow signal subscription', function(){
-                var signal = g1.io.outputs.beamout.callbackContext;
+                var ctx, spyctx;
 
-                spyOn(signal, 'dispatch');
+                beforeEach(function(){
 
-                g1.io.inputs.beamin("Buckets");
-                expect(signal.dispatch).not.toHaveBeenCalled();
-                g1.io.inputs.trigger(2);
-                expect(signal.dispatch).not.toHaveBeenCalled();
-                g1.io.inputs.trigger(6);
-                expect(signal.dispatch).toHaveBeenCalledWith("Buckets")
+                    spyctx ={
+                        cb(){}
+                    }
 
-            });
+                    ctx = {
+                        cb(x){
+                            spyctx.cb(x);
+                        },
+                    }
 
+                    g1.io.dress("*", {callback:ctx.cb, context: ctx});
+                });
+
+                it('should be applied to all outputs', function(){
+                    expect(g1.io.outputs.arc.callback).toBe(ctx.cb);
+                    expect(g1.io.outputs.arc.callbackContext).toBe(ctx);
+                    expect(g1.io.outputs.beamout.callback).toBe(ctx.cb);
+                    expect(g1.io.outputs.beamout.callbackContext).toBe(ctx);
+                    expect(g1.io.outputs.$.callback).toBe(ctx.cb);
+                    expect(g1.io.outputs.$.callbackContext).toBe(ctx);
+                })
+
+
+
+                it('should be triggered ',function(){
+                    spyOn(spyctx, 'cb');
+                    g1.io.inputs.beamin("Buckets");
+                    expect(spyctx.cb).not.toHaveBeenCalled();
+                    g1.io.inputs.trigger(2);
+                    expect(spyctx.cb).not.toHaveBeenCalled();
+                    g1.io.inputs.trigger(6);
+                    expect(spyctx.cb).toHaveBeenCalledWith("Buckets");
+                });
+            })
+
+            describe('with signals',function(){
+                beforeEach(function(){
+                    g1.io.dress("*", {callback:'dispatch', context: signals.Signal})
+                });
+
+                it('should have a signal instance on outputs', function(){
+                    expect(g1.io.outputs.arc.callbackContext instanceof signals.Signal).toBe(true)
+                    expect(g1.io.outputs.beamout.callbackContext instanceof signals.Signal).toBe(true)
+                });
+
+                it('should allow signal subscription', function(){
+                    var signal = g1.io.outputs.beamout.callbackContext;
+
+                    spyOn(signal, 'dispatch');
+
+                    g1.io.inputs.beamin("Buckets");
+                    expect(signal.dispatch).not.toHaveBeenCalled();
+                    g1.io.inputs.trigger(2);
+                    expect(signal.dispatch).not.toHaveBeenCalled();
+                    g1.io.inputs.trigger(6);
+                    expect(signal.dispatch).toHaveBeenCalledWith("Buckets")
+
+                });
+
+            })
         })
+
     })
 
     describe("special base io", function(){
@@ -265,13 +272,13 @@ describe("input-output", function(){
 
         it("should set a context value passively", function(){
 
-            var g = G(null,{
+            var g = R(G(null,{
                 _X:undefined,
                 _Y:0,
                 r(x){
                     return [this.X, this.Y]
                 }
-            }).prepare();
+            }).bundle()).prepare();
 
 
             var res = g.resolve();
@@ -288,14 +295,14 @@ describe("input-output", function(){
 
         it("should trigger on change for eager only", function(){
 
-            var g = G(null,{
+            var g = R(G(null,{
                 __X:undefined,
                 __Y:0,
                 _Z:"bleep",
                 r(x){
                     return [this.X, this.Y, this.Z]
                 }
-            }).prepare();
+            }).bundle()).prepare();
             g.io.outputs.$.callback = function(x){
                 console.log("spied out")
             }

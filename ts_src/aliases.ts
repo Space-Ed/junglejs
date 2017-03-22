@@ -15,10 +15,6 @@ namespace Jungle {
         return new ResolutionCell(components, {r:func})
     }
 
-    export function R(reconstructionBundle){
-        return new Reconstruction(reconstructionBundle)
-    }
-
     export function T(type){
         return new Terminal(type)
     }

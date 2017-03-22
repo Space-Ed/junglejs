@@ -18,10 +18,6 @@ var Jungle;
         return new Jungle.ResolutionCell(components, { r: func });
     }
     Jungle.F = F;
-    function R(reconstructionBundle) {
-        return new Jungle.Reconstruction(reconstructionBundle);
-    }
-    Jungle.R = R;
     function T(type) {
         return new Jungle.Terminal(type);
     }
@@ -318,6 +314,7 @@ var Jungle;
     var BaseCell = (function () {
         function BaseCell(components, form) {
             if (form === void 0) { form = {}; }
+            this.kind = "Base";
             this.depth = 0;
             this.isRoot = true;
             this.prepared = false;
@@ -489,12 +486,13 @@ var Jungle;
                     return node;
                 }
             }
-            var recurrentCellBundle = Jungle.Util.typeCaseSplitF(bundler, bundler, null)(this.crown);
+            var recurrentCellBundle = Jungle.Util.typeCaseSplitF(bundler)(this.crown);
             var product = {
-                node: recurrentCellBundle,
-                form: Jungle.deformulate(this),
-                state: this.ctx.extract()
+                core: this.kind,
+                crown: recurrentCellBundle,
+                form: this.form.consolidate(this.io, this.ctx)
             };
+            console.log('bundle: ', product);
             return product;
         };
         BaseCell.prototype.enshell = function () {
@@ -503,6 +501,10 @@ var Jungle;
         };
         BaseCell.prototype.resolve = function (arg) {
             return null;
+        };
+        BaseCell.prototype.X = function (crown, form) {
+            var deconstruction = this.bundle();
+            return Jungle.R(Jungle.Util.melder(deconstruction, { crown: crown, form: form, core: this.constructor }));
         };
         return BaseCell;
     }());
@@ -808,7 +810,9 @@ var Jungle;
     var LinkCell = (function (_super) {
         __extends(LinkCell, _super);
         function LinkCell(crown, formspec) {
-            return _super.call(this, crown, formspec) || this;
+            var _this = _super.call(this, crown, formspec) || this;
+            _this.kind = "Link";
+            return _this;
         }
         LinkCell.prototype.constructIO = function (iospec) {
             return new Jungle.IO.LinkIO(this, iospec);
@@ -883,6 +887,16 @@ var Jungle;
             }
             return { iospec: { ports: portlabels, links: links, linkFunciton: linkf }, contextspec: { properties: contextprops, declaration: ctxdeclare } };
         };
+        LinkForm.prototype.consolidate = function (io, ctx) {
+            return Jungle.Util.melder({
+                p: this.preparator,
+                d: this.depreparator,
+                x: ctx.declaration,
+                link: io.links,
+                lf: io.linker,
+                port: io.ports
+            }, ctx.extract());
+        };
         return LinkForm;
     }(Jungle.BaseForm));
     Jungle.LinkForm = LinkForm;
@@ -902,7 +916,8 @@ var Jungle;
             __extends(LinkIO, _super);
             function LinkIO(host, spec) {
                 var _this = _super.call(this, host, spec) || this;
-                _this.spec = spec;
+                _this.ports = spec.ports;
+                _this.links = spec.links;
                 _this.linkmap = {};
                 _this.linker = spec.linkFunciton;
                 _this.emmissionGate = new Jungle.Util.Junction();
@@ -910,7 +925,7 @@ var Jungle;
                 return _this;
             }
             LinkIO.prototype.enshell = function () {
-                this.shell = new IO.BaseShell(this, this.spec.ports);
+                this.shell = new IO.BaseShell(this, this.ports);
                 this.lining = this.shell.invert();
                 this.innerDress();
                 this.applyLinks();
@@ -936,7 +951,7 @@ var Jungle;
                 }
             };
             LinkIO.prototype.applyLinks = function () {
-                for (var _i = 0, _a = this.spec.links; _i < _a.length; _i++) {
+                for (var _i = 0, _a = this.links; _i < _a.length; _i++) {
                     var link = _a[_i];
                     var linkir = this.parseLink(link);
                     this.interpretLink(linkir);
@@ -966,34 +981,34 @@ var Jungle;
             LinkIO.prototype.interpretLink = function (linkspec) {
                 var sourceShells = {};
                 var sinkShells = {};
-                var sourceLabels = [];
-                var sinkLabels = [];
+                var sourceShellLabels = [];
+                var sinkShellLabels = [];
                 if (linkspec.sourceCell === "*") {
-                    sourceShells = Jungle.Util.mapObject(this.host.crown, function (k, src) { sourceLabels.push(k); return src.io.shell; });
+                    sourceShells = Jungle.Util.mapObject(this.host.crown, function (k, src) { sourceShellLabels.push(k); return src.io.shell; });
                 }
                 else if (linkspec.sourceCell === '_') {
                     sourceShells['_'] = this.host.io.lining;
-                    sourceLabels = ['_'];
+                    sourceShellLabels = ['_'];
                 }
                 else if (linkspec.sourceCell in this.host.crown) {
                     sourceShells[linkspec.sourceCell] = this.host.crown[linkspec.sourceCell].io.shell;
-                    sourceLabels = [linkspec.sourceCell];
+                    sourceShellLabels = [linkspec.sourceCell];
                 }
                 if (linkspec.sinkCell === "*") {
-                    sinkShells = Jungle.Util.mapObject(this.host.crown, function (k, src) { sinkLabels.push(k); return src.io.shell; });
+                    sinkShells = Jungle.Util.mapObject(this.host.crown, function (k, src) { sinkShellLabels.push(k); return src.io.shell; });
                 }
                 else if (linkspec.sinkCell === '_') {
                     sinkShells['_'] = this.host.io.lining;
-                    sinkLabels = ['_'];
+                    sinkShellLabels = ['_'];
                 }
                 else if (linkspec.sinkCell in this.host.crown) {
                     sinkShells[linkspec.sinkCell] = this.host.crown[linkspec.sinkCell].io.shell;
-                    sinkLabels = [linkspec.sinkCell];
+                    sinkShellLabels = [linkspec.sinkCell];
                 }
-                for (var _i = 0, sourceLabels_1 = sourceLabels; _i < sourceLabels_1.length; _i++) {
-                    var sourceLb = sourceLabels_1[_i];
-                    for (var _a = 0, sinkLabels_1 = sinkLabels; _a < sinkLabels_1.length; _a++) {
-                        var sinkLb = sinkLabels_1[_a];
+                for (var _i = 0, sourceShellLabels_1 = sourceShellLabels; _i < sourceShellLabels_1.length; _i++) {
+                    var sourceLb = sourceShellLabels_1[_i];
+                    for (var _a = 0, sinkShellLabels_1 = sinkShellLabels; _a < sinkShellLabels_1.length; _a++) {
+                        var sinkLb = sinkShellLabels_1[_a];
                         var sourcePorts = sourceShells[sourceLb].designate(linkspec.sourcePort);
                         var sinkPorts = sinkShells[sinkLb].designate(linkspec.sinkPort);
                         for (var _b = 0, sourcePorts_1 = sourcePorts; _b < sourcePorts_1.length; _b++) {
@@ -1008,8 +1023,10 @@ var Jungle;
                     }
                 }
             };
-            LinkIO.prototype.checkLink = function (linkspec, sourceLabel, sinkLabel, sourceP, sinkP) {
-                var matched = (!linkspec.matching || sinkLabel === sourceLabel), openSource = (this.closed.sources.indexOf(sourceLabel) === -1), openSink = this.closed.sinks.indexOf(sinkLabel) === -1, unfiltered = this.filterCheck(sourceLabel, sinkLabel, linkspec);
+            LinkIO.prototype.checkLink = function (linkspec, sourceCellLabel, sinkCellLabel, sourceP, sinkP) {
+                console.log("checkLink(" + linkspec.propogation + ", " + sourceCellLabel + ", " + sinkCellLabel + ", " + sourceP.label + ", " + sinkP.label + ")");
+                var matched = (!linkspec.matching || sourceP.label === sinkP.label), openSource = (this.closed.sources.indexOf(sourceCellLabel) === -1), openSink = this.closed.sinks.indexOf(sinkCellLabel) === -1, unfiltered = this.filterCheck(sourceCellLabel, sinkCellLabel, linkspec);
+                console.log("matched" + matched + " && openSource" + openSource + " && openSink" + openSink + " && unfiltered" + unfiltered);
                 return matched && openSource && openSink && unfiltered;
             };
             LinkIO.prototype.filterCheck = function (sourceLabel, sinkLabel, linkspec) {
@@ -1026,7 +1043,7 @@ var Jungle;
                     }
                 }
                 else {
-                    if (LINK_FILTERS.ELSEWHERE) {
+                    if (linkspec.propogation == LINK_FILTERS.ELSEWHERE) {
                         return sourceLabel !== sinkLabel;
                     }
                     else {
@@ -1082,10 +1099,6 @@ var Jungle;
 }).call(this);
 var Jungle;
 (function (Jungle) {
-    function isBundle(object) {
-        return object instanceof Object && "form" in object && "state" in object && "node" in object;
-    }
-    Jungle.isBundle = isBundle;
     var ObjectFunctionCache = (function () {
         function ObjectFunctionCache() {
             this.functions = {};
@@ -1129,34 +1142,35 @@ var Jungle;
         return recovered;
     }
     Jungle.reformulate = reformulate;
-    var Reconstruction = (function (_super) {
-        __extends(Reconstruction, _super);
-        function Reconstruction(bundle) {
-            var _this = this;
-            function debundle(bundle) {
-                if (isBundle(bundle)) {
-                    return new Reconstruction(bundle);
-                }
-                else {
-                    return bundle;
-                }
+    function isBundle(object) {
+        return object instanceof Object && "form" in object && "crown" in object && "core" in object;
+    }
+    Jungle.isBundle = isBundle;
+    function R(bundle) {
+        function debundle(bundle) {
+            if (isBundle(bundle)) {
+                return R(bundle);
             }
-            var node = Jungle.Util.typeCaseSplitF(debundle)(bundle.node);
-            var form = Jungle.reformulate(bundle.form);
-            var state = bundle.state;
-            _this = _super.call(this, node, Jungle.Util.melder(form, state)) || this;
-            return _this;
+            else {
+                return bundle;
+            }
         }
-        return Reconstruction;
-    }(Jungle.BaseCell));
-    Jungle.Reconstruction = Reconstruction;
+        var freshcrown = Jungle.Util.typeCaseSplitF(debundle)(bundle.crown);
+        return new ({
+            "Resolution": Jungle.ResolutionCell,
+            "Link": Jungle.LinkCell
+        }[bundle.core])(freshcrown, bundle.form);
+    }
+    Jungle.R = R;
 })(Jungle || (Jungle = {}));
 var Jungle;
 (function (Jungle) {
     var ResolutionCell = (function (_super) {
         __extends(ResolutionCell, _super);
         function ResolutionCell() {
-            return _super !== null && _super.apply(this, arguments) || this;
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.kind = "Resolution";
+            return _this;
         }
         ResolutionCell.prototype.constructForm = function () {
             return new Jungle.GForm(this);
@@ -1285,7 +1299,6 @@ var Jungle;
             var ctxdeclare = formObj.x || "";
             this.carrier = formObj.c || Jungle.Util.identity;
             this.resolver = formObj.r || Jungle.Util.identity;
-            this.selector = formObj.s || function (keys, carg) { return true; };
             this.preparator = formObj.p || function (x) { };
             var hookIORegex = /^(_{0,2})([a-zA-Z]+(?:\w*[a-zA-Z])?|\$)(_{0,2})$/;
             var hooks = [];
@@ -1458,14 +1471,13 @@ var Jungle;
                 c: this.carrier,
                 p: this.preparator,
                 d: this.depreparator,
-                s: this.selector,
                 x: ctx.declaration,
             }, Jungle.Util.melder(io.extract(), ctx.extract(), void 0, void 0, false));
             return consolidated;
         };
         return GForm;
     }(Jungle.BaseForm));
-    GForm.RFormProps = ["x", "p", "d", "c", "r", "s", "prepare", "destroy", "carry", "resolve", "select"];
+    GForm.RFormProps = ["x", "p", "d", "c", "r", "prepare", "destroy", "carry", "resolve", "select"];
     Jungle.GForm = GForm;
 })(Jungle || (Jungle = {}));
 var Jungle;
@@ -2072,7 +2084,7 @@ var Jungle;
                     }
                     for (var q in node2) {
                         if (!(q in node1)) {
-                            throw new Error("key " + k + " in object2 but not object1, derefs:[" + derefstack + "]");
+                            throw new Error("key " + q + " in object2 but not object1, derefs:[" + derefstack + "]");
                         }
                         else {
                             deeplyEqualsThrow(node1[q], node2[q], derefstack.concat(q), seen.concat(node1, node2), allowIdentical);

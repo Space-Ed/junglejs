@@ -24,11 +24,10 @@ namespace Jungle {
 
      export class GForm extends BaseForm{
 
-         static RFormProps = ["x", "p", "d", "c", "r", "s", "prepare", "destroy", "carry", "resolve", "select"]
+         static RFormProps = ["x", "p", "d", "c", "r", "prepare", "destroy", "carry", "resolve", "select"]
 
          carrier:(arg)=>any;
          resolver:(obj, arg)=>any;
-         selector:(keys, arg)=>any;
 
          constructor(host:ResolutionCell){
              super(host);
@@ -40,8 +39,7 @@ namespace Jungle {
 
              this.carrier = formObj.c || Jungle.Util.identity;
              this.resolver = formObj.r || Jungle.Util.identity;
-             this.selector = formObj.s || function(keys, carg){return true}
-             this.preparator = formObj.p || function(x){};
+            this.preparator = formObj.p || function(x){};
 
             const hookIORegex = /^(_{0,2})([a-zA-Z]+(?:\w*[a-zA-Z])?|\$)(_{0,2})$/;
 
@@ -142,15 +140,15 @@ namespace Jungle {
 
         consolidate(io:IO.IOComponent, ctx:GContext):FormSpec{
 
-
             var consolidated = Util.melder({
                 r:this.resolver,
                 c:this.carrier ,
                 p:this.preparator,
                 d:this.depreparator,
-                s:this.selector,
                 x:ctx.declaration,
             },Util.melder(io.extract(), ctx.extract(), void 0, void 0, false));
+
+            // console.log("Consolidated Form: ", consolidated);
 
             return consolidated;
         }

@@ -1,26 +1,11 @@
 
 namespace Jungle {
 
-    export interface FormRef {
-        f:string,
-        c:string,
-        m:string
-    }
-
     export interface FunctionCache {
         storeFunction(func:Function):string;
         recoverFunction(id:string):Function;
     }
 
-    export interface Bundle {
-        node:any;
-        form:FormRef;
-        state:any;
-    }
-
-    export function isBundle (object){
-        return object instanceof Object && "form" in object && "state" in object && "node" in object;
-    }
 
     /**
      * A rudimetary implementation not supporting failure cases or serialization
@@ -74,7 +59,7 @@ namespace Jungle {
     /**
     * rebuild the form object by recovering the stored function from the cache using the uuids and labels.
      */
-    export function reformulate(formRef:FormRef):FormSpec{
+    export function reformulate(formRef):FormSpec{
         var recovered = {}
 
         for (let k in formRef){
@@ -85,28 +70,39 @@ namespace Jungle {
     }
 
 
-    export class Reconstruction extends BaseCell {
 
-        constructor(bundle:Bundle){
-
-            //construct the node of array, object or primative,
-
-            function debundle(bundle){
-                if(isBundle(bundle)){
-                    return new Reconstruction(bundle)
-                }else {
-                    return bundle
-                }
-            }
-
-            let node = Util.typeCaseSplitF(debundle)(bundle.node)
-
-            //reconstruction is almost entirely for this, so that it can pass through reformulation.
-            let form =  Jungle.reformulate(bundle.form);
-            let state = bundle.state;
-
-            super(node, Util.melder(form, state))
-
-        }
+    export interface Bundle {
+        core:string;
+        crown:any;
+        form:any;
     }
+
+    export function isBundle (object){
+        return object instanceof Object && "form" in object && "crown" in object && "core" in object;
+    }
+
+    export function R(bundle:Bundle){
+        //construct the node of array, object or primative,
+
+        function debundle(bundle){
+
+            if(isBundle(bundle)){
+                return R(bundle)
+            }else {
+                return bundle
+            }
+        }
+
+        let freshcrown = Util.typeCaseSplitF(debundle)(bundle.crown)
+
+        //reconstruction is almost entirely for this, so that it can pass through reformulation.
+        // let form =  Jungle.reformulate(bundle.form);
+
+        return new ({
+            "Resolution":ResolutionCell,
+            "Link":LinkCell
+        }[bundle.core])(freshcrown, bundle.form)
+    }
+
+
 }

@@ -1,6 +1,9 @@
 namespace Jungle {
 
     export class BaseCell{
+
+        kind:string = "Base";
+
         crown:any;
         ctx:GContext;
         form:BaseForm;
@@ -247,13 +250,15 @@ namespace Jungle {
                 }
             }
 
-            var recurrentCellBundle = Util.typeCaseSplitF(bundler, bundler, null)(this.crown)
+            var recurrentCellBundle = Util.typeCaseSplitF(bundler)(this.crown)
 
             var product = {
-                node:recurrentCellBundle,
-                form:Jungle.deformulate(this),
-                state:this.ctx.extract()
+                core:this.kind,
+                crown:recurrentCellBundle,
+                form:this.form.consolidate(this.io, this.ctx)
             }
+
+            console.log('bundle: ', product)
             return product;
         }
 
@@ -266,6 +271,11 @@ namespace Jungle {
 
         resolve(arg){
             return null;
+        }
+
+        X(crown, form){
+            var deconstruction = this.bundle();
+            return R(Util.melder(deconstruction, {crown:crown, form:form, core:this.constructor}))
         }
 
     }

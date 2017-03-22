@@ -57,6 +57,17 @@ namespace Jungle {
             return {iospec:{ports:portlabels, links:links, linkFunciton:linkf}, contextspec:{properties:contextprops, declaration:ctxdeclare}}
 
         }
+
+        consolidate(io:IO.LinkIO, ctx:GContext):FormSpec{
+            return Util.melder({
+                p:this.preparator,
+                d:this.depreparator,
+                x:ctx.declaration,
+                link:io.links,
+                lf:io.linker,
+                port:io.ports
+            },ctx.extract())
+}
     }
 
 }

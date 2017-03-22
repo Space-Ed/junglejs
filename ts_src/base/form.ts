@@ -3,7 +3,6 @@ namespace Jungle {
     export interface FormSpec {
         r?:(obj, args?)=>any;
         c?:(args?)=>any;
-        s?:(keys, arg?)=>any;
         p?:(arg)=>void;
         d?:(arg)=>void;
         x?:string;
@@ -34,7 +33,6 @@ namespace Jungle {
               var ctxdeclare =  formObj.x || "";
               this.preparator = formObj.p || function(x){};
               this.preparator = formObj.p || function(x){};
-
 
               var contextprops = [];
               //Forbid the use of underscores

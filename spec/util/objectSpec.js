@@ -25,6 +25,31 @@ describe('deep equality', function(){
         deepEqualTest({a:{b:"one"}},{ a:{b:'two'}});
     })
 
+    it('should throw for deep type difference',function(){
+        deepEqualTest({
+            node:{
+                a:{
+                    node:{},
+                    form:{f:x=>{return x}, c:'identity', m:''},
+                    state:{}
+                }
+            },
+            form:{f:'fame', c:'identity', m:''},
+            state:{fearless:0}
+        },
+        {
+            node:{
+                a:{
+                    node:{},
+                    form:{f:'identity', c:'identity', m:''},
+                    state:{}
+                }
+            },
+            form:{f:'fame', c:'identity', m:''},
+            state:{fearless:0}
+        })
+    })
+
 
 })
 

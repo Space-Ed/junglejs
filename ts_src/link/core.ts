@@ -2,6 +2,7 @@ module Jungle {
 
     export class LinkCell extends BaseCell{
 
+        kind:string = "Link";
         constructor(crown, formspec){
             super(crown, formspec)
         }

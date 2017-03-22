@@ -2,7 +2,6 @@
 declare namespace Jungle {
     function G(components: Object, form: any): ResolutionCell;
     function F(func: any, components: any): ResolutionCell;
-    function R(reconstructionBundle: any): Reconstruction;
     function T(type: any): Terminal;
     function L(crown: any, form: any): LinkCell;
 }
@@ -74,6 +73,7 @@ declare namespace Jungle {
 }
 declare namespace Jungle {
     class BaseCell {
+        kind: string;
         crown: any;
         ctx: GContext;
         form: BaseForm;
@@ -107,13 +107,13 @@ declare namespace Jungle {
         bundle(): Bundle;
         enshell(): this;
         resolve(arg: any): any;
+        X(crown: any, form: any): any;
     }
 }
 declare namespace Jungle {
     interface FormSpec {
         r?: (obj, args?) => any;
         c?: (args?) => any;
-        s?: (keys, arg?) => any;
         p?: (arg) => void;
         d?: (arg) => void;
         x?: string;
@@ -247,6 +247,7 @@ declare namespace Jungle.Inv {
 }
 declare module Jungle {
     class LinkCell extends BaseCell {
+        kind: string;
         constructor(crown: any, formspec: any);
         constructIO(iospec: any): IO.IOComponent;
         constructForm(): LinkForm;
@@ -265,12 +266,12 @@ declare namespace Jungle {
             iospec: IOLinkSpec;
             contextspec: ContextSpec;
         };
+        consolidate(io: IO.LinkIO, ctx: GContext): FormSpec;
     }
 }
 declare namespace Jungle {
     namespace IO {
         class LinkIO extends BaseIO {
-            private spec;
             shell: BaseShell;
             specialGate: boolean;
             lining: Shell;
@@ -280,6 +281,8 @@ declare namespace Jungle {
                 sources: string[];
             };
             linker: (porta, portb) => void;
+            ports: PortSpec[];
+            links: string[];
             emmissionGate: Util.Junction;
             constructor(host: LinkCell, spec: IOLinkSpec);
             enshell(): Shell;
@@ -287,7 +290,7 @@ declare namespace Jungle {
             applyLinks(): void;
             private parseLink(link);
             private interpretLink(linkspec);
-            private checkLink(linkspec, sourceLabel, sinkLabel, sourceP, sinkP);
+            private checkLink(linkspec, sourceCellLabel, sinkCellLabel, sourceP, sinkP);
             private filterCheck(sourceLabel, sinkLabel, linkspec);
             private forgeLink(linkspec, sourceCell, sinkCell, sourcePort, sinkPort);
             follow(sourceCell: string, source: Port, throughput: any): void;
@@ -297,29 +300,23 @@ declare namespace Jungle {
     }
 }
 declare namespace Jungle {
-    interface FormRef {
-        f: string;
-        c: string;
-        m: string;
-    }
     interface FunctionCache {
         storeFunction(func: Function): string;
         recoverFunction(id: string): Function;
     }
+    function deformulate(fromCell: BaseCell): any;
+    function reformulate(formRef: any): FormSpec;
     interface Bundle {
-        node: any;
-        form: FormRef;
-        state: any;
+        core: string;
+        crown: any;
+        form: any;
     }
     function isBundle(object: any): boolean;
-    function deformulate(fromCell: BaseCell): any;
-    function reformulate(formRef: FormRef): FormSpec;
-    class Reconstruction extends BaseCell {
-        constructor(bundle: Bundle);
-    }
+    function R(bundle: Bundle): any;
 }
 declare namespace Jungle {
     class ResolutionCell extends BaseCell {
+        kind: string;
         io: IO.ResolveIO;
         form: GForm;
         resolveCache: {
@@ -357,7 +354,6 @@ declare namespace Jungle {
         static RFormProps: string[];
         carrier: (arg) => any;
         resolver: (obj, arg) => any;
-        selector: (keys, arg) => any;
         constructor(host: ResolutionCell);
         parse(formObj: FormSpec): {
             iospec: any;

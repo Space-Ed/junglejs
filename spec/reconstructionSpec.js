@@ -1,41 +1,54 @@
-var G = require("../dist/jungle.js");
-var g = G.G;
+const Jungle = require("../dist/jungle.js");
+const {G, R} = Jungle;
 
 describe("bundle creation",function(){
     pending("reconstruction overview")
 
+    function fame(resolved, args){
+        this.fearless += 1
+        return `peace for ${this.fearless}`
+    }
+
+    function ID(x){return x}
+
     beforeEach(function(){
-        this.g = g({
-            a:g({
+        this.g = G({
+            a:G({
                 meaning:'peace'
             })
         },{
-            r(resolved, args){
-                this.fearless += 1
-                return `peace for ${this.fearless}`
-            },
+            r:fame,
             fearless:0
         })
+
+        //console.log(this.g.bundle())
+        //console.log(R(this.g.bundle()).bundle())
+
     })
 
     it('should dump the appropriate object before preparation',function(){
-        G.Util.isDeepReplica(this.g.bundle(), {
-            node:{
+        Jungle.Util.deeplyEqualsThrow(this.g.bundle(), {
+            core:Jungle.ResolutionCell,
+            crown:{
                 a:{
-                    node:{},
-                    form:{f:'identity', c:'identity', m:''},
-                    state:{}
+                    core:Jungle.ResolutionCell,
+                    form:{r:Jungle.Util.identity, c:Jungle.Util.identity, x:'', p:Jungle.Util.identity, d:undefined},
+                    crown:{meaning:'peace'}
                 }
             },
-            form:{f:'fame', c:'identity', m:''},
-            state:{fearless:0}
+            form:{r:fame,
+                x:'',
+                c:Jungle.Util.identity,
+                p:Jungle.Util.identity ,
+                d:undefined,
+                fearless:0},
         })
     })
 
     it('should dump the appropriate object after preparation',function(){
         this.g.prepare()
 
-        G.Util.isDeepReplica(this.g.bundle(), {
+        Jungle.Util.isDeepReplica(this.g.bundle(), {
             node:{
                 a:{
                     node:{},
@@ -53,7 +66,7 @@ describe("bundle creation",function(){
         this.g.prepare()
         this.g.resolve()
 
-        G.Util.isDeepReplica(this.g.bundle(), {
+        Jungle.Util.isDeepReplica(this.g.bundle(), {
             node:{
                 a:{
                     node:{},
@@ -73,13 +86,13 @@ describe("bundle creation",function(){
         })
 
         it('should reconstruct without error', function(){
-            var reconstructed = new G.Reconstruction(this.bundle)
+            var reconstructed = R(this.bundle)
         })
 
         it('should reconstruct to an equivalent structure', function(){
-            var reconstructed = new G.Reconstruction(this.bundle)
+            var reconstructed = R(this.bundle)
             reconstructed.prepare()
-            G.Util.deeplyEqualsThrow(reconstructed, this.g)
+            Jungle.Util.deeplyEqualsThrow(reconstructed, this.g)
         })
     })
 })

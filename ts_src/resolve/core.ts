@@ -3,6 +3,8 @@ namespace Jungle {
 
     export class ResolutionCell extends BaseCell {
 
+        kind:string = "Resolution";
+
         io:IO.ResolveIO;
         form:GForm;
         resolveCache:{

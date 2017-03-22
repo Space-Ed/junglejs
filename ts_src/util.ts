@@ -178,14 +178,14 @@ namespace Jungle{
                 if(node1 === node2 && !allowIdentical){
                     throw new Error(`identical object not replica, derefs:[${derefstack}]`)
                 }else{
-                    for (var k in node1){
+                    for (let k in node1){
                         if(!(k in node2)){
                             throw new Error(`key ${k} in object1 but not object2, derefs:[${derefstack}]`)
                         }
                     }
-                    for (var q in node2){
+                    for (let q in node2){
                         if(!(q in node1)){
-                            throw new Error(`key ${k} in object2 but not object1, derefs:[${derefstack}]`)// key in node2 and not node1
+                            throw new Error(`key ${q} in object2 but not object1, derefs:[${derefstack}]`)// key in node2 and not node1
                         }else{
                             deeplyEqualsThrow(node1[q], node2[q], derefstack.concat(q), seen.concat(node1, node2), allowIdentical)
                         }

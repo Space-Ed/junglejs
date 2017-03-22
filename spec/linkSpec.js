@@ -1,7 +1,5 @@
-var Jungle = require('../dist/jungle.js')
-
-var G = Jungle.G;
-var L = Jungle.L;
+const Jungle = require('../dist/jungle.js')
+const {G,L,R} = Jungle;
 
 describe("Link Cells", function () {
     var io = G(null,{
@@ -38,14 +36,20 @@ describe("Link Cells", function () {
         pushed:[]
     })
 
-    function portResponseTest(cell, inp, outp, input, expected, count=1){
+    function portResponseTest(cell, inp, outp, input, expected, count=1, test = ""){
         let spy = jasmine.createSpy();
 
         cell.io.shell.sources[outp].callback = spy;
         cell.io.shell.sinks[inp].handle(input);
 
-        expect(spy.calls.count()).toBe(count, "Number of Calls match expected");
+        expect(spy.calls.count()).toBe(count, `failure: ${test} : Number of calls did not match expected`);
         expect(spy).toHaveBeenCalledWith(expected);
+
+        if(!test.match("reconstruction")){
+            let reconstructed = Jungle.R(cell.bundle());
+            reconstructed.prepare();
+            portResponseTest(reconstructed, inp, outp, input, expected, count, test + "- under reconstruction")
+        }
     }
 
     it("should direct link",function(){
@@ -76,12 +80,13 @@ describe("Link Cells", function () {
 
         wildLink.prepare();
 
-        portResponseTest(wildLink, 'ri', 'ro', 1, 1, 3);
+        portResponseTest(wildLink, 'ri', 'ro', 1, 1, 3, "all trigger");
 
     })
 
     it('should match link', function(){
         let matchLink = L({
+            awk:{}
         },{
             port:['_sig', 'sig_'],
             link:['_.*->_.*']
@@ -89,8 +94,9 @@ describe("Link Cells", function () {
 
         matchLink.prepare();
 
-        portResponseTest(matchLink, '$', '$', 1, 1, 1);
-        portResponseTest(matchLink, 'sig', 'sig', 1, 1, 1);
+        portResponseTest(matchLink, '$', '$', 1, 1, 1, '$ triggers');
+
+        portResponseTest(matchLink, 'sig', 'sig', 1, 1, 1, "sig triggers");
     });
 
     /*
@@ -119,7 +125,7 @@ describe("Link Cells", function () {
         portResponseTest(closeLink, '$', '$', 2, [1, 1], 1);
     })
 
-    fit('should propogate in arrays',function(){
+    it('should propogate in arrays',function(){
         let propLink = L([
             io, io, io
         ],{
@@ -129,7 +135,7 @@ describe("Link Cells", function () {
         portResponseTest(propLink, '$', '$', "x","x",1);
     })
 
-    fit('should propogate in reverse in arrays',function(){
+    it('should propogate in reverse in arrays',function(){
         let propLink = L([
             io, io, io
         ],{

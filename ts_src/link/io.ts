@@ -28,11 +28,17 @@ namespace Jungle {
             closed:{sinks:string[], sources:string[]};
 
             linker:(porta, portb)=>void;
+            ports:PortSpec[];
+            links:string[];
+
 
             emmissionGate:Util.Junction;
 
-            constructor(host:LinkCell, private spec:IOLinkSpec){
+            constructor(host:LinkCell, spec:IOLinkSpec){
                 super(host, spec);
+
+                this.ports = spec.ports;
+                this.links = spec.links;
 
                 this.linkmap = {};
                 this.linker = spec.linkFunciton;
@@ -42,7 +48,7 @@ namespace Jungle {
             }
 
             enshell():Shell{
-                this.shell = new BaseShell(<BaseIO>this, this.spec.ports);
+                this.shell = new BaseShell(<BaseIO>this, this.ports);
                 this.lining = this.shell.invert();
                 this.innerDress();
                 this.applyLinks();
@@ -74,7 +80,7 @@ namespace Jungle {
             }
 
             applyLinks(){
-                for(let link of this.spec.links){
+                for(let link of this.links){
                     var linkir = this.parseLink(link);
                     this.interpretLink(linkir);
                 }
@@ -109,31 +115,31 @@ namespace Jungle {
 
                 let sourceShells  = {};
                 let sinkShells = {};
-                let sourceLabels = [];
-                let sinkLabels = [];
+                let sourceShellLabels = [];
+                let sinkShellLabels = [];
 
                 if(linkspec.sourceCell === "*"){
-                    sourceShells = Util.mapObject(this.host.crown, function(k, src){sourceLabels.push(k); return src.io.shell});
+                    sourceShells = Util.mapObject(this.host.crown, function(k, src){sourceShellLabels.push(k); return src.io.shell});
                 }
                 else if(linkspec.sourceCell === '_'){
-                    sourceShells['_'] = (<LinkIO>this.host.io).lining; sourceLabels = ['_'];
+                    sourceShells['_'] = (<LinkIO>this.host.io).lining; sourceShellLabels = ['_'];
                 }
                 else if (linkspec.sourceCell in this.host.crown){
-                    sourceShells[linkspec.sourceCell] = this.host.crown[linkspec.sourceCell].io.shell; sourceLabels = [linkspec.sourceCell];
+                    sourceShells[linkspec.sourceCell] = this.host.crown[linkspec.sourceCell].io.shell; sourceShellLabels = [linkspec.sourceCell];
                 }
 
                 if(linkspec.sinkCell === "*"){
-                    sinkShells = Util.mapObject(this.host.crown, function(k, src){sinkLabels.push(k); return src.io.shell});
+                    sinkShells = Util.mapObject(this.host.crown, function(k, src){sinkShellLabels.push(k); return src.io.shell});
                 }
                 else if(linkspec.sinkCell === '_'){
-                    sinkShells['_'] = (<LinkIO>this.host.io).lining;sinkLabels = ['_']
+                    sinkShells['_'] = (<LinkIO>this.host.io).lining;sinkShellLabels = ['_']
                 }
                 else if(linkspec.sinkCell in this.host.crown){
-                    sinkShells[linkspec.sinkCell] = this.host.crown[linkspec.sinkCell].io.shell; sinkLabels = [linkspec.sinkCell]
+                    sinkShells[linkspec.sinkCell] = this.host.crown[linkspec.sinkCell].io.shell; sinkShellLabels = [linkspec.sinkCell]
                 }
 
-                for(let sourceLb of sourceLabels){
-                    for(let sinkLb of sinkLabels){
+                for(let sourceLb of sourceShellLabels){
+                    for(let sinkLb of sinkShellLabels){
                         let sourcePorts = (<BaseShell>sourceShells[sourceLb]).designate(linkspec.sourcePort);
                         let sinkPorts =   (<BaseShell> sinkShells[sinkLb]).designate(linkspec.sinkPort);
                         //console.log("sourceP",sourcePorts)
@@ -150,11 +156,12 @@ namespace Jungle {
                 }
             }
 
-            private checkLink(linkspec:LinkIR, sourceLabel, sinkLabel, sourceP, sinkP){
-                let matched = (!linkspec.matching || sinkLabel === sourceLabel),
-                    openSource = (this.closed.sources.indexOf(sourceLabel) === -1),
-                    openSink = this.closed.sinks.indexOf(sinkLabel) === -1,
-                    unfiltered = this.filterCheck(sourceLabel, sinkLabel, linkspec)
+            private checkLink(linkspec:LinkIR, sourceCellLabel, sinkCellLabel, sourceP, sinkP){
+
+                let matched = (!linkspec.matching || sourceP.label === sinkP.label),
+                    openSource = (this.closed.sources.indexOf(sourceCellLabel) === -1),
+                    openSink = this.closed.sinks.indexOf(sinkCellLabel) === -1,
+                    unfiltered = this.filterCheck(sourceCellLabel, sinkCellLabel, linkspec)
 
                 return matched && openSource && openSink && unfiltered;
             }
@@ -170,7 +177,7 @@ namespace Jungle {
                         return srcnum !== snknum;
                     }
                 }else{
-                    if(LINK_FILTERS.ELSEWHERE){
+                    if(linkspec.propogation == LINK_FILTERS.ELSEWHERE){
                         return sourceLabel !== sinkLabel; //Or perhaps feedback check, does the sink have in its source tree,the cell of the source label?
                     }else{
                         return true;

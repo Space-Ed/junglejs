@@ -41,3 +41,5 @@ captures/
 
 node_modules
 typings
+script/deploy
+repl/*
