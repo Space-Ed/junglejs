@@ -55,7 +55,7 @@ describe('deep equality', function(){
 
 describe('Tree reduction', function(){
 
-    pending("removal of logs and use")
+    //pending("removal of logs and use")
 
     let defaults = {
         a:{
@@ -124,4 +124,56 @@ describe('Tree reduction', function(){
 
         Util.deeplyEqualsThrow(expected, actual);
     })
+
+    it('should add properties', ()=>{
+        var b = B();
+        b.blend({a:0});
+        expect(b.dump()).toEqual({a:0});
+    })
+
+    it('should not clobber with nothing',function(){
+        var b = B()
+            .init({a:0})
+            .blend(undefined)
+            .blend({})
+            .blend({a:undefined})
+
+        expect(b.dump()).toEqual({a:0});
+    })
+
+    it('should not ruin arrays', function(){
+        var b = B()
+            .init([])
+
+        expect(b.dump() instanceof Array).toBeTruthy();
+
+        b.init(undefined)
+            .blend([])
+
+
+        expect(b.dump() instanceof Array).toBeTruthy();
+
+        b.blend([2,[]]);
+        console.log("Crown after array blend", b.crown);
+
+        expect(b.dump() instanceof Array).toBeTruthy();
+
+        b.blend({0:"c"})
+        expect(b.dump() instanceof Array).toBeTruthy();
+
+    })
+
+    it('should override primative values', function(){
+        expect(B().init(1).blend(2).dump()).toBe(2)
+
+        let b = B()
+            .init({a:1})
+
+        expect(b.dump().a).toBe(1)
+
+        b.blend({a:2})
+        expect(b.dump().a).toBe(2)
+
+    })
+
 })

@@ -35,7 +35,7 @@ namespace Jungle {
             reducer:(a,b)=>any;
             mapper:(a)=>any;
 
-            constructor(public crown={}, form:any={}){
+            constructor(public crown, form:any={}){
                 if(form instanceof Function){
                     this.reducer = form
                 }else if (form.reducer instanceof Function){
@@ -51,7 +51,7 @@ namespace Jungle {
 
             init(obj):Blender{
                 if(this.term === false){
-                    typeCaseSplitF(this.initChurn.bind(this))(obj);
+                    this.crown = typeCaseSplitF(this.initChurn.bind(this))(obj);
                 }else{
                     this.crown = obj;
                 }
@@ -59,32 +59,39 @@ namespace Jungle {
             }
 
             initChurn(inner, k){
-                if(k === undefined){
-                    this.crown = inner;
-                    this.term = true;
+                var result
+
+                if(k === undefined && Util.isPrimative(inner)){
+                    result = inner;
+                    this.term = inner !== undefined;
                 }else if(k in this.crown){
                     let val = this.crown[k];
                     if(val instanceof Blender){
-                        val.init(inner);
+                        result = val.init(inner);
                     }
                     else if(val instanceof Function){
-                        this.crown[k] = B(undefined, val).init(inner);
+                        result = B(undefined, val).init(inner);
                     }
                     else{
                         //undefined, object, array, primative... use inherited reduction strategy,
                         //convert an existing object or terminal to a blender and initialise
-                        this.crown[k] = B(this.crown[k], {mapper:this.mapper, reducer:this.reducer}).init(inner);
+                        result = B(this.crown[k], {mapper:this.mapper, reducer:this.reducer}).init(inner);
                     }
-                }else{ //convert
-                    this.crown[k] = B(undefined, {mapper:this.mapper, reducer:this.reducer}).init(inner);
+                }else{ //introduce
+                    result = B(undefined, {mapper:this.mapper, reducer:this.reducer}).init(inner);
                 }
+
+                return result;
+
             }
 
             dump(){
                 if(this.term){
                     return this.crown;
                 }else{
-                    return typeCaseSplitF(function(child){return child.dump()})(this.crown);
+                    return typeCaseSplitF(function(child){
+                        return child !== undefined ? child.dump() : undefined
+                    })(this.crown);
                 }
 
             }
@@ -101,10 +108,10 @@ namespace Jungle {
                 if(this.term){
                     reduced = this.reducer(this.crown, mapped);
                     this.crown = reduced;
-                    console.log('updated reduced:', reduced);
+                    //console.log('updated reduced:', reduced);
                 }else{
                     reduced = this.merge(mapped);
-                    console.log('updated recursed:', reduced);
+                    //console.log('updated recursed:', reduced);
                 }
 
                 return reduced;
@@ -115,51 +122,48 @@ namespace Jungle {
             */
             merge(income){
 
-                let superkeys;
-                superkeys = Object.keys(this.crown || {});
-                superkeys = Object.keys(income || {}).reduce(
-                    (collected, current, i , array) => {
-                        return ((array.indexOf(current) === -1)
-                        ?
-                            collected.concat(current):collected
-                        )
-                    }
-                    , superkeys);
+                //console.log("merge:  income = ", income , "this.crown = " ,this.crown);
 
-                console.log('total keys', superkeys, "  income: ", income);
-
-                //reduced type and catching miss case
-                let result = this.crown instanceof Array ? [] : {};
-                for(let key of superkeys){
-                    if (income === undefined || income[key] === undefined){
-                        result[key] = this.churn(undefined, key);
+                let result, superkeys
+                if(this.crown === undefined && income !== undefined){ //only crown is undefined, initialise
+                    this.init(income);
+                    return income
+                }else if (income !== undefined){//both crown and income are defined.
+                    if(this.crown instanceof Array){
+                        result =[]; superkeys = Util.range(Math.max((income||[]).length||0,this.crown.length));
                     }else{
-                        result[key] = this.churn(income[key], key);
+                        result = {}; superkeys = Object.keys(this.crown || {});
+
+                        Object.keys(income || {}).forEach(key=>{
+                            if(superkeys.indexOf(key) === -1){
+                                superkeys.push(key);
+                            }
+                        });
                     }
+                    //console.log('total keys', superkeys, "  income: ", income);
+
+                    for(let key of superkeys){
+                        if (key in income ){
+                            if(key in this.crown){ //Blend
+                                //console.log("blend denizen", this.crown[key], " income: ", income)
+                                result[key] = this.crown[key]._blend(income[key]);
+                            }else{  // Introduction
+                                //console.log("introduction crown: ", this.crown[key], " income: ", income)
+                                this.crown[key] = B(undefined, {mapper:this.mapper, reducer:this.reducer}).init(income[key]);
+                                result[key] = this.crown[key].dump();
+                            }
+                        }else if(key in this.crown){ //Retroduction
+                            //console.log("retroduction crown: ", this.crown[key], " income: ", income[key])
+                            result[key] = this.crown[key].dump();
+                        }else {
+                            //impossible
+                        }
+                    }
+
+                    return result
                 }
-                return result;
             }
 
-            /*
-                handles the subsume and extention of crown
-                returns the blended inside or the
-                modifies
-            */
-            churn(inner, k){
-                console.log("churn, inner:", inner, " , k:", k);
-
-                let churned;
-                if(inner === undefined){
-                    churned = this.crown[k].dump();
-                }else if(k in this.crown){//case for recursive blend with own crown
-                    console.log('recursive blend', inner);
-                    churned = this.crown[k]._blend(inner);
-                }else{ //crown does not have key so introduce a new blender and initialise, then dump the contents
-                    this.crown[k] = B(undefined, {mapper:this.mapper, reducer:this.reducer}).init(inner);
-                    churned = this.crown[k].dump();
-                }
-                return churned;
-            }
 
         }
 
