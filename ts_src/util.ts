@@ -193,7 +193,7 @@ namespace Jungle{
                     return true; // no false flag
                 }
             } else if(node1 !== node2){
-                throw new Error(`${node1} and ${node2} not equal, derefs:[${derefstack}]`)
+                throw new Error(`Terminals: "${node1}" and "${node2}" not equal, derefs:[${derefstack}]`)
             }
         }
 

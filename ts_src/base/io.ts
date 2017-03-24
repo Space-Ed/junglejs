@@ -39,10 +39,12 @@ namespace Jungle {
             base:IOComponent;
             designate:(designator:PortDesignator)=>Port[];
             dress:(designator:PortDesignator, coat:OutputCoat) => void;
+            invert:()=>Shell;
         }
 
         export interface IOComponent {
             shell:Shell;
+            host:BaseCell;
             enshell:() => Shell;
             dress:(designator: string, coat:OutputCoat) => void;
             extract:()=>any;
@@ -67,9 +69,12 @@ namespace Jungle {
 
             specialGate:boolean;
             shell:Shell;
+            ports:PortSpec[]
 
             constructor(public host:BaseCell, iospec){
+
             }
+
 
             /*
                 scan the whole shell's output ports to ascribe the callbacks using a unified format
@@ -101,7 +106,8 @@ namespace Jungle {
             }
 
             extract():any{
-                return {}
+                return {
+                }
             }
         }
     }

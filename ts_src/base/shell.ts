@@ -14,21 +14,29 @@ namespace Jungle {
             sinks:any;
             sources:any;
 
+            ports:PortSpec[];
             base:IOComponent;
 
             constructor(base:IOComponent, ports:PortSpec[]){
                 this.base = base;
+                this.ports = ports;
+
                 this.sinks = {'$':new Port('$')};
+                this.sinks.$.addShell(this);
+
                 this.sources = {'$': new Port('$')};
+                this.sources.$.addShell(this);
 
                 for(let portSpec of ports){
 
                     switch(portSpec.direction){
                         case Orientation.INPUT:{
-                            this.sinks[portSpec.label] = new Port(portSpec.label); break;
+                            this.sinks[portSpec.label] = new Port(portSpec.label);
+                            this.sinks[portSpec.label].addShell(this); break;
                         }
                         case Orientation.OUTPUT:{
-                            this.sources[portSpec.label] = new Port(portSpec.label); break;
+                            this.sources[portSpec.label] = new Port(portSpec.label);
+                            this.sources[portSpec.label].addShell(this);break;
                         }
                     }
                 }
@@ -82,6 +90,15 @@ namespace Jungle {
                     outport.dress(coat);
                 }
             }
+
+            extractPorts():string[]{
+                let extracted = this.ports.map(pspec =>{
+                    return (pspec.direction==IO.Orientation.INPUT?'_':'')+pspec.label+(pspec.direction==IO.Orientation.OUTPUT?'_':'');
+                });
+
+                return extracted
+            }
+
 
         }
 

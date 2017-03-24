@@ -36,27 +36,63 @@ namespace Jungle {
 
               var contextprops = [];
               //Forbid the use of underscores
-              var linkPropRegex = /^[a-zA-Z](?:\w*[a-zA-Z])?$/;
+              var propertyRegex = /^[a-zA-Z](?:\w*[a-zA-Z])?$/;
               for (var k in formObj){
                   if(GForm.RFormProps.indexOf(k) > -1) continue;
-
-                  if(k.match(linkPropRegex)){
+                  if(k.match(propertyRegex)){
                       contextprops.push({key:k, type:CTXPropertyTypes.NORMAL, value:formObj[k]})
                   }else{
-                      throw new Error("Invalid property for link context, use ports")
+                      throw new Error("Invalid property name for context")
                   }
               }
 
               return{iospec:null , contextspec:{properties:contextprops, declaration:ctxdeclare}}
          }
 
+         parsePorts(portNames:string[]):IO.PortSpec[]{
+             var portDescriptors = []
 
-         consolidate(io:IO.IOComponent, ctx:GContext):FormSpec{
-             return Util.melder({
+             var linkPortRegex = /^(_?)([a-zA-Z](?:\w*[a-zA-Z])?)(_?)$/
+             for (let i = 0; i < portNames.length; i++) {
+                 let pmatch = portNames[i].match(linkPortRegex);
+
+                 if(pmatch){
+                     let inp = pmatch[1], label = pmatch[2], out = pmatch[3];
+
+                     if(inp){
+                         portDescriptors.push({label:label, direction:IO.Orientation.INPUT})
+                     }
+                     if(out){
+                         portDescriptors.push({label:label, direction:IO.Orientation.OUTPUT})
+                     }
+                 }else{
+                     throw new Error("Invalid property label in Link Cell")
+                 }
+             }
+
+
+             return portDescriptors
+         }
+
+         extract(){
+             return {
                  p:this.preparator,
                  d:this.depreparator,
-                 x:ctx.declaration,
-             },ctx.extract())
+             }
+         }
+
+         consolidate(io:IO.IOComponent, ctx:GContext):FormSpec{
+             let blended = Util.B().init(
+                 this.extract()
+             ).blend(
+                 io.extract()
+             ).blend(
+                 ctx.extract()
+             ).dump();
+
+            //console.log('consolidated for replication/bundling: ', blended)
+
+             return blended
          }
 
      }

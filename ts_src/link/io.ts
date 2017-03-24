@@ -28,30 +28,41 @@ namespace Jungle {
             closed:{sinks:string[], sources:string[]};
 
             linker:(porta, portb)=>void;
-            ports:PortSpec[];
             links:string[];
 
 
             emmissionGate:Util.Junction;
+            ports:PortSpec[];
 
             constructor(host:LinkCell, spec:IOLinkSpec){
                 super(host, spec);
 
-                this.ports = spec.ports;
                 this.links = spec.links;
 
+                this.ports = spec.ports;
                 this.linkmap = {};
                 this.linker = spec.linkFunciton;
                 this.emmissionGate = new Util.Junction();
                 this.closed = {sinks:[], sources:[]};
-
+                this.shell = new BaseShell(<BaseIO>this, this.ports);
+                this.lining = this.shell.invert();
             }
 
             enshell():Shell{
-                this.shell = new BaseShell(<BaseIO>this, this.ports);
-                this.lining = this.shell.invert();
                 this.innerDress();
                 this.applyLinks();
+
+                //aliased input function by binding the outward facing port to the host
+                for(let k in this.shell.sinks){
+                    this.host.inp[k] = (function(input){
+                        this.shell.sinks[k].handle(input);
+                    }).bind(this);
+                }
+                //aliased the output sources
+                for(let k in this.shell.sources){
+                    this.host.out[k] = this.shell.sources[k];
+                }
+
                 return
             };
 
@@ -59,17 +70,19 @@ namespace Jungle {
              * All sources available must be dressed with a link follower
              */
             innerDress(){
-                for(let k in this.host.crown){
-                    let v:BaseCell = this.host.crown[k];
-                    let cellSources = v.io.shell.sources;
-                    this.linkmap[k] = {};
 
+
+                Util.typeCaseSplitF((item, key)=>{
+                    let cellSources = item.io.shell.sources
+
+                    let cellLinkMap = [];
                     for(let q in cellSources){
                         let source = cellSources[q];
-                        this.linkmap[k][q] = [];
-                        source.callback = this.follow.bind(this,k,source);
+                        cellLinkMap[q] = [];
+                        source.callback = this.follow.bind(this, key, source);
                     }
-                }
+                    this.linkmap[key===undefined?"undefined":key]=cellLinkMap
+                })(this.host.crown)
 
                 this.linkmap['_'] = {}
                 for(let q in this.lining.sources){
@@ -87,13 +100,21 @@ namespace Jungle {
             }
 
             private parseLink(link):LinkIR{
-                let m = link.match(/(?:(\w+|\*).)?(\w+|\*|\$)(\|?)(<?)([\+\-\!]?)([=\-])(>{1,2})(\|?)(?:(\w+|\*).)?(\w+|\*|\$)/)
+                let m = link.match(/(\w+|\*)(?:\.(\w+|\*|\$))?(\|?)(<?)([\+\-\!]?)([=\-])(>{1,2})(\|?)(\w+|\*)(?:\.(\w+|\*|\$))?/)
 
                 if(!m){throw new Error(`Unable to parse link description, expression ${link} did not match regex`)};
                 let [match, srcCell, srcPort, srcClose, viceVersa, filter, matching, persistent, snkClose, snkCell, snkPort] = m;
 
-                let srcDesig =  {direction:Orientation.OUTPUT, type: (srcPort == '*')?DesignationTypes.ALL:DesignationTypes.MATCH, data:srcPort}
-                let snkDesig =  {direction:Orientation.INPUT, type: (snkPort == '*')?DesignationTypes.ALL:DesignationTypes.MATCH, data:snkPort}
+                let srcDesig =  {
+                    direction:Orientation.OUTPUT,
+                    type: (srcPort == '*') ? DesignationTypes.ALL: DesignationTypes.MATCH,
+                    data: (!srcPort ? '$' : srcPort)
+                }
+                let snkDesig =  {
+                    direction:Orientation.INPUT,
+                    type: (snkPort == '*')?DesignationTypes.ALL:DesignationTypes.MATCH,
+                    data:(!snkPort ? '$' : snkPort)
+                }
 
 
                 return {
@@ -187,8 +208,10 @@ namespace Jungle {
 
             private forgeLink(linkspec:LinkIR, sourceCell:string, sinkCell:string, sourcePort:Port, sinkPort:Port){
 
-                console.log(`link formation: source:${sourceCell}.${sourcePort.label}, sink:${sinkCell}.${sinkPort.label}, closed sinks ${this.closed.sinks}`)
+                //console.log(`link formation: source:${sourceCell}.${sourcePort.label}, sink:${sinkCell}.${sinkPort.label}, closed sinks ${this.closed.sinks}`)
                 this.linkmap[sourceCell][sourcePort.label].push(sinkPort)
+
+                this.linker.call(this.host.ctx.exposed, sourcePort.hostctx(), sinkPort.hostctx(), sourcePort.label, sinkPort.label);
 
                 if(linkspec.closeSink){
                     this.closed.sinks.push(sinkCell);
@@ -205,7 +228,7 @@ namespace Jungle {
                 this.emmissionGate.then(
                     (result, handle)=>{
                         for(let sink of targeted){
-                            console.log(`Throughput of ${throughput} from source ${sourceCell}.${source.label} to ${sink.label}`)
+                            //console.log(`Throughput of ${throughput} from source ${sourceCell}.${source.label} to ${sink.label}`)
                             sink.handle(throughput);
                         }
                     }
@@ -219,7 +242,11 @@ namespace Jungle {
             };
 
             extract(){
-
+                return {
+                    port:this.shell.extractPorts(),
+                    link:this.links,
+                    lf:this.linker
+                }
             }
         }
 

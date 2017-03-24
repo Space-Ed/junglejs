@@ -90,7 +90,7 @@ namespace Jungle {
         addInternalProperty(spec:PropertySpec){
             switch(spec.type){
                 case CTXPropertyTypes.NORMAL: this.addExposedProperty(spec.key,spec.value);break;
-                case CTXPropertyTypes.BOUND: this.addExposedProperty(spec.key,spec.value.bind(this.exposed)); break;
+                case CTXPropertyTypes.BOUND: this.addExposedProperty(spec.key,spec.value); break; //.bind(this.exposed)
                 case CTXPropertyTypes.HOOK: this.addHookedProperty(spec);
             }
         }
@@ -200,6 +200,8 @@ namespace Jungle {
                     patch[k] = Util.deepCopy(v);
                 }
             }
+
+            patch['x'] = this.declaration;
             return patch;
         }
 

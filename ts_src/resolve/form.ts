@@ -24,7 +24,7 @@ namespace Jungle {
 
      export class GForm extends BaseForm{
 
-         static RFormProps = ["x", "p", "d", "c", "r", "prepare", "destroy", "carry", "resolve", "select"]
+         static RFormProps = ["x", "p", "d", "c", "r", "port", "prepare", "destroy", "carry", "resolve", "select"]
 
          carrier:(arg)=>any;
          resolver:(obj, arg)=>any;
@@ -40,6 +40,9 @@ namespace Jungle {
              this.carrier = formObj.c || Jungle.Util.identity;
              this.resolver = formObj.r || Jungle.Util.identity;
             this.preparator = formObj.p || function(x){};
+
+            //create port intermediate representation
+            var portlabels = this.parsePorts(formObj.port||[])
 
             const hookIORegex = /^(_{0,2})([a-zA-Z]+(?:\w*[a-zA-Z])?|\$)(_{0,2})$/;
 
@@ -134,23 +137,47 @@ namespace Jungle {
                }
             }
 
-            return {iospec:{hooks:hooks, specialIn:specialInHook, specialOut:specialOutHook}, contextspec:{properties:props, declaration:ctxdeclare}};
+            return {iospec:{hooks:hooks, specialIn:specialInHook, specialOut:specialOutHook, ports:portlabels}, contextspec:{properties:props, declaration:ctxdeclare}};
          }
 
+         extract(){
+             return {
+                 r:this.resolver,
+                 c:this.carrier ,
+                 p:this.preparator,
+                 d:this.depreparator
+             }
+         }
 
-        consolidate(io:IO.IOComponent, ctx:GContext):FormSpec{
-
-            var consolidated = Util.melder({
-                r:this.resolver,
-                c:this.carrier ,
-                p:this.preparator,
-                d:this.depreparator,
-                x:ctx.declaration,
-            },Util.melder(io.extract(), ctx.extract(), void 0, void 0, false));
-
-            // console.log("Consolidated Form: ", consolidated);
-
-            return consolidated;
-        }
+        //
+        // consolidate(io:IO.IOComponent, ctx:GContext):FormSpec{
+        //
+        //     return Util.B()
+        //         .blend({
+        //             r:this.resolver,
+        //             c:this.carrier ,
+        //             p:this.preparator,
+        //             d:this.depreparator,
+        //             x:ctx.declaration
+        //         })
+        //         .blend(
+        //             io.extract()
+        //         )
+        //         .blend(
+        //             ctx.extract()
+        //         ).dump();
+        //
+        //     // var consolidated = Util.melder({
+        //     //     r:this.resolver,
+        //     //     c:this.carrier ,
+        //     //     p:this.preparator,
+        //     //     d:this.depreparator,
+        //     //     x:ctx.declaration
+        //     // },Util.melder(io.extract(), ctx.extract(), void 0, void 0, false));
+        //
+        //     // console.log("Consolidated Form: ", consolidated);
+        //     //
+        //     // return consolidated;
+        // }
      }
 }

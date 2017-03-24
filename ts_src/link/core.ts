@@ -16,23 +16,31 @@ module Jungle {
         }
 
         protected prepareChild(prepargs, handle, child, k){
+
+            let mergekey = k === undefined ? false : k;
+
             if(child instanceof BaseCell){
                 var replica = child.replicate();
 
                 (<any>replica).setParent(this, k);
 
-                replica.prepare(prepargs);
+                let prep = replica.prepare(prepargs);
 
                 //enshell happens after
-                let aftershell = new Util.Junction().merge(replica, false).then(function(replica){
-                    replica.enshell();
-                    return replica
+                let aftershell = new Util.Junction().merge(prep, false).then(function(preparedReplica){
+                    preparedReplica.enshell();
+                    return preparedReplica
                 }, false);
-
-                handle.merge(aftershell, k);
+                
+                handle.merge(aftershell, mergekey);
             }else{
-                handle.merge(child, k);
+                handle.merge(child, mergekey);
             }
+        }
+
+        completePrepare(){
+            this.prepared = true;
+            this.enshell();
         }
 
         resolve(resarg){

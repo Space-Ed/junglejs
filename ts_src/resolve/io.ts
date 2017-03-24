@@ -50,6 +50,9 @@ namespace Jungle {
             shell:HookShell;
             host:ResolutionCell;
 
+            ports:PortSpec[];
+            portShell:BaseShell;
+
             constructor(host:ResolutionCell, iospec){
                 super(host, iospec);
                 var {hooks, specialIn, specialOut} = iospec;
@@ -62,10 +65,15 @@ namespace Jungle {
                 this.outputs = {};
 
                 this.initialiseHooks(hooks, specialIn, specialOut);
+                this.initialisePorts(iospec.ports)
 
             }
 
-            prepare(){
+            initialisePorts(ports:PortSpec[]){
+                this.portShell = new BaseShell(this, ports);
+
+                //Context injection
+                this.host.ctx.exposed.lining  = this.portShell.invert()
 
             }
 
@@ -85,6 +93,8 @@ namespace Jungle {
                         ext[label] = hook.tractor;
                     }
                 }
+
+                ext['port'] = this.portShell.extractPorts();
 
                 return ext
             }
@@ -211,9 +221,9 @@ namespace Jungle {
                 //if child is an inversion node then shell it else provide the io map to the accumulated nodes
 
                 //begin with the hooks of this node
-                var accumulated = {
+                var accumulated:{hooks:Hook[], shells:Shell[]} = {
                     hooks:[].concat(this.hooks),
-                    shells:[]
+                    shells:[this.portShell]
                 };
 
                 const accumulator = function(child, k, accumulated : {hooks:Hook[], shells:Shell[]}) : {hooks:Hook[], shells:Shell[]}{
@@ -255,15 +265,16 @@ namespace Jungle {
                     //compile the accumulated hooks into a single shell
                     this.shell = new HookShell(this, accumulated.hooks, accumulated.shells);
 
+
                     //aliased input function by binding the outward facing port to the host
                     for(let k in this.shell.sinks){
-                        this.inputs[k] = (function(input){
+                        this.host.inp[k] = (function(input){
                             this.shell.sinks[k].handle(input);
                         }).bind(this);
                     }
                     //aliased the output sources
                     for(let k in this.shell.sources){
-                        this.outputs[k] = this.shell.sources[k];
+                        this.host.out[k] = this.shell.sources[k];
                     }
 
                     return {shells:[this.shell], hooks:[]}

@@ -119,8 +119,8 @@ describe('Tree reduction', function(){
         blender.init(defaults);
         let actual = blender.blend(data).dump();
 
-        console.log('actual result:', actual);
-        console.log('expected result:', expected);
+        // console.log('actual result:', actual);
+        // console.log('expected result:', expected);
 
         Util.deeplyEqualsThrow(expected, actual);
     })
@@ -154,7 +154,6 @@ describe('Tree reduction', function(){
         expect(b.dump() instanceof Array).toBeTruthy();
 
         b.blend([2,[]]);
-        console.log("Crown after array blend", b.crown);
 
         expect(b.dump() instanceof Array).toBeTruthy();
 

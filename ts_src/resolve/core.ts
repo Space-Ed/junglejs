@@ -27,6 +27,7 @@ namespace Jungle {
             return new ResolutionCell(crown, form)
         }
 
+
         private resolveDenizen(handle, args, denizen, reference){
             let mergekey = reference === undefined ? false : reference;
 

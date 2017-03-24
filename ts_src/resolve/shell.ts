@@ -15,9 +15,6 @@ namespace Jungle{
             constructor(public base:ResolveIO, midrantHooks:Hook[], subshells:Shell[]) {
 
                     super(base, []);
-
-                    this.sources = {};
-                    this.sinks = {};
                     this.inputHooks = {};
                     this.outputHooks = {};
 
@@ -33,6 +30,7 @@ namespace Jungle{
 
                     for(let label in this.outputHooks){
                         this.sources[label] = new ResolveOutputPort(label);
+                        this.sources[label].addShell(this);
                     }
 
                     for(let shell of subshells){
@@ -40,11 +38,11 @@ namespace Jungle{
                         this.addShell(shell);
                     }
 
-                    //create the special IO Ports
+                    //create the special IO Ports : overrides port special IO
                     this.sinks['$'] = new SpecialInputPort(this.base);
+                    this.sinks['$'].addShell(this);
                     this.sources['$'] = new ResolveOutputPort('$');
-
-
+                    this.sources['$'].addShell(this);
                 }
 
             /**
@@ -69,22 +67,22 @@ namespace Jungle{
             addShell(shell:Shell){
 
                 for(let k in shell.sinks){
-                    let sink = shell.sinks[k]
-                    if(sink.label in this.sinks){
+                    let innerSink = shell.sinks[k]
+                    if(innerSink.label in this.sinks){
                         //retrofusion
-                        let outerSink = <ResolveInputPort>this.sinks[sink.label];
+                        let outerSink = <ResolveInputPort>this.sinks[innerSink.label];
                         outerSink.addShell(this)
 
                         //all the shells of the fused sink now must ref the outermost
-                        for(let shell of sink.shells){
-                            (<HookShell>shell).sinks[sink.label] = outerSink;
+                        for(let shell of innerSink.shells){
+                            (<HookShell>shell).sinks[innerSink.label] = outerSink;
                         }
 
                         //now "sink" should be GC
 
                     }else{
-                        //subsumption
-                        this.sinks[sink.label] = sink;
+                        //subsumption bring sink out
+                        this.sinks[innerSink.label] = innerSink;
                     }
                 }
 

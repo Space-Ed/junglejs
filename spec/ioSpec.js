@@ -33,22 +33,22 @@ describe("input-output", function(){
                         },
                         buffer:[]
                     }),
-                    crux:G(
-                        null
-                        ,{
-                            __trigger(input){
-                                if(input <= 5){
-                                    return Jungle.IO.HALT
-                                }
+                crux:G(
+                    null
+                    ,{
+                        __trigger(input){
+                            if(input <= 5){
+                                return Jungle.IO.HALT
                             }
-                        })
-                    },{
-                        x:'_',
-                        beamout_(obj, arg){
-                            return obj.beam
                         }
                     })
+                },{
+                    x:'_',
+                    beamout_(obj, arg){
+                        return obj.beam
+                    }
                 })
+            })
 
         it('should throw error when shelling unprepared', function(){
             expect(function(){
@@ -69,16 +69,14 @@ describe("input-output", function(){
                 g1.io.enshell()
 
                 //spyOn(this, 'outcatch')
-
             })
 
-
             it("should allow me to call input label",function(){
-                g1.io.inputs.beamin("fallacies")
+                g1.inp.beamin("fallacies")
             });
 
             it('should modify state using input function',function(){
-                g1.io.inputs.arc("hello?")
+                g1.inp.arc("hello?")
 
                 expect(g1.crown.arc.ctx.exposed.saved).toBe("hello?")
 
@@ -112,23 +110,23 @@ describe("input-output", function(){
                 });
 
                 it('should be applied to all outputs', function(){
-                    expect(g1.io.outputs.arc.callback).toBe(ctx.cb);
-                    expect(g1.io.outputs.arc.callbackContext).toBe(ctx);
-                    expect(g1.io.outputs.beamout.callback).toBe(ctx.cb);
-                    expect(g1.io.outputs.beamout.callbackContext).toBe(ctx);
-                    expect(g1.io.outputs.$.callback).toBe(ctx.cb);
-                    expect(g1.io.outputs.$.callbackContext).toBe(ctx);
+                    expect(g1.out.arc.callback).toBe(ctx.cb);
+                    expect(g1.out.arc.callbackContext).toBe(ctx);
+                    expect(g1.out.beamout.callback).toBe(ctx.cb);
+                    expect(g1.out.beamout.callbackContext).toBe(ctx);
+                    expect(g1.out.$.callback).toBe(ctx.cb);
+                    expect(g1.out.$.callbackContext).toBe(ctx);
                 })
 
 
 
                 it('should be triggered ',function(){
                     spyOn(spyctx, 'cb');
-                    g1.io.inputs.beamin("Buckets");
+                    g1.inp.beamin("Buckets");
                     expect(spyctx.cb).not.toHaveBeenCalled();
-                    g1.io.inputs.trigger(2);
+                    g1.inp.trigger(2);
                     expect(spyctx.cb).not.toHaveBeenCalled();
-                    g1.io.inputs.trigger(6);
+                    g1.inp.trigger(6);
                     expect(spyctx.cb).toHaveBeenCalledWith("Buckets");
                 });
             })
@@ -139,20 +137,20 @@ describe("input-output", function(){
                 });
 
                 it('should have a signal instance on outputs', function(){
-                    expect(g1.io.outputs.arc.callbackContext instanceof signals.Signal).toBe(true)
-                    expect(g1.io.outputs.beamout.callbackContext instanceof signals.Signal).toBe(true)
+                    expect(g1.out.arc.callbackContext instanceof signals.Signal).toBe(true)
+                    expect(g1.out.beamout.callbackContext instanceof signals.Signal).toBe(true)
                 });
 
                 it('should allow signal subscription', function(){
-                    var signal = g1.io.outputs.beamout.callbackContext;
+                    var signal = g1.out.beamout.callbackContext;
 
                     spyOn(signal, 'dispatch');
 
-                    g1.io.inputs.beamin("Buckets");
+                    g1.inp.beamin("Buckets");
                     expect(signal.dispatch).not.toHaveBeenCalled();
-                    g1.io.inputs.trigger(2);
+                    g1.inp.trigger(2);
                     expect(signal.dispatch).not.toHaveBeenCalled();
-                    g1.io.inputs.trigger(6);
+                    g1.inp.trigger(6);
                     expect(signal.dispatch).toHaveBeenCalledWith("Buckets")
 
                 });
@@ -214,7 +212,7 @@ describe("input-output", function(){
         it('should have dressed the root', function(){
 
             g2.io.enshell();
-            let cb = function(x){console.log("Peace", this.store)};
+            let cb = function(x){};
             let ctx = {}
             g2.io.dress("*", {callback:cb,  context:ctx});
             let shell = g2.io.shell;
@@ -233,7 +231,7 @@ describe("input-output", function(){
 
             for (let i = 0; i < versions.length; i++) {
 
-                let cb = function(x){console.log("cant call it")};
+                let cb = function(x){};
                 let ctx = {}
 
                 let g = versions[i]
@@ -285,8 +283,8 @@ describe("input-output", function(){
             expect(res[0]).toBeUndefined();
             expect(res[1]).toBe(0);
 
-            g.io.inputs.X(1);
-            g.io.inputs.Y(2);
+            g.inp.X(1);
+            g.inp.Y(2);
 
             res = g.resolve();
             expect(res[0]).toBe(1);
@@ -303,20 +301,20 @@ describe("input-output", function(){
                     return [this.X, this.Y, this.Z]
                 }
             }).bundle()).prepare();
-            g.io.outputs.$.callback = function(x){
+            g.out.$.callback = function(x){
                 console.log("spied out")
             }
 
-            spyOn(g.io.outputs.$, 'callback');
+            spyOn(g.out.$, 'callback');
 
-            g.io.inputs.Y(0); //not a change;
-            expect(g.io.outputs.$.callback).not.toHaveBeenCalled();
+            g.inp.Y(0); //not a change;
+            expect(g.out.$.callback).not.toHaveBeenCalled();
 
-            g.io.inputs.Z("trash") // is a change but not eager
-            expect(g.io.outputs.$.callback).not.toHaveBeenCalled();
+            g.inp.Z("trash") // is a change but not eager
+            expect(g.out.$.callback).not.toHaveBeenCalled();
 
-            g.io.inputs.X(1);
-            expect(g.io.outputs.$.callback).toHaveBeenCalledWith([1, 0, 'trash']);
+            g.inp.X(1);
+            expect(g.out.$.callback).toHaveBeenCalledWith([1, 0, 'trash']);
         });
 
         it("should output value", function(){
@@ -330,22 +328,22 @@ describe("input-output", function(){
                 }
             }).prepare();
 
-            g.io.outputs.W.callback = function(x){}
-            g.io.outputs.X.callback = function(x){}
-            g.io.outputs.Y.callback = function(x){}
-            g.io.outputs.Z.callback = function(x){}
+            g.out.W.callback = function(x){}
+            g.out.X.callback = function(x){}
+            g.out.Y.callback = function(x){}
+            g.out.Z.callback = function(x){}
 
-            spyOn(g.io.outputs.W, 'callback');
-            spyOn(g.io.outputs.X, 'callback');
-            spyOn(g.io.outputs.Y, 'callback');
-            spyOn(g.io.outputs.Z, 'callback');
+            spyOn(g.out.W, 'callback');
+            spyOn(g.out.X, 'callback');
+            spyOn(g.out.Y, 'callback');
+            spyOn(g.out.Z, 'callback');
 
-            g.io.inputs.$([2, 1, 0, "trash"]);
+            g.inp.$([2, 1, 0, "trash"]);
 
-            expect(g.io.outputs.W.callback).not.toHaveBeenCalled(); //unchanging lazy
-            expect(g.io.outputs.X.callback).toHaveBeenCalledWith(1); //changing - lazy
-            expect(g.io.outputs.Y.callback).toHaveBeenCalledWith(0); // unchanging eager
-            expect(g.io.outputs.Z.callback).toHaveBeenCalledWith("trash");  // changing eager
+            expect(g.out.W.callback).not.toHaveBeenCalled(); //unchanging lazy
+            expect(g.out.X.callback).toHaveBeenCalledWith(1); //changing - lazy
+            expect(g.out.Y.callback).toHaveBeenCalledWith(0); // unchanging eager
+            expect(g.out.Z.callback).toHaveBeenCalledWith("trash");  // changing eager
         })
 
         it("should throughput value",function(){
@@ -360,31 +358,31 @@ describe("input-output", function(){
                 }
             }).prepare();
 
-            g.io.outputs.W.callback = function(x){}; spyOn(g.io.outputs.W, 'callback');
-            g.io.outputs.X.callback = function(x){}; spyOn(g.io.outputs.X, 'callback');
-            g.io.outputs.Y.callback = function(x){}; spyOn(g.io.outputs.Y, 'callback');
-            g.io.outputs.Z.callback = function(x){}; spyOn(g.io.outputs.Z, 'callback');
-            g.io.outputs.$.callback = function(x){}; spyOn(g.io.outputs.$, 'callback');
+            g.out.W.callback = function(x){}; spyOn(g.out.W, 'callback');
+            g.out.X.callback = function(x){}; spyOn(g.out.X, 'callback');
+            g.out.Y.callback = function(x){}; spyOn(g.out.Y, 'callback');
+            g.out.Z.callback = function(x){}; spyOn(g.out.Z, 'callback');
+            g.out.$.callback = function(x){}; spyOn(g.out.$, 'callback');
 
-            g.io.inputs.$([0,0,0,0]);
+            g.inp.$([0,0,0,0]);
 
-            expect(g.io.outputs.W.callback).not.toHaveBeenCalled(); //trigate - unchanged
-            expect(g.io.outputs.X.callback).not.toHaveBeenCalled(); //entrigate - unchanged
-            expect(g.io.outputs.Y.callback).toHaveBeenCalledWith(0); // trigater - unchanged
-            expect(g.io.outputs.Z.callback).toHaveBeenCalledWith(0); // entrigater -unchanged
+            expect(g.out.W.callback).not.toHaveBeenCalled(); //trigate - unchanged
+            expect(g.out.X.callback).not.toHaveBeenCalled(); //entrigate - unchanged
+            expect(g.out.Y.callback).toHaveBeenCalledWith(0); // trigater - unchanged
+            expect(g.out.Z.callback).toHaveBeenCalledWith(0); // entrigater -unchanged
 
-            g.io.inputs.$([1,1,1,1]);
+            g.inp.$([1,1,1,1]);
 
-            expect(g.io.outputs.W.callback).toHaveBeenCalledWith(1); //trigate    - changed
-            expect(g.io.outputs.X.callback).toHaveBeenCalledWith(1); //entrigate  - changed
-            expect(g.io.outputs.Y.callback).toHaveBeenCalledWith(1); // trigater  - changed
-            expect(g.io.outputs.Z.callback).toHaveBeenCalledWith(1); // entrigater -changed
+            expect(g.out.W.callback).toHaveBeenCalledWith(1); //trigate    - changed
+            expect(g.out.X.callback).toHaveBeenCalledWith(1); //entrigate  - changed
+            expect(g.out.Y.callback).toHaveBeenCalledWith(1); // trigater  - changed
+            expect(g.out.Z.callback).toHaveBeenCalledWith(1); // entrigater -changed
 
-            g.io.outputs.W.callback = function(x){}; spyOn(g.io.outputs.W, 'callback');
-            g.io.outputs.X.callback = function(x){}; spyOn(g.io.outputs.X, 'callback');
-            g.io.outputs.Y.callback = function(x){}; spyOn(g.io.outputs.Y, 'callback');
-            g.io.outputs.Z.callback = function(x){}; spyOn(g.io.outputs.Z, 'callback');
-            g.io.outputs.$.callback = function(x){}; spyOn(g.io.outputs.$, 'callback');
+            g.out.W.callback = function(x){}; spyOn(g.out.W, 'callback');
+            g.out.X.callback = function(x){}; spyOn(g.out.X, 'callback');
+            g.out.Y.callback = function(x){}; spyOn(g.out.Y, 'callback');
+            g.out.Z.callback = function(x){}; spyOn(g.out.Z, 'callback');
+            g.out.$.callback = function(x){}; spyOn(g.out.$, 'callback');
 
         })
 

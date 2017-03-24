@@ -1,6 +1,5 @@
 var Jungle = require("../dist/jungle.js");
-var G = Jungle.G;
-var Util = Jungle.Util;
+var {G, L, Util} = Jungle;
 
 
 const fs = require('fs');
@@ -30,7 +29,6 @@ describe("asynchronous tractors", function(){
                     },
 
                     r(){
-                        console.log("resolve", this.data);
                         return this.data;
                     },
 
@@ -49,8 +47,6 @@ describe("asynchronous tractors", function(){
                 expect(junction.isIdle()).toBe(false, "junction is waiting for something");
 
                 g.resolve().then((resolved)=>{
-
-                    console.log('complete prepare', resolved)
 
                     expect(g.prepared).toBe(true);
 
@@ -188,6 +184,34 @@ describe("asynchronous tractors", function(){
             }
 
             recur(0);
+        })
+
+        it('should function asynchronously in a link context', function(done){
+
+            let g = G({},{
+                p(){
+                    this.handle.await((mydone, raise)=>{
+                        setTimeout(mydone, 50, "Done")
+                    },false)
+                }
+            })
+
+            expect(g.prepare() instanceof Util.Junction).toBe(true);
+
+            let l = L(g,{
+                p(){
+
+                }
+            })
+
+            let prep = l.prepare();
+            prep.then(done)
+
+
+            expect(prep instanceof Util.Junction).toBe(true, "Link prepare can become junction");
+
+            setTimeout(done, 200)
+
         })
 
     });

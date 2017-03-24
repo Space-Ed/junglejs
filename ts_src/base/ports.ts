@@ -20,6 +20,10 @@ namespace Jungle{
                 this.shells.push(shell)
             }
 
+            hostctx(){
+                return this.shells[this.shells.length-1].base.host.ctx.exposed
+            }
+
             designate(designator:PortDesignator):boolean{
                 switch (designator.type){
                     case DesignationTypes.ALL :{

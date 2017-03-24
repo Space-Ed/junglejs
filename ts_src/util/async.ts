@@ -162,7 +162,7 @@ namespace Jungle {
                 return !this.hasFuture() && !this.isTampered() && this.isPresent();
             }
 
-            private isIdle(){
+            public isIdle(){
                 return this.allDone() && this.isPresent()
             }
 
@@ -291,16 +291,16 @@ namespace Jungle {
                 return frontier;
             }
 
-            merge(upstream:any, label?){
+            merge(upstream:any, holdstyle?){
                 let frontier = this.frontier();
 
                 if(upstream instanceof Junction){
                     return frontier.await(function(done, raise){
                         upstream.then(done);
                         upstream.catch(raise);
-                    }, label);
+                    }, holdstyle);
                 }else{
-                    frontier.hold(label)[0](upstream);
+                    frontier.hold(holdstyle)[0](upstream);
                     return frontier;
                 }
             }

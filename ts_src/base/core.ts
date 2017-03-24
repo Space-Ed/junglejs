@@ -23,12 +23,17 @@ namespace Jungle {
 
         junction:Util.Junction;
 
+        inp:any;
+        out:any;
+
         constructor(components:any, form:FormSpec = {}){
             this.depth = 0;
             this.isRoot = true;
             this.prepared = false;
             this.junction = new Util.Junction();
 
+            this.inp = {};
+            this.out = {};
             this.form = this.constructForm();
 
             var {iospec, contextspec} = this.form.parse(form);
@@ -142,7 +147,10 @@ namespace Jungle {
             if(child instanceof BaseCell){
                 var replica = child.replicate();
                 replica.setParent(this, k);
-                let prepared = replica.prepare(prepargs);
+
+                let arg = (k in Object(prepargs))?prepargs[k]:prepargs;
+
+                let prepared = replica.prepare(arg);
 
                 handle.merge(prepared, mergekey);
             }else{
@@ -153,7 +161,7 @@ namespace Jungle {
         protected setParent(parentCell:BaseCell, dereferent:string|number){
 
             //append to path
-            this.ctx.path = parentCell.ctx.path.concat(dereferent);
+            this.ctx.exposed.path = parentCell.ctx.exposed.path.concat(dereferent);
 
             this.parent = parentCell;
             this.isRoot = false;
@@ -258,7 +266,7 @@ namespace Jungle {
                 form:this.form.consolidate(this.io, this.ctx)
             }
 
-            console.log('bundle: ', product)
+            //console.log('bundle: ', product)
             return product;
         }
 
@@ -275,7 +283,7 @@ namespace Jungle {
 
         X(crown, form){
             var deconstruction = this.bundle();
-            return R(Util.melder(deconstruction, {crown:crown, form:form, core:this.constructor}))
+            return R(Util.melder(deconstruction, {crown:crown, form:form, core:this.kind}))
         }
 
     }

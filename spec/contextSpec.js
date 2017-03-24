@@ -59,4 +59,22 @@ describe("A context labelled node",function(){
     it('will always choose the closest to the tip possible',function(){
 
     })
+
+    // describe('can access the context within a method', function(){
+    //     var g = G({},{
+    //         method(x){
+    //             this.property = x;
+    //         },
+    //         c(arg){
+    //             this.method(arg);
+    //         },
+    //         r(){
+    //             return this.property;
+    //         },
+    //         property:"Hi"
+    //     });
+    //
+    //     resolveTest(g, "Bye", "Bye");
+    //
+    // })
 })

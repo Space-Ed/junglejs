@@ -1,5 +1,5 @@
 {
-  "name": "jungle-organic",
+  "name": "jungle-core",
   "version": "0.2.0",
   "description": "The organic programming framework",
   "main": "./dist/jungle.js",

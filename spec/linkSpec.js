@@ -2,10 +2,17 @@ const Jungle = require('../dist/jungle.js')
 const {G,L,R} = Jungle;
 
 describe("Link Cells", function () {
+    // var io = G(null,{
+    //     __i:0,
+    //     o__(x){return x},
+    //     r(obj, arg){return this.i}
+    // });
+
     var io = G(null,{
-        __i:0,
-        o__(x){return x},
-        r(obj, arg){return this.i}
+        __i(x){
+            this.lining.sinks['o'].handle(x)
+        },
+        port:['o_']
     });
 
     // var io2 = G(null, {
@@ -25,7 +32,6 @@ describe("Link Cells", function () {
     var bufferFlush = G(null, {
         _buffer(input){
             this.pushed.push(input);
-            console.log("buffered",this.pushed)
         },
         __flush(){
             return "HEY"
@@ -75,7 +81,7 @@ describe("Link Cells", function () {
             c:io
         },{
             port:['_ri','ro_'],
-            link:['_.ri->*.i', '*.o->_.ro', '_.$->x.*'],
+            link:['_.ri->*.i', '*.o->_.ro', '_->x.*'],
         })
 
         wildLink.prepare();
@@ -111,13 +117,16 @@ describe("Link Cells", function () {
         },{
             port:['_bufin'],
             link:[
-                "_.$->d.flush",
+                "_->d.flush",
                 '_.bufin->*.i',
                 'a.o->d.buffer',
                 'b.o->|d.buffer',
                 'c.o->d.buffer',
                 'd.drain->_.$'
-            ]
+            ],
+            lf(srcCtx, snkCtx){
+                //console.log(`sink context: ${srcCtx.path}, source context: ${snkCtx.path}`);
+            }
         }).prepare();
 
         closeLink.io.shell.sinks.bufin.handle(1);
@@ -139,7 +148,7 @@ describe("Link Cells", function () {
         let propLink = L([
             io, io, io
         ],{
-            link:['_.$->2.i', '*.o-->*.i', '0.o->_.$']
+            link:['_->2.i', '*.o-->*.i', '0.o->_']
         }).prepare()
 
         portResponseTest(propLink, '$', '$', "x","x",1);
