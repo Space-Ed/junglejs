@@ -1,10 +1,6 @@
 
 # Jungle - Organic Programming Framework
 
-__a dual paradigm javascript framework for building modular and self-growing interconnected synthesis systems__
-
-### Note: Unstable, very likely to have foundational changes in coming months
-
 [![npm version](https://badge.fury.io/js/junglejs.svg)](https://badge.fury.io/js/junglejs)
 
 ## Abstract
@@ -89,3 +85,39 @@ All structures are extensible, including those that are active parts of live sys
 ### Remarks
 
 Although it may seem to be an impossible task to implement such a broadly scoped yet tightly constrained framework — for instance is it really possible to make a system that can be modified from a distance secure? — That thinking will have no place. It is really only a matter of getting the core to a stable implementation that can be reproduced by the communities of the various platforms that will see the benefit of being connected to the Jungle. The grandest vision obviously cannot be created by me alone. No. I am only a guide and If no one joins me with the belief that it leads to a more open, democratic and dynamic world, then the project may only achieve a subset of its intended features. But working together we can build the next step toward the technological transcendence of humanity.
+=======
+[![npm version](https://badge.fury.io/js/junglejs.svg)](https://badge.fury.io/js/junglejs)
+
+### Note: Unstable, very likely to have foundational changes in coming months
+
+
+## Organic
+Being organic means it is designed based on the way natural systems are able to grow and develop.
+Examples of such systems include.
+- Cellular growth from embryo to organism.
+- Ecologies of interacting organisms.
+- Reproduction, ancestry, mutation of DNA.
+- Cultures of free agents.
+
+Imagine your program starting as an embryo and growing cell by cell in to a rich and fully fledged application using reusable cell patterns.
+
+##### Jungle can:
+- Destructure
+- Compose
+- Store
+- Stream processing
+- Asynchonous input-output
+- Modularise
+
+##### Jungle is:
+- data focused model of execution
+- dynamically typed
+- runnable in node and browser without dependencies
+- Front-back ambivalent
+
+### Components
+#### Cells
+- Resolution (GCell)
+  the cell responsible for synthesis and analysis of data
+- Link (LCell)
+  the cell responsible for interconnection and data flow
