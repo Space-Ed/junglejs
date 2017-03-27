@@ -31,7 +31,7 @@ module Jungle {
                     preparedReplica.enshell();
                     return preparedReplica
                 }, false);
-
+                
                 handle.merge(aftershell, mergekey);
             }else{
                 handle.merge(child, mergekey);
@@ -43,30 +43,9 @@ module Jungle {
             this.enshell();
         }
 
-        innerResolve(arg){
-            //called by special tractor or resolve.
-
-            /** ports in the lining */
-            let detector:IO.SpecialLinkOutputPort = this.io.shell.sources.$;
-            let emmitter:IO.SpecialLinkInputPort = this.io.shell.sinks.$
-
-            //await result from shell
-            let result = new Util.Junction().await(
-                (done, raise)=>{
-                    detector.detect = done;
-                }
-            ).then(()=>{
-                detector.emit()
-                emmitter.complete()
-            }
-            )
-
-            emmitter.innerHandle(arg)
-
-            return result;
-
+        resolve(resarg){
+            super.resolve(resarg);
         }
-
     }
 
 }

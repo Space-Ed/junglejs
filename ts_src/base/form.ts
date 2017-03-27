@@ -5,7 +5,6 @@ namespace Jungle {
         c?:(args?)=>any;
         p?:(arg)=>void;
         d?:(arg)=>void;
-        $?:(arg, inner)=>any;
         x?:string;
         link?:string[];
         port?:string[];
@@ -26,7 +25,6 @@ namespace Jungle {
 
          preparator:(arg)=>void;
          depreparator:(arg)=>void;
-         special:(arg, resolve)=>any;
 
          constructor(public host:BaseCell){
          }
@@ -34,8 +32,7 @@ namespace Jungle {
          parse(formObj:FormSpec):{iospec:any, contextspec:{properties:any, declaration:string}} {
               var ctxdeclare =  formObj.x || "";
               this.preparator = formObj.p || function(x){};
-              this.depreparator = formObj.d || function(x){};
-              this.special = formObj.$;
+              this.preparator = formObj.p || function(x){};
 
               var contextprops = [];
               //Forbid the use of underscores

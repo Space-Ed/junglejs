@@ -20,10 +20,6 @@ namespace Jungle{
                 this.shells.push(shell)
             }
 
-
-            /**
-            *    Get the context of the port's host(the host of the shell upon which it resides)
-            */
             hostctx(){
                 return this.shells[this.shells.length-1].base.host.ctx.exposed
             }

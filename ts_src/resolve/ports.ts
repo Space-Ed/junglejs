@@ -40,19 +40,32 @@ namespace Jungle {
                     if(inputGate){
                         //console.log("[base trigger resolve ] Handle input: ", baseInput)
 
+                        //in order to get around the resolve restriction
+                        shell.base.host.io.specialGate = true;
                         shell.base.host.resolve(baseInput);
+                        shell.base.host.io.specialGate = false;
                     }
                 }
             }
         }
 
-        export class SpecialInputPort extends Port {
+        export class SpecialInputPort extends ResolveInputPort {
             constructor(private base:ResolveIO){
                 super('$');
             }
 
             handleInput(input){
-                this.base.host.resolve(input);
+
+                var hook = this.base.specialInput;
+                var iresult = hook.tractor.call(this.base.host.ctx.exposed, input);
+
+                var inputGate = iresult != IO.HALT && (hook.eager || iresult !== undefined);
+
+                if(inputGate){
+                    this.base.specialGate = true;
+                    this.base.host.resolve(iresult);
+                    this.base.specialGate = false;
+                }
             }
         }
 
