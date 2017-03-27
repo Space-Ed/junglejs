@@ -20,9 +20,9 @@ namespace Jungle {
             var specialInHook;
             var specialOutHook;
 
-            var portlabels:IO.PortSpec[] = this.parsePorts(formObj.port||[])
+            var portlabels:IO.PortSpec[] = this.parsePorts(formObj.port||[]);
             var labels = {};
-            var contextprops:PropertySpec[] = []
+            var contextprops:PropertySpec[] = [];
 
             //create port intermediate representation
 

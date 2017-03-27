@@ -217,7 +217,7 @@ namespace Jungle {
                 }
             }
 
-            collect():{hooks:Hook[], shells:Shell[]} {
+            collect(): {hooks:Hook[], shells:Shell[]} {
                 //if child is an inversion node then shell it else provide the io map to the accumulated nodes
 
                 //begin with the hooks of this node
@@ -226,14 +226,14 @@ namespace Jungle {
                     shells:[this.portShell]
                 };
 
-                const accumulator = function(child, k, accumulated : {hooks:Hook[], shells:Shell[]}) : {hooks:Hook[], shells:Shell[]}{
+                const accumulator = function(child, k, accumulated : {hooks:Hook[], shells:Shell[]}) : {hooks:Hook[], shells:Shell[]} {
                     child = <ResolutionCell> child;
                     let {hooks, shells} = child.io.collect();
                     return {hooks: accumulated.hooks.concat(hooks), shells: accumulated.shells.concat(shells)};
                 }
 
                 //singular case handling
-                if (!Util.isVanillaObject(this.host.crown) && !Util.isVanillaArray(this.host.crown)){
+                if ( ! Util.isVanillaObject(this.host.crown) && !Util.isVanillaArray(this.host.crown)){
                     if(this.host.crown instanceof ResolutionCell){
                         accumulated = accumulator(this.host.crown, null, accumulated);
                     }
@@ -241,10 +241,10 @@ namespace Jungle {
 
                     for (var k in this.host.crown){
                         let child = this.host.crown[k];
-                        if(child instanceof ResolutionCell){
+                        if(child instanceof ResolutionCell){ //collect hooks and shells
                             child = <ResolutionCell> child;
                             accumulated = accumulator(child, k, accumulated);
-                        }else if (child instanceof BaseCell){
+                        }else if (child instanceof BaseCell){ //collect shells where they exist
                             child = <BaseCell> child;
 
                             //on other node
@@ -255,7 +255,7 @@ namespace Jungle {
                     }
                 }
 
-                //shell creation post recurse means leaves shell first
+                //shell creation if marked as base by orientation inversion detector
                 if(this.isShellBase){
 
                     //special hooks are needed at this point, by default they will trigger and pass.
@@ -265,20 +265,10 @@ namespace Jungle {
                     //compile the accumulated hooks into a single shell
                     this.shell = new HookShell(this, accumulated.hooks, accumulated.shells);
 
-
-                    //aliased input function by binding the outward facing port to the host
-                    for(let k in this.shell.sinks){
-                        this.host.inp[k] = (function(input){
-                            this.shell.sinks[k].handle(input);
-                        }).bind(this);
-                    }
-                    //aliased the output sources
-                    for(let k in this.shell.sources){
-                        this.host.out[k] = this.shell.sources[k];
-                    }
-
-                    return {shells:[this.shell], hooks:[]}
-                }else{
+                    this.hostAlias();
+                    
+                    return { shells: [this.shell], hooks:[]}
+                }else {
                     return {hooks: accumulated.hooks, shells:accumulated.shells};
                 }
             }

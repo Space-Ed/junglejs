@@ -639,6 +639,20 @@ var Jungle;
                 }
                 this.shell.dress(designator, coat);
             };
+            BaseIO.prototype.hostAlias = function () {
+                var _loop_1 = function (k) {
+                    this_1.host.inp[k] = (function (input) {
+                        this.shell.sinks[k].handle(input);
+                    }).bind(this_1);
+                };
+                var this_1 = this;
+                for (var k in this.shell.sinks) {
+                    _loop_1(k);
+                }
+                for (var k in this.shell.sources) {
+                    this.host.out[k] = this.shell.sources[k];
+                }
+            };
             BaseIO.prototype.enshell = function () {
                 return this.shell;
             };
@@ -950,19 +964,8 @@ var Jungle;
             LinkIO.prototype.enshell = function () {
                 this.innerDress();
                 this.applyLinks();
-                var _loop_1 = function (k) {
-                    this_1.host.inp[k] = (function (input) {
-                        this.shell.sinks[k].handle(input);
-                    }).bind(this_1);
-                };
-                var this_1 = this;
-                for (var k in this.shell.sinks) {
-                    _loop_1(k);
-                }
-                for (var k in this.shell.sources) {
-                    this.host.out[k] = this.shell.sources[k];
-                }
-                return;
+                this.hostAlias();
+                return this.shell;
             };
             ;
             LinkIO.prototype.innerDress = function () {
@@ -1681,18 +1684,7 @@ var Jungle;
                     this.specialInput = this.specialInput || { tractor: IO.passing, label: '$', host: this.host, orientation: IO.Orientation.INPUT, eager: true };
                     this.specialOutput = this.specialOutput || { tractor: IO.passing, label: '$', host: this.host, orientation: IO.Orientation.OUTPUT, eager: true };
                     this.shell = new IO.HookShell(this, accumulated.hooks, accumulated.shells);
-                    var _loop_2 = function (k_1) {
-                        this_2.host.inp[k_1] = (function (input) {
-                            this.shell.sinks[k_1].handle(input);
-                        }).bind(this_2);
-                    };
-                    var this_2 = this;
-                    for (var k_1 in this.shell.sinks) {
-                        _loop_2(k_1);
-                    }
-                    for (var k_2 in this.shell.sources) {
-                        this.host.out[k_2] = this.shell.sources[k_2];
-                    }
+                    this.hostAlias();
                     return { shells: [this.shell], hooks: [] };
                 }
                 else {

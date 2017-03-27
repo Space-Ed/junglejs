@@ -51,26 +51,15 @@ namespace Jungle {
             enshell():Shell{
                 this.innerDress();
                 this.applyLinks();
+                this.hostAlias();
 
-                //aliased input function by binding the outward facing port to the host
-                for(let k in this.shell.sinks){
-                    this.host.inp[k] = (function(input){
-                        this.shell.sinks[k].handle(input);
-                    }).bind(this);
-                }
-                //aliased the output sources
-                for(let k in this.shell.sources){
-                    this.host.out[k] = this.shell.sources[k];
-                }
-
-                return
+                return this.shell
             };
 
             /**
              * All sources available must be dressed with a link follower
              */
             innerDress(){
-
 
                 Util.typeCaseSplitF((item, key)=>{
                     let cellSources = item.io.shell.sources

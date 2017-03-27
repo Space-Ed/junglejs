@@ -193,6 +193,11 @@ describe("asynchronous tractors", function(){
                     this.handle.await((mydone, raise)=>{
                         setTimeout(mydone, 50, "Done")
                     },false)
+                },
+                r(){
+                    this.handle.await((mydone, raise)=>{
+                        setTimeout(mydone, 50, "Done")
+                    },false);
                 }
             })
 
@@ -207,10 +212,12 @@ describe("asynchronous tractors", function(){
             let prep = l.prepare();
             prep.then(done)
 
-
             expect(prep instanceof Util.Junction).toBe(true, "Link prepare can become junction");
-
             setTimeout(done, 200)
+        })
+
+        it('should prepare asynchronously when containing an async link context', function(){
+
 
         })
 

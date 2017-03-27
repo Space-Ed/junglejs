@@ -204,6 +204,7 @@ declare namespace Jungle {
             ports: PortSpec[];
             constructor(host: BaseCell, iospec: any);
             dress(designation: any, coat: OutputCoat): void;
+            hostAlias(): void;
             enshell(): Shell;
             extract(): any;
         }

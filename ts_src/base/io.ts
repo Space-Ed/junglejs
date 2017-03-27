@@ -101,6 +101,19 @@ namespace Jungle {
                 this.shell.dress(designator, coat);
             }
 
+            hostAlias(){
+                //aliased input function by binding the outward facing port to the host
+                for(let k in this.shell.sinks){
+                    this.host.inp[k] = (function(input){
+                        this.shell.sinks[k].handle(input);
+                    }).bind(this);
+                }
+                //aliased the output sources
+                for(let k in this.shell.sources){
+                    this.host.out[k] = this.shell.sources[k];
+                }
+            }
+
             enshell():Shell{
                 return this.shell
             }

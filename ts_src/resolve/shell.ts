@@ -49,6 +49,8 @@ namespace Jungle{
              * Handle the compaction of midrant hooks into label based arrays
              */
             addMidrantHook(hook:Hook){
+
+                //set this base as the base of the hook
                 hook.host.io.base = this.base;
 
                 if(hook.orientation === Orientation.INPUT){
