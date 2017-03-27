@@ -40,6 +40,8 @@ namespace Jungle {
              this.carrier = formObj.c || Jungle.Util.identity;
              this.resolver = formObj.r || Jungle.Util.identity;
             this.preparator = formObj.p || function(x){};
+            this.special = formObj.$;
+
 
             //create port intermediate representation
             var portlabels = this.parsePorts(formObj.port||[])

@@ -63,56 +63,28 @@ namespace Jungle {
             Util.typeCaseSplitF(splitf)(projectedCrown);
         }
 
-        resolve(resolveArgs){
-
-            Object.freeze(resolveArgs)
-
-            //
-            // if(!this.prepared){
-            //     var pr = this.prepare();
-            // }
-
-            if (this.io.isShellBase && !this.io.specialGate){
-
-                //resolve external
-                var sInpHook = this.io.specialInput
-                var sInpResult = sInpHook.tractor.call(this.ctx.exposed, resolveArgs);
-
-                var sResult;
-                if(sInpResult != IO.HALT && (sInpHook.eager || sInpResult !== undefined)){
-                    this.io.specialGate = true;
-                    sResult = this.resolve(sInpResult);
-                    this.io.specialGate = false;
-                    return sResult;
-                }else{
-                    //the input has failed to trigger resolution our output hook
-                    //will provide the return value on potentially undefined input
-                    return this.io.specialOutput.tractor.call(this.ctx.exposed, sInpResult);
-                }
-            }else{
-
-                this.resolveCache = {
-                    args:resolveArgs,
-                    carried:null,
-                    crowned:null,
-                    selection:null,
-                    reduced:null
-                }
-
-                //let [begin, raise] = this.junction.hold();
-
-                this.junction
-                    .then(this.resolveCarryThen.bind(this),false)
-                    .then(this.resolveCrownThen.bind(this),false)
-                    .then(this.resolveReduceThen.bind(this),false)
-                    .then(this.resolveCompleteThen.bind(this),false)
-
-                //begin();
-
-                return this.junction.realize();
-
-                //var selection = this.form.selector.call(this.ctx.exposed, Object.keys(this.crown), this.resolveCache.resolveArgs);
+        innerResolve(resolveArgs){
+            this.resolveCache = {
+                args:resolveArgs,
+                carried:null,
+                crowned:null,
+                selection:null,
+                reduced:null
             }
+
+            //let [begin, raise] = this.junction.hold();
+
+            this.junction
+                .then(this.resolveCarryThen.bind(this),false)
+                .then(this.resolveCrownThen.bind(this),false)
+                .then(this.resolveReduceThen.bind(this),false)
+                .then(this.resolveCompleteThen.bind(this),false)
+
+            //begin();
+
+            return this.junction.realize();
+
+            //var selection = this.form.selector.call(this.ctx.exposed, Object.keys(this.crown), this.resolveCache.resolveArgs);
         }
 
         resolveCarryThen(results, handle){

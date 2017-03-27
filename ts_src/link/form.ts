@@ -12,6 +12,8 @@ namespace Jungle {
 
              var ctxdeclare =  formObj.x || "";
              this.preparator = formObj.p || function(x){};
+             this.special = formObj.$;
+
 
              var links = formObj.link || [];
              var linkf = formObj.lf || function(a, b){}

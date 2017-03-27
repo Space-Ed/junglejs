@@ -277,8 +277,21 @@ namespace Jungle {
             return this;
         }
 
+        innerResolve(arg){
+            return undefined;
+        }
+
         resolve(arg){
-            return null;
+            //engage the $ tractor if it exists
+
+            if (this.form.special){
+
+                return this.form.special(arg, this.innerResolve.bind(this))
+            }else{
+                return this.innerResolve(arg)
+            }
+
+
         }
 
         X(crown, form){
