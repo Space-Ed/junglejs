@@ -12,9 +12,11 @@ describe('crumbs', function(){
     })
 
     beforeEach(function(){
+        fs.appendFileSync('test.log', '\n')
+
         Debug.Crumb.defaultOptions.debug = true;
         Debug.Crumb.defaultOptions.log = {log:(...args)=>{
-            fs.appendFileSync('test.log', JSON.stringify(args[0])+'\n')
+            fs.appendFileSync('test.log', args[0] +'\n')
         }};
 
         crumb1 = new Debug.Crumb("Entry")
@@ -120,7 +122,7 @@ Error: waters too rapid
 
     })
 
-    fdescribe('custom options', function(){
+    describe('custom options', function(){
         let originalDefaults = Debug.Crumb.defaultOptions;
 
         beforeAll(function(){

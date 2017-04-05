@@ -26,6 +26,9 @@ namespace Jungle {
          preparator:(arg)=>void;
          depreparator:(arg)=>void;
 
+
+        static RFormProps = ["x", "p", "d", "c", "r", "port", "link", "lf", "prepare", "destroy", "carry", "resolve", "select"]
+
          constructor(public host:BaseCell){
          }
 

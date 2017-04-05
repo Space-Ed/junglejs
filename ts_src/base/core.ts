@@ -71,18 +71,13 @@ namespace Jungle {
         }
 
         inductComponent(component):any{
-            var c
             if (component instanceof BaseCell){
-                c = component
-                //c.setParent(this);
+                return component
             }else if (component instanceof Object){
-                c = new ResolutionCell(component)
-                //c.setParent(this);
+                return new ResolutionCell(component)
             }else {
-                c = component
+                return  component
             }
-
-            return c;
         }
 
         //------------------Construct //// Prepare ------------------------
@@ -90,7 +85,7 @@ namespace Jungle {
         /**
          * setup the state tree, recursively preparing the contexts
          */
-        public prepare(prepargs=null):BaseCell{
+        public prepare(prepargs=null):BaseCell|Util.Junction{
 
             if(this.isAncestor){
                 throw Error("Ancestors cannot be prepared for resolution")
@@ -104,7 +99,10 @@ namespace Jungle {
             this.ancestor = this.ancestor || this.replicate();
             this.ancestor.isAncestor = true;
 
-            if(!this.prepared){
+            if(this.junction.isIdle() == false){
+                //we are already doing something.
+                return this.junction;
+            }else if (!this.prepared){
 
                 this.ctx.prepare();
                 //push to the journey
@@ -134,7 +132,6 @@ namespace Jungle {
 
         completePrepare(){
             this.prepared = true;
-            // CONTROVERTIAL: does the automatic shelling of the root make sense?
             if(this.isRoot){
                 this.enshell()
             }
