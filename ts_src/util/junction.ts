@@ -337,48 +337,5 @@ namespace Jungle {
 
         }
 
-        export class Gate{
-            private locks:boolean[];
-            private locki:number;
-            private data:any[];
-
-            constructor(public callback?, public context?){
-                this.locks = [];
-                this.locki = 0;
-                this.data = [];
-            }
-
-            lock():(arg) => void {
-                this.locks[this.locki] = true;
-
-                return (function(locki, arg){
-
-                    if(arg != undefined){
-                        this.data = arg;
-                    }
-
-                    this.locks[locki] = false;
-                    if(this.allUnlocked()){
-                        this.callback.call(this.context, this.data);
-                    }
-                }).bind(this, this.locki++)
-            }
-
-            reset(){
-                this.locks = [];
-                this.locki = 0;
-            }
-
-            isClean(){
-                return this.locki === 0;
-            }
-
-            allUnlocked():boolean{
-                return this.locks.filter(function(x){return x}).length === 0;
-            }
-        }
-
-
-
     }
 }

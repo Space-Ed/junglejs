@@ -46,7 +46,6 @@
         "./link/core.ts",
         "./link/form.ts",
         "./link/io.ts",
-        "./link/shell-context.ts",
         "./main.ts",
         "./reconstruction.ts",
         "./resolve/core.ts",
@@ -55,8 +54,13 @@
         "./resolve/ports.ts",
         "./resolve/shell.ts",
         "./terminal.ts",
-        "./util.ts",
-        "./util/async.ts",
-        "./util/object.ts"
+        "./util/blender.ts",
+        "./util/checks.ts",
+        "./util/debug.ts",
+        "./util/junction.ts",
+        "./util/math.ts",
+        "./util/misc.ts",
+        "./util/transforms.ts",
+        "./util/typesplit.ts"
     ]
 }
