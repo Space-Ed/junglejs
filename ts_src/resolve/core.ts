@@ -28,12 +28,23 @@ namespace Jungle {
         }
 
 
-        private resolveDenizen(handle, args, denizen, reference){
+        private resolveDenizen(deref, handle, args, denizen, reference){
+            console.log(`resolving subject ${reference} : ${denizen}`);
+
             let mergekey = reference === undefined ? false : reference;
 
-            if(denizen instanceof BaseCell && denizen !== undefined){
-                let denizenArg = args === undefined ? undefined : args[reference];
+            if(denizen !== undefined && denizen instanceof BaseCell){
+
+                let denizenArg;
+                if(deref){
+                    denizenArg = args[reference];
+                }else{
+                    denizenArg = args;
+                }
+
                 let resolved = denizen.resolve(denizenArg);
+
+                console.log('resolved', resolved)
                 handle.merge(resolved, mergekey);
             }else{
                 handle.merge(denizen, mergekey);
@@ -41,25 +52,37 @@ namespace Jungle {
         }
 
         //main recursion
-        private  resolveCell(handle:Util.Junction, node, carriedArgs, selection):any{
-            //log("node to resolve: ", node)
+        private  resolveCell(handle:Util.Junction, node, carriedArgs):any{
 
-            //cutting dictates that we select nothing and therefore will
-            var cut = false;
+            let projectedCrown, deref;
 
-            if(!selection){
-                cut = true;
-            }else if(selection === true && node instanceof Object){
-                //select all
-                selection = Object.keys(node);
+            //if the carried arg does not have the key
+            if(carriedArgs instanceof Object && this.crown instanceof Object){
+                let carriedKeys;
+                carriedKeys = Object.keys(carriedArgs);
+
+                //if there are any extraneous keys we will not allow selection.
+                if(Util.isSubset(carriedKeys, Object.keys(this.crown))){ //then we can use all the carried keys to select
+                    projectedCrown = Util.projectObject(this.crown, carriedKeys);
+                    deref = true;
+                }
+                // else if(Util.isSubset(Object.keys(this.crown), carriedKeys)){ //we can use carried keys to dereference
+                //     projectedCrown = this.crown;
+                //     deref = true;
+                // }
+                else{
+                    projectedCrown = this.crown;
+                    deref = false;
+                }
+            }else{
+                projectedCrown = this.crown;
+                deref = false;
             }
-            //at this stage cut determines primitives are nullified and objects empty
-            const projectedCrown = this.crown; //TODO: projection onto selected keys;
-            const core = this;
 
             //in here we have time to scan all Denizens and they will merge into the handle.
-            let splitf = core.resolveDenizen.bind(core, handle, carriedArgs)
+            let splitf = this.resolveDenizen.bind(this, deref, handle, carriedArgs)
 
+            //the result is not used
             Util.typeCaseSplitF(splitf)(projectedCrown);
         }
 
@@ -67,10 +90,18 @@ namespace Jungle {
 
             Object.freeze(resolveArgs)
 
-            //
-            // if(!this.prepared){
-            //     var pr = this.prepare();
+            // if the generator is in use it is dangerous to layer on the junction as an external user would be unsure of what result they are getting
+            // if(!this.junction.isIdle()){
+            //     throw new Error("Unable to resolve, the generator is in use")
             // }
+
+
+            /*
+                when a node is not prepared before resolve it should be done
+            */
+            if(!this.prepared){
+                var pr = this.prepare();
+            }
 
             if (this.io.isShellBase && !this.io.specialGate){
 
@@ -99,19 +130,14 @@ namespace Jungle {
                     reduced:null
                 }
 
-                //let [begin, raise] = this.junction.hold();
-
-                this.junction
+                this.junction = this.junction
                     .then(this.resolveCarryThen.bind(this),false)
                     .then(this.resolveCrownThen.bind(this),false)
                     .then(this.resolveReduceThen.bind(this),false)
                     .then(this.resolveCompleteThen.bind(this),false)
 
-                //begin();
-
                 return this.junction.realize();
 
-                //var selection = this.form.selector.call(this.ctx.exposed, Object.keys(this.crown), this.resolveCache.resolveArgs);
             }
         }
 
@@ -123,7 +149,7 @@ namespace Jungle {
 
         resolveCrownThen(results, handle){
             this.resolveCache.carried = results;
-            return this.resolveCell(handle, this.crown,  this.resolveCache.carried, true);
+            return this.resolveCell(handle, this.crown,  this.resolveCache.carried);
         }
 
         resolveReduceThen(results, handle){

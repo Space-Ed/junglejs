@@ -292,18 +292,13 @@ var Jungle;
         GContext.prototype.addSourceLayer = function (layer) {
             for (var prop in layer.source.propertyLayerMap) {
                 var propVal = layer.source.propertyLayerMap[prop];
-                if (this.propertyLayerMap[prop] != undefined && (this.propertyLayerMap[prop].mode != propVal.mode || this.propertyLayerMap[prop].source != propVal.source)) {
-                    throw new Error("source layer introduces incompatible source/mode of property");
-                }
-                else {
-                    this.propertyLayerMap[prop] = { source: propVal.source, mode: layer.mode };
-                    Object.defineProperty(this.exposed, prop, {
-                        set: this.setItem.bind(this, prop),
-                        get: this.getItem.bind(this, prop),
-                        enumerable: true,
-                        configurable: true
-                    });
-                }
+                this.propertyLayerMap[prop] = { source: propVal.source, mode: layer.mode };
+                Object.defineProperty(this.exposed, prop, {
+                    set: this.setItem.bind(this, prop),
+                    get: this.getItem.bind(this, prop),
+                    enumerable: true,
+                    configurable: true
+                });
             }
         };
         return GContext;
@@ -346,17 +341,15 @@ var Jungle;
             return new BaseCell(crown, form);
         };
         BaseCell.prototype.inductComponent = function (component) {
-            var c;
             if (component instanceof BaseCell) {
-                c = component;
+                return component;
             }
             else if (component instanceof Object) {
-                c = new Jungle.ResolutionCell(component);
+                return new Jungle.ResolutionCell(component);
             }
             else {
-                c = component;
+                return component;
             }
-            return c;
         };
         BaseCell.prototype.prepare = function (prepargs) {
             var _this = this;
@@ -366,7 +359,10 @@ var Jungle;
             }
             this.ancestor = this.ancestor || this.replicate();
             this.ancestor.isAncestor = true;
-            if (!this.prepared) {
+            if (this.junction.isIdle() == false) {
+                return this.junction;
+            }
+            else if (!this.prepared) {
                 this.ctx.prepare();
                 this.junction = this.junction
                     .then(function (results, handle) {
@@ -569,6 +565,7 @@ var Jungle;
         };
         return BaseForm;
     }());
+    BaseForm.RFormProps = ["x", "p", "d", "c", "r", "port", "link", "lf", "prepare", "destroy", "carry", "resolve", "select"];
     Jungle.BaseForm = BaseForm;
 })(Jungle || (Jungle = {}));
 var Jungle;
@@ -868,6 +865,9 @@ var Jungle;
             _this.kind = "Link";
             return _this;
         }
+        LinkCell.prototype.constructCore = function (crown, form) {
+            return new LinkCell(crown, form);
+        };
         LinkCell.prototype.constructIO = function (iospec) {
             return new Jungle.IO.LinkIO(this, iospec);
         };
@@ -895,7 +895,19 @@ var Jungle;
             this.enshell();
         };
         LinkCell.prototype.resolve = function (resarg) {
-            _super.prototype.resolve.call(this, resarg);
+            var called = false;
+            var result;
+            var cachecb = this.io.shell.sources.$.callback;
+            this.io.shell.sources.$.callback = function (output) {
+                called = true;
+                result = output;
+            };
+            this.io.shell.sinks.$.handle(resarg);
+            this.io.shell.sources.$.callback = cachecb;
+            if (called) {
+                this.io.shell.sources.$.handle(result);
+            }
+            return result;
         };
         return LinkCell;
     }(Jungle.BaseCell));
@@ -970,7 +982,9 @@ var Jungle;
             ;
             LinkIO.prototype.innerDress = function () {
                 var _this = this;
+                console.log('this.host.crown: ', this.host.crown);
                 Jungle.Util.typeCaseSplitF(function (item, key) {
+                    console.log("item", item, ' key:', key);
                     var cellSources = item.io.shell.sources;
                     var cellLinkMap = [];
                     for (var q in cellSources) {
@@ -984,6 +998,7 @@ var Jungle;
                 for (var q in this.lining.sources) {
                     var source = this.lining.sources[q];
                     this.linkmap["_"][q] = [];
+                    console.log("port shell dress", q);
                     source.callback = this.follow.bind(this, '_', source);
                 }
             };
@@ -1095,6 +1110,7 @@ var Jungle;
                 }
             };
             LinkIO.prototype.forgeLink = function (linkspec, sourceCell, sinkCell, sourcePort, sinkPort) {
+                console.log("link formation: source:" + sourceCell + "." + sourcePort.label + ", sink:" + sinkCell + "." + sinkPort.label + ", closed sinks: [" + this.closed.sinks + "]");
                 this.linkmap[sourceCell][sourcePort.label].push(sinkPort);
                 this.linker.call(this.host.ctx.exposed, sourcePort.hostctx(), sinkPort.hostctx(), sourcePort.label, sinkPort.label);
                 if (linkspec.closeSink) {
@@ -1106,6 +1122,7 @@ var Jungle;
             };
             LinkIO.prototype.follow = function (sourceCell, source, throughput) {
                 var targeted = this.linkmap[sourceCell][source.label];
+                console.log("Throughput of " + throughput + " from source " + sourceCell + "." + source.label + " to ", targeted);
                 this.emmissionGate.then(function (result, handle) {
                     for (var _i = 0, targeted_1 = targeted; _i < targeted_1.length; _i++) {
                         var sink = targeted_1[_i];
@@ -1228,32 +1245,51 @@ var Jungle;
         ResolutionCell.prototype.constructCore = function (crown, form) {
             return new ResolutionCell(crown, form);
         };
-        ResolutionCell.prototype.resolveDenizen = function (handle, args, denizen, reference) {
+        ResolutionCell.prototype.resolveDenizen = function (deref, handle, args, denizen, reference) {
+            console.log("resolving subject " + reference + " : " + denizen);
             var mergekey = reference === undefined ? false : reference;
-            if (denizen instanceof Jungle.BaseCell && denizen !== undefined) {
-                var denizenArg = args === undefined ? undefined : args[reference];
+            if (denizen !== undefined && denizen instanceof Jungle.BaseCell) {
+                var denizenArg = void 0;
+                if (deref) {
+                    denizenArg = args[reference];
+                }
+                else {
+                    denizenArg = args;
+                }
                 var resolved = denizen.resolve(denizenArg);
+                console.log('resolved', resolved);
                 handle.merge(resolved, mergekey);
             }
             else {
                 handle.merge(denizen, mergekey);
             }
         };
-        ResolutionCell.prototype.resolveCell = function (handle, node, carriedArgs, selection) {
-            var cut = false;
-            if (!selection) {
-                cut = true;
+        ResolutionCell.prototype.resolveCell = function (handle, node, carriedArgs) {
+            var projectedCrown, deref;
+            if (carriedArgs instanceof Object && this.crown instanceof Object) {
+                var carriedKeys = void 0;
+                carriedKeys = Object.keys(carriedArgs);
+                if (Jungle.Util.isSubset(carriedKeys, Object.keys(this.crown))) {
+                    projectedCrown = Jungle.Util.projectObject(this.crown, carriedKeys);
+                    deref = true;
+                }
+                else {
+                    projectedCrown = this.crown;
+                    deref = false;
+                }
             }
-            else if (selection === true && node instanceof Object) {
-                selection = Object.keys(node);
+            else {
+                projectedCrown = this.crown;
+                deref = false;
             }
-            var projectedCrown = this.crown;
-            var core = this;
-            var splitf = core.resolveDenizen.bind(core, handle, carriedArgs);
+            var splitf = this.resolveDenizen.bind(this, deref, handle, carriedArgs);
             Jungle.Util.typeCaseSplitF(splitf)(projectedCrown);
         };
         ResolutionCell.prototype.resolve = function (resolveArgs) {
             Object.freeze(resolveArgs);
+            if (!this.prepared) {
+                var pr = this.prepare();
+            }
             if (this.io.isShellBase && !this.io.specialGate) {
                 var sInpHook = this.io.specialInput;
                 var sInpResult = sInpHook.tractor.call(this.ctx.exposed, resolveArgs);
@@ -1276,7 +1312,7 @@ var Jungle;
                     selection: null,
                     reduced: null
                 };
-                this.junction
+                this.junction = this.junction
                     .then(this.resolveCarryThen.bind(this), false)
                     .then(this.resolveCrownThen.bind(this), false)
                     .then(this.resolveReduceThen.bind(this), false)
@@ -1290,7 +1326,7 @@ var Jungle;
         };
         ResolutionCell.prototype.resolveCrownThen = function (results, handle) {
             this.resolveCache.carried = results;
-            return this.resolveCell(handle, this.crown, this.resolveCache.carried, true);
+            return this.resolveCell(handle, this.crown, this.resolveCache.carried);
         };
         ResolutionCell.prototype.resolveReduceThen = function (results, handle) {
             this.resolveCache.crowned = results;
@@ -1887,146 +1923,189 @@ var Jungle;
 (function (Jungle) {
     var Util;
     (function (Util) {
-        function identity(x) {
-            return x;
+        function B(crown, form) {
+            if (crown === void 0) { crown = {}; }
+            if (form === void 0) { form = {}; }
+            return new Blender(crown, form);
         }
-        Util.identity = identity;
-        function weightedChoice(weights) {
-            var sum = weights.reduce(function (a, b) { return a + b; }, 0);
-            var cdfArray = weights.reduce(function (coll, next, i) {
-                var v = (coll[i - 1] || 0) + next / sum;
-                return coll.concat([v]);
-            }, []);
-            var r = Math.random();
-            var i = 0;
-            while (i < weights.length - 1 && r > cdfArray[i]) {
-                i++;
-            }
-            return i;
-        }
-        Util.weightedChoice = weightedChoice;
-        function range() {
-            var args = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                args[_i] = arguments[_i];
-            }
-            var beg, end, step;
-            switch (args.length) {
-                case 1: {
-                    end = args[0];
-                    beg = 0;
-                    step = 1;
-                    break;
+        Util.B = B;
+        var Blender = (function () {
+            function Blender(crown, form) {
+                if (form === void 0) { form = {}; }
+                this.crown = crown;
+                if (form instanceof Function) {
+                    this.reducer = form;
                 }
-                case 2: {
-                    end = args[1];
-                    beg = args[0];
-                    step = 1;
-                    break;
+                else if (form.reducer instanceof Function) {
+                    this.reducer = form.reducer;
                 }
-                case 3: {
-                    end = args[2];
-                    beg = args[0];
-                    step = args[1];
-                    break;
+                else {
+                    this.reducer = Blender.defaultReduce;
                 }
-                default: {
-                    end = 0;
-                    beg = 0;
-                    step = 1;
-                    break;
-                }
+                this.block = form.block || false;
+                this.term = form.term || false;
+                this.mapper = form.mapper || Blender.defaultMap;
             }
-            var rng = [];
-            if (beg > end && step < 0) {
-                for (var i = beg; i > end; i += step) {
-                    rng.push(i);
+            Blender.defaultReduce = function (a, b) {
+                if (Blender.strictTypeReduce && (typeof (a) != typeof (b))) {
+                    var errmsg = "Expected melding to be the same type \n" +
+                        "existing: " + a + "\n" +
+                        "incoming: " + b + "\n";
+                    throw TypeError(errmsg);
                 }
-            }
-            else if (beg < end && step > 0) {
-                for (var i = beg; i < end; i += step) {
-                    rng.push(i);
+                return b === undefined ? a : b;
+            };
+            ;
+            Blender.defaultMap = function (x) {
+                return x;
+            };
+            Blender.prototype.init = function (obj) {
+                if (this.term === false) {
+                    this.crown = Util.typeCaseSplitF(this.initChurn.bind(this))(obj);
                 }
-            }
-            else {
-                throw new Error("invalid range parameters");
-            }
-            return rng;
-        }
-        Util.range = range;
-        function translator(node, translation) {
-            var translated;
-            if (typeof (node) == "object" && !(node instanceof Array)) {
-                translated = {};
-                for (var k in node) {
-                    var tval = translation[k];
-                    if (typeof (tval) == "function") {
-                        translated[tval.name] = tval(node[k]);
+                else {
+                    this.crown = obj;
+                }
+                return this;
+            };
+            Blender.prototype.initChurn = function (inner, k) {
+                var result;
+                if (k === undefined && Util.isPrimative(inner)) {
+                    result = inner;
+                    this.term = inner !== undefined;
+                }
+                else if (k in this.crown) {
+                    var val = this.crown[k];
+                    if (val instanceof Blender) {
+                        result = val.init(inner);
                     }
-                    if (typeof (tval) == "string") {
-                        translated[tval] = node[k];
-                    }
-                    else if (tval != undefined) {
-                        translated[k] = translator(node[k], tval);
+                    else if (val instanceof Function) {
+                        result = B(undefined, val).init(inner);
                     }
                     else {
-                        translated[k] = node[k];
+                        result = B(this.crown[k], { mapper: this.mapper, reducer: this.reducer }).init(inner);
                     }
                 }
-                return translated;
-            }
-            else {
-                return node;
-            }
-        }
-        Util.translator = translator;
-        function melder(node1, node2, merge, concatArrays, typeConstrain) {
-            if (merge === void 0) { merge = function (a, b) { return b; }; }
-            if (concatArrays === void 0) { concatArrays = false; }
-            if (typeConstrain === void 0) { typeConstrain = true; }
-            if (node1 == undefined) {
-                return node2;
-            }
-            if (node2 == undefined) {
-                return node1;
-            }
-            if (typeConstrain && (typeof (node1) != typeof (node2))) {
-                var errmsg = "Expected melding nodes to be the same type \n" +
-                    "type of node1: " + typeof (node1) + "\n" +
-                    "type of node2: " + typeof (node2) + "\n";
-                throw TypeError(errmsg);
-            }
-            var melded;
-            if (node1 instanceof Array) {
-                return concatArrays ? node1.concat(node2) : merge(node1, node2);
-            }
-            else if (typeof (node1) == 'object') {
-                melded = {};
-                for (var k in node1) {
-                    melded[k] = node1[k];
+                else {
+                    result = B(undefined, { mapper: this.mapper, reducer: this.reducer }).init(inner);
                 }
-                for (var q in node2) {
-                    melded[q] = node2[q];
+                return result;
+            };
+            Blender.prototype.dump = function () {
+                if (this.term) {
+                    return this.crown;
                 }
-                for (var k in node1) {
-                    for (var q in node2) {
-                        if (k == q) {
-                            if (node1[k] == node2[k]) {
-                                melded[k] = node1[k];
+                else {
+                    return Util.typeCaseSplitF(function (child) {
+                        return child !== undefined ? child.dump() : undefined;
+                    })(this.crown);
+                }
+            };
+            Blender.prototype.blend = function (obj) {
+                this._blend(obj);
+                return this;
+            };
+            Blender.prototype._blend = function (obj) {
+                var mapped = this.mapper(obj);
+                var reduced;
+                if (this.term) {
+                    reduced = this.reducer(this.crown, mapped);
+                    this.crown = reduced;
+                }
+                else {
+                    reduced = this.merge(mapped);
+                }
+                return reduced;
+            };
+            Blender.prototype.merge = function (income) {
+                var result, superkeys;
+                if (this.crown === undefined && income !== undefined) {
+                    this.init(income);
+                    return income;
+                }
+                else if (income !== undefined) {
+                    if (this.crown instanceof Array) {
+                        result = [];
+                        superkeys = Util.range(Math.max((income || []).length || 0, this.crown.length));
+                    }
+                    else {
+                        result = {};
+                        superkeys = Object.keys(this.crown || {});
+                        Object.keys(income || {}).forEach(function (key) {
+                            if (superkeys.indexOf(key) === -1) {
+                                superkeys.push(key);
+                            }
+                        });
+                    }
+                    for (var _i = 0, superkeys_1 = superkeys; _i < superkeys_1.length; _i++) {
+                        var key = superkeys_1[_i];
+                        if (key in income) {
+                            if (key in this.crown) {
+                                result[key] = this.crown[key]._blend(income[key]);
                             }
                             else {
-                                melded[k] = melder(node1[k], node2[k], merge, concatArrays);
+                                this.crown[key] = B(undefined, { mapper: this.mapper, reducer: this.reducer }).init(income[key]);
+                                result[key] = this.crown[key].dump();
                             }
                         }
+                        else if (key in this.crown) {
+                            result[key] = this.crown[key].dump();
+                        }
+                        else {
+                        }
                     }
+                    return result;
+                }
+            };
+            return Blender;
+        }());
+        Blender.strictTypeReduce = false;
+        Util.Blender = Blender;
+    })(Util = Jungle.Util || (Jungle.Util = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var Util;
+    (function (Util) {
+        function isPrimative(thing) {
+            return thing == undefined || typeof (thing) !== 'object';
+        }
+        Util.isPrimative = isPrimative;
+        function isVanillaObject(thing) {
+            return thing instanceof Object && Object.prototype == Object.getPrototypeOf(thing);
+        }
+        Util.isVanillaObject = isVanillaObject;
+        function isVanillaArray(thing) {
+            return thing instanceof Array && Array.prototype == Object.getPrototypeOf(thing);
+        }
+        Util.isVanillaArray = isVanillaArray;
+        function isTree(thing, stack) {
+            if (stack === void 0) { stack = []; }
+            stack = stack.concat(thing);
+            function decirc(proposed) {
+                if ((stack.indexOf(proposed) === -1)) {
+                    return isTree(proposed, stack);
+                }
+                else {
+                    return false;
                 }
             }
-            else {
-                melded = merge(node1, node2);
-            }
-            return melded;
+            return Util.typeCaseSplitR(decirc, decirc, function () { return true; })(thing, true, function (a, b, k) { return a && b; });
         }
-        Util.melder = melder;
+        Util.isTree = isTree;
+        function isVanillaTree(thing, stack) {
+            if (stack === void 0) { stack = []; }
+            function decirc(proposed) {
+                if ((isVanillaObject(proposed) || isVanillaArray(proposed) && stack.indexOf(proposed) === -1)) {
+                    return isVanillaTree(proposed, stack.concat(proposed));
+                }
+                else {
+                    return false;
+                }
+            }
+            return Util.typeCaseSplitR(decirc, decirc, isPrimative)(thing, true, function (a, b, k) { return a && b; });
+        }
+        Util.isVanillaTree = isVanillaTree;
         function deeplyEquals(node1, node2, allowIdentical) {
             if (allowIdentical === void 0) { allowIdentical = true; }
             if (typeof (node1) != typeof (node2)) {
@@ -2102,243 +2181,179 @@ var Jungle;
             deeplyEqualsThrow(node1, node2, undefined, undefined, false);
         }
         Util.isDeepReplicaThrow = isDeepReplicaThrow;
-        function softAssoc(from, onto) {
-            for (var k in from) {
-                onto[k] = melder(from[k], onto[k]);
-            }
-        }
-        Util.softAssoc = softAssoc;
-        function parassoc(from, onto) {
-            for (var k in from) {
-                onto[k] = melder(onto[k], from[k], function (a, b) {
-                    return [a, b];
-                }, true);
-            }
-        }
-        Util.parassoc = parassoc;
-        function assoc(from, onto) {
-            for (var k in from) {
-                onto[k] = melder(onto[k], from[k]);
-            }
-        }
-        Util.assoc = assoc;
-        function deepCopy(thing) {
-            return typeCaseSplitF(deepCopy, deepCopy)(thing);
-        }
-        Util.deepCopy = deepCopy;
-        function applyMixins(derivedCtor, baseCtors) {
-            baseCtors.forEach(function (baseCtor) {
-                Object.getOwnPropertyNames(baseCtor.prototype).forEach(function (name) {
-                    derivedCtor.prototype[name] = baseCtor.prototype[name];
-                });
-            });
-        }
-        Util.applyMixins = applyMixins;
-        function objectArrayTranspose(objArr, key) {
-            var invert;
-            if (typeof (key) !== 'string') {
-                throw new Error("Value error: key must be string literal");
-            }
-            if (isVanillaArray(objArr)) {
-                invert = {};
-                objArr.forEach(function (value, index) {
-                    invert[value[key]] = value;
-                });
-            }
-            else if (isVanillaObject(objArr)) {
-                invert = [];
-                for (var k in objArr) {
-                    var obj = objArr[k];
-                    obj[key] = k;
-                    invert.push(obj);
-                }
-            }
-            else {
-                throw new Error("Value error: can only transpose object and array literals");
-            }
-        }
-        Util.objectArrayTranspose = objectArrayTranspose;
-        function flattenObject(obj, depth, values) {
-            if (depth === void 0) { depth = -1; }
-            if (values === void 0) { values = []; }
-            for (var k in obj) {
-                var v = obj[k];
-                if (isVanillaObject(v) && (depth >= 0 || depth >= -1)) {
-                    flattenObject(v, depth - 1, values);
-                }
-                else {
-                    values.push(v);
-                }
-            }
-            return values;
-        }
-        Util.flattenObject = flattenObject;
-        function mapObject(obj, func) {
-            var mapped = {};
-            for (var k in obj) {
-                var v = obj[k];
-                mapped[k] = func(k, v);
-            }
-            return mapped;
-        }
-        Util.mapObject = mapObject;
-        function isPrimative(thing) {
-            return thing == undefined || typeof (thing) !== 'object';
-        }
-        Util.isPrimative = isPrimative;
-        function isVanillaObject(thing) {
-            return thing instanceof Object && Object.prototype == Object.getPrototypeOf(thing);
-        }
-        Util.isVanillaObject = isVanillaObject;
-        function isVanillaArray(thing) {
-            return thing instanceof Array && Array.prototype == Object.getPrototypeOf(thing);
-        }
-        Util.isVanillaArray = isVanillaArray;
-        function isTree(thing, stack) {
-            if (stack === void 0) { stack = []; }
-            stack = stack.concat(thing);
-            function decirc(proposed) {
-                if ((stack.indexOf(proposed) === -1)) {
-                    return isTree(proposed, stack);
-                }
-                else {
-                    return false;
-                }
-            }
-            return typeCaseSplitR(decirc, decirc, function () { return true; })(thing, true, function (a, b, k) { return a && b; });
-        }
-        Util.isTree = isTree;
-        function isVanillaTree(thing, stack) {
-            if (stack === void 0) { stack = []; }
-            function decirc(proposed) {
-                if ((isVanillaObject(proposed) || isVanillaArray(proposed) && stack.indexOf(proposed) === -1)) {
-                    return isVanillaTree(proposed, stack.concat(proposed));
-                }
-                else {
-                    return false;
-                }
-            }
-            return typeCaseSplitR(decirc, decirc, isPrimative)(thing, true, function (a, b, k) { return a && b; });
-        }
-        Util.isVanillaTree = isVanillaTree;
-        function typeCaseSplitR(objectOrAllFunction, arrayFunc, primativeFunc) {
-            var ofunc, afunc, pfunc;
-            if (primativeFunc == undefined && arrayFunc == undefined) {
-                ofunc = objectOrAllFunction || identity;
-                afunc = objectOrAllFunction || identity;
-                pfunc = objectOrAllFunction || identity;
-            }
-            else {
-                ofunc = objectOrAllFunction || identity;
-                afunc = arrayFunc || identity;
-                pfunc = primativeFunc || identity;
-            }
-            return function (inThing, initial, reductor) {
-                if (initial === void 0) { initial = null; }
-                if (reductor === void 0) { reductor = function (a, b, k) { }; }
-                var result = initial;
-                if (isVanillaArray(inThing)) {
-                    for (var i = 0; i < inThing.length; i++) {
-                        var subBundle = inThing[i];
-                        result = reductor(result, afunc(subBundle, i), i);
-                    }
-                }
-                else if (isVanillaObject(inThing)) {
-                    for (var k in inThing) {
-                        var subBundle = inThing[k];
-                        result = reductor(result, ofunc(subBundle, k), k);
-                    }
-                }
-                else {
-                    result = pfunc(inThing);
-                }
-                return result;
-            };
-        }
-        Util.typeCaseSplitR = typeCaseSplitR;
-        function typeCaseSplitF(objectOrAllFunction, arrayFunc, primativeFunc) {
-            var ofunc, afunc, pfunc;
-            if (primativeFunc == undefined && arrayFunc == undefined) {
-                ofunc = objectOrAllFunction || identity;
-                afunc = objectOrAllFunction || identity;
-                pfunc = objectOrAllFunction || identity;
-            }
-            else {
-                ofunc = objectOrAllFunction || identity;
-                afunc = arrayFunc || identity;
-                pfunc = primativeFunc || identity;
-            }
-            return function (inThing) {
-                var outThing;
-                if (isVanillaArray(inThing)) {
-                    outThing = [];
-                    outThing.length = inThing.length;
-                    for (var i = 0; i < inThing.length; i++) {
-                        var subBundle = inThing[i];
-                        outThing[i] = afunc(subBundle, i);
-                    }
-                }
-                else if (isVanillaObject(inThing)) {
-                    outThing = {};
-                    for (var k in inThing) {
-                        var subBundle = inThing[k];
-                        outThing[k] = ofunc(subBundle, k);
-                    }
-                }
-                else {
-                    outThing = pfunc(inThing);
-                }
-                return outThing;
-            };
-        }
-        Util.typeCaseSplitF = typeCaseSplitF;
-        function typeCaseSplitM(objectOrAllFunction, arrayFunc, primativeFunc) {
-            var ofunc, afunc, pfunc;
-            if (primativeFunc == undefined && arrayFunc == undefined) {
-                ofunc = objectOrAllFunction || identity;
-                afunc = objectOrAllFunction || identity;
-                pfunc = objectOrAllFunction || identity;
-            }
-            else {
-                ofunc = objectOrAllFunction || identity;
-                afunc = arrayFunc || identity;
-                pfunc = primativeFunc || identity;
-            }
-            return function (inThing) {
-                if (isVanillaArray(inThing)) {
-                    for (var i = 0; i < inThing.length; i++) {
-                        var subBundle = inThing[i];
-                        inThing[i] = afunc(subBundle, i);
-                    }
-                }
-                else if (isVanillaObject(inThing)) {
-                    for (var k in inThing) {
-                        var subBundle = inThing[k];
-                        inThing[k] = ofunc(subBundle, k);
-                    }
-                }
-                else {
-                    pfunc(inThing);
-                }
-            };
-        }
-        Util.typeCaseSplitM = typeCaseSplitM;
-        function collapseValues(obj) {
-            if (!isVanillaTree(obj)) {
-                throw new Error("cant collapse circular structure");
-            }
-            var valArr = [];
-            function nodeProcess(node) {
-                valArr.push(node);
-            }
-            function recursor(node) {
-                typeCaseSplitF(recursor, recursor, nodeProcess)(node);
-            }
-            recursor(obj);
-            return valArr;
-        }
-        Util.collapseValues = collapseValues;
     })(Util = Jungle.Util || (Jungle.Util = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var Debug;
+    (function (Debug) {
+        function dumpToDepthF(maxdepth, indentSym) {
+            if (indentSym === void 0) { indentSym = "  "; }
+            var recur = function (depth, indentation, item) {
+                var outstr = "\n";
+                if (Jungle.Util.isPrimative(item) || depth <= 0) {
+                    outstr = String(item);
+                }
+                else if (item instanceof Array) {
+                    outstr = "[\n";
+                    item.forEach(function (item) { outstr += (indentation + recur(depth - 1, indentation + indentSym, item) + '\n'); });
+                    outstr += "\n]";
+                }
+                else if (item instanceof Object) {
+                    outstr = "{\n";
+                    for (var k in item) {
+                        outstr += (indentation + indentSym + k + ': ' + recur(depth - 1, indentation + indentSym, item[k]) + '\n');
+                    }
+                    outstr += "\n" + indentation + "}";
+                }
+                return outstr;
+            };
+            return function (x) {
+                return recur(maxdepth, "", x);
+            };
+        }
+        Debug.dumpToDepthF = dumpToDepthF;
+        var JungleError = (function () {
+            function JungleError(message, fileName, lineNumber) {
+                this.message = message;
+                this.fileName = fileName;
+                this.lineNumber = lineNumber;
+                var err = new Error();
+            }
+            return JungleError;
+        }());
+        Debug.JungleError = JungleError;
+        var Crumb = (function () {
+            function Crumb(label) {
+                this.label = label;
+                this.raised = false;
+                if (label in Crumb.customOptions) {
+                    this.setOptions(Crumb.customOptions[label]);
+                }
+                else {
+                    this.options = Crumb.defaultOptions;
+                }
+            }
+            Crumb.prototype.setOptions = function (optionObj) {
+                if (Crumb.defaultOptions.debug instanceof Array) {
+                    if (Crumb.defaultOptions.debug.indexOf(this.label) !== -1) {
+                        (Crumb.customOptions[this.label] = Crumb.customOptions[this.label] || { debug: true }).debug = true;
+                    }
+                }
+                this.options = Jungle.Util.melder(Crumb.defaultOptions, optionObj);
+            };
+            Crumb.prototype.drop = function (label) {
+                var crumb = new Crumb(label);
+                crumb.previous = this;
+                return crumb;
+            };
+            Crumb.prototype.excursion = function (label, callback) {
+                var _this = this;
+                var catcher = this.drop(label)
+                    .catch(function (crumback) {
+                    _this.raise("\nExcursion Failure: " + crumback.message + "\n\nWhile Attempting:\n" + crumback.describe() + "\n");
+                });
+                try {
+                    callback(catcher);
+                }
+                catch (e) {
+                    catcher.raise(e);
+                }
+            };
+            Crumb.prototype.at = function (position) {
+                if (this.options.debug) {
+                    this.position = (this.options.at || this.options.format)(position);
+                    if (this.options.log !== undefined) {
+                        var logmsg = ("[" + this.label + "] at: " + this.position);
+                        this.options.log.log(logmsg);
+                    }
+                }
+                return this;
+            };
+            Crumb.prototype.in = function (location) {
+                if (this.options.debug) {
+                    this.location = (this.options.within || this.options.format)(location);
+                    if (this.options.log !== undefined) {
+                        var logmsg = ("[" + this.label + "] in: " + this.location);
+                        this.options.log.log(logmsg);
+                    }
+                }
+                return this;
+            };
+            Crumb.prototype.as = function (situation) {
+                if (this.options.debug) {
+                    this.situation = (this.options.as || this.options.format)(situation);
+                    if (this.options.log !== undefined) {
+                        var logmsg = ("[" + this.label + "] as: " + this.situation);
+                        this.options.log.log(logmsg);
+                    }
+                }
+                return this;
+            };
+            Crumb.prototype.with = function (data) {
+                if (this.options.debug) {
+                    this.data = (this.options.with || this.options.format)(data);
+                    if (this.options.log !== undefined) {
+                        var logmsg = ("[" + this.label + "] with: " + this.data);
+                        this.options.log.log(logmsg);
+                    }
+                }
+                return this;
+            };
+            Crumb.prototype.dump = function () {
+                return "\n" + (this.message !== undefined ? "Error: " + this.message : '') + "\n\nCrumb Trail(most recent at top):\n" + this.traceback(this.options.traceDepth) + "                ";
+            };
+            Crumb.prototype.describe = function () {
+                return "* " + this.options.header + ": " + this.label + (this.position !== undefined ? "\n|    at: " + this.position : '') + (this.location !== undefined ? "\n|    within: " + this.location : '');
+            };
+            Crumb.prototype.traceback = function (depth) {
+                if (depth === void 0) { depth = -1; }
+                if (this.previous !== undefined && (depth > 0 || depth === -1)) {
+                    return "\n" + this.describe() + "\n|\n" + this.previous.traceback(depth - 1) + "\n                    ";
+                }
+                else {
+                    return this.describe();
+                }
+            };
+            Crumb.prototype.catch = function (callback) {
+                this.catchCallback = callback;
+                return this;
+            };
+            Crumb.prototype.raise = function (error) {
+                if (this.catchCallback && !this.raised) {
+                    this.raised = true;
+                    this.message = error;
+                    this.catchCallback(this);
+                }
+                else {
+                    this.message = error;
+                    throw new JungleError(this.dump());
+                }
+            };
+            Crumb.prototype.deflect = function (exception) {
+                if (this.previous) {
+                    this.previous.raise("\nDeflected:\n    from: " + this.label + "\n    message: " + exception);
+                }
+                else {
+                    this.raise(exception);
+                }
+            };
+            return Crumb;
+        }());
+        Crumb.defaultOptions = {
+            header: "Crumb",
+            traceDepth: -1,
+            debug: false,
+            log: undefined,
+            format: function (x) { return x; },
+            with: undefined,
+            at: undefined,
+            within: undefined,
+            as: undefined,
+        };
+        Crumb.customOptions = {};
+        Debug.Crumb = Crumb;
+    })(Debug = Jungle.Debug || (Jungle.Debug = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
 (function (Jungle) {
@@ -2597,182 +2612,402 @@ var Jungle;
             return Junction;
         }());
         Util.Junction = Junction;
-        var Gate = (function () {
-            function Gate(callback, context) {
-                this.callback = callback;
-                this.context = context;
-                this.locks = [];
-                this.locki = 0;
-                this.data = [];
-            }
-            Gate.prototype.lock = function () {
-                this.locks[this.locki] = true;
-                return (function (locki, arg) {
-                    if (arg != undefined) {
-                        this.data = arg;
-                    }
-                    this.locks[locki] = false;
-                    if (this.allUnlocked()) {
-                        this.callback.call(this.context, this.data);
-                    }
-                }).bind(this, this.locki++);
-            };
-            Gate.prototype.reset = function () {
-                this.locks = [];
-                this.locki = 0;
-            };
-            Gate.prototype.isClean = function () {
-                return this.locki === 0;
-            };
-            Gate.prototype.allUnlocked = function () {
-                return this.locks.filter(function (x) { return x; }).length === 0;
-            };
-            return Gate;
-        }());
-        Util.Gate = Gate;
     })(Util = Jungle.Util || (Jungle.Util = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
 (function (Jungle) {
     var Util;
     (function (Util) {
-        function B(crown, form) {
-            if (crown === void 0) { crown = {}; }
-            if (form === void 0) { form = {}; }
-            return new Blender(crown, form);
-        }
-        Util.B = B;
-        var Blender = (function () {
-            function Blender(crown, form) {
-                if (form === void 0) { form = {}; }
-                this.crown = crown;
-                if (form instanceof Function) {
-                    this.reducer = form;
+        function isSubset(seq1, seq2) {
+            for (var _i = 0, seq1_1 = seq1; _i < seq1_1.length; _i++) {
+                var k = seq1_1[_i];
+                if (seq2.indexOf(k) === -1) {
+                    return false;
                 }
-                else if (form.reducer instanceof Function) {
-                    this.reducer = form.reducer;
-                }
-                else {
-                    this.reducer = Blender.defaultReduce;
-                }
-                this.block = form.block || false;
-                this.term = form.term || false;
-                this.mapper = form.mapper || Blender.defaultMap;
             }
-            Blender.defaultReduce = function (a, b) {
-                if (Blender.strictTypeReduce && (typeof (a) != typeof (b))) {
-                    var errmsg = "Expected melding to be the same type \n" +
-                        "existing: " + a + "\n" +
-                        "incoming: " + b + "\n";
-                    throw TypeError(errmsg);
+            return true;
+        }
+        Util.isSubset = isSubset;
+        function isSetEqual(seq1, seq2) {
+            return isSubset(seq1, seq2) && isSubset(seq2, seq1);
+        }
+        Util.isSetEqual = isSetEqual;
+        function weightedChoice(weights) {
+            var sum = weights.reduce(function (a, b) { return a + b; }, 0);
+            var cdfArray = weights.reduce(function (coll, next, i) {
+                var v = (coll[i - 1] || 0) + next / sum;
+                return coll.concat([v]);
+            }, []);
+            var r = Math.random();
+            var i = 0;
+            while (i < weights.length - 1 && r > cdfArray[i]) {
+                i++;
+            }
+            return i;
+        }
+        Util.weightedChoice = weightedChoice;
+        function range() {
+            var args = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                args[_i] = arguments[_i];
+            }
+            var beg, end, step;
+            switch (args.length) {
+                case 1: {
+                    end = args[0];
+                    beg = 0;
+                    step = 1;
+                    break;
                 }
-                return b === undefined ? a : b;
-            };
-            ;
-            Blender.defaultMap = function (x) {
-                return x;
-            };
-            Blender.prototype.init = function (obj) {
-                if (this.term === false) {
-                    this.crown = Util.typeCaseSplitF(this.initChurn.bind(this))(obj);
+                case 2: {
+                    end = args[1];
+                    beg = args[0];
+                    step = 1;
+                    break;
                 }
-                else {
-                    this.crown = obj;
+                case 3: {
+                    end = args[2];
+                    beg = args[0];
+                    step = args[1];
+                    break;
                 }
-                return this;
-            };
-            Blender.prototype.initChurn = function (inner, k) {
-                var result;
-                if (k === undefined && Util.isPrimative(inner)) {
-                    result = inner;
-                    this.term = inner !== undefined;
+                default: {
+                    end = 0;
+                    beg = 0;
+                    step = 1;
+                    break;
                 }
-                else if (k in this.crown) {
-                    var val = this.crown[k];
-                    if (val instanceof Blender) {
-                        result = val.init(inner);
+            }
+            var rng = [];
+            if (beg > end && step < 0) {
+                for (var i = beg; i > end; i += step) {
+                    rng.push(i);
+                }
+            }
+            else if (beg < end && step > 0) {
+                for (var i = beg; i < end; i += step) {
+                    rng.push(i);
+                }
+            }
+            else {
+                throw new Error("invalid range parameters");
+            }
+            return rng;
+        }
+        Util.range = range;
+    })(Util = Jungle.Util || (Jungle.Util = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var Util;
+    (function (Util) {
+        function identity(x) {
+            return x;
+        }
+        Util.identity = identity;
+        function collapseValues(obj) {
+            if (!Util.isVanillaTree(obj)) {
+                throw new Error("cant collapse circular structure");
+            }
+            var valArr = [];
+            function nodeProcess(node) {
+                valArr.push(node);
+            }
+            function recursor(node) {
+                Util.typeCaseSplitF(recursor, recursor, nodeProcess)(node);
+            }
+            recursor(obj);
+            return valArr;
+        }
+        Util.collapseValues = collapseValues;
+        function translator(node, translation) {
+            var translated;
+            if (typeof (node) == "object" && !(node instanceof Array)) {
+                translated = {};
+                for (var k in node) {
+                    var tval = translation[k];
+                    if (typeof (tval) == "function") {
+                        translated[tval.name] = tval(node[k]);
                     }
-                    else if (val instanceof Function) {
-                        result = B(undefined, val).init(inner);
+                    if (typeof (tval) == "string") {
+                        translated[tval] = node[k];
+                    }
+                    else if (tval != undefined) {
+                        translated[k] = translator(node[k], tval);
                     }
                     else {
-                        result = B(this.crown[k], { mapper: this.mapper, reducer: this.reducer }).init(inner);
+                        translated[k] = node[k];
+                    }
+                }
+                return translated;
+            }
+            else {
+                return node;
+            }
+        }
+        Util.translator = translator;
+        function melder(node1, node2, merge, concatArrays, typeConstrain) {
+            if (merge === void 0) { merge = function (a, b) { return b; }; }
+            if (concatArrays === void 0) { concatArrays = false; }
+            if (typeConstrain === void 0) { typeConstrain = true; }
+            if (node1 == undefined) {
+                return node2;
+            }
+            if (node2 == undefined) {
+                return node1;
+            }
+            if (typeConstrain && (typeof (node1) != typeof (node2))) {
+                var errmsg = "Expected melding nodes to be the same type \n" +
+                    "type of node1: " + typeof (node1) + "\n" +
+                    "type of node2: " + typeof (node2) + "\n";
+                throw TypeError(errmsg);
+            }
+            var melded;
+            if (node1 instanceof Array) {
+                return concatArrays ? node1.concat(node2) : merge(node1, node2);
+            }
+            else if (typeof (node1) == 'object') {
+                melded = {};
+                for (var k in node1) {
+                    melded[k] = node1[k];
+                }
+                for (var q in node2) {
+                    melded[q] = node2[q];
+                }
+                for (var k in node1) {
+                    for (var q in node2) {
+                        if (k == q) {
+                            if (node1[k] == node2[k]) {
+                                melded[k] = node1[k];
+                            }
+                            else {
+                                melded[k] = melder(node1[k], node2[k], merge, concatArrays);
+                            }
+                        }
+                    }
+                }
+            }
+            else {
+                melded = merge(node1, node2);
+            }
+            return melded;
+        }
+        Util.melder = melder;
+        function softAssoc(from, onto) {
+            for (var k in from) {
+                onto[k] = melder(from[k], onto[k]);
+            }
+        }
+        Util.softAssoc = softAssoc;
+        function parassoc(from, onto) {
+            for (var k in from) {
+                onto[k] = melder(onto[k], from[k], function (a, b) {
+                    return [a, b];
+                }, true);
+            }
+        }
+        Util.parassoc = parassoc;
+        function assoc(from, onto) {
+            for (var k in from) {
+                onto[k] = melder(onto[k], from[k]);
+            }
+        }
+        Util.assoc = assoc;
+        function deepCopy(thing) {
+            return Util.typeCaseSplitF(deepCopy, deepCopy)(thing);
+        }
+        Util.deepCopy = deepCopy;
+        function applyMixins(derivedCtor, baseCtors) {
+            baseCtors.forEach(function (baseCtor) {
+                Object.getOwnPropertyNames(baseCtor.prototype).forEach(function (name) {
+                    derivedCtor.prototype[name] = baseCtor.prototype[name];
+                });
+            });
+        }
+        Util.applyMixins = applyMixins;
+        function objectArrayTranspose(objArr, key) {
+            var invert;
+            if (typeof (key) !== 'string') {
+                throw new Error("Value error: key must be string literal");
+            }
+            if (Util.isVanillaArray(objArr)) {
+                invert = {};
+                objArr.forEach(function (value, index) {
+                    invert[value[key]] = value;
+                });
+            }
+            else if (Util.isVanillaObject(objArr)) {
+                invert = [];
+                for (var k in objArr) {
+                    var obj = objArr[k];
+                    obj[key] = k;
+                    invert.push(obj);
+                }
+            }
+            else {
+                throw new Error("Value error: can only transpose object and array literals");
+            }
+        }
+        Util.objectArrayTranspose = objectArrayTranspose;
+        function flattenObject(obj, depth, values) {
+            if (depth === void 0) { depth = -1; }
+            if (values === void 0) { values = []; }
+            for (var k in obj) {
+                var v = obj[k];
+                if (Util.isVanillaObject(v) && (depth >= 0 || depth >= -1)) {
+                    flattenObject(v, depth - 1, values);
+                }
+                else {
+                    values.push(v);
+                }
+            }
+            return values;
+        }
+        Util.flattenObject = flattenObject;
+        function mapObject(obj, func) {
+            var mapped = {};
+            for (var k in obj) {
+                var v = obj[k];
+                mapped[k] = func(k, v);
+            }
+            return mapped;
+        }
+        Util.mapObject = mapObject;
+        function projectObject(obj, keys) {
+            if (obj instanceof Object) {
+                var result = void 0;
+                if (obj instanceof Array) {
+                    result = [];
+                    for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
+                        var k = keys_1[_i];
+                        if (k in obj) {
+                            result.push(obj[k]);
+                        }
                     }
                 }
                 else {
-                    result = B(undefined, { mapper: this.mapper, reducer: this.reducer }).init(inner);
+                    result = {};
+                    for (var _a = 0, keys_2 = keys; _a < keys_2.length; _a++) {
+                        var k = keys_2[_a];
+                        if (k in obj) {
+                            result[k] = obj[k];
+                        }
+                    }
+                }
+                return result;
+            }
+            else {
+                return obj;
+            }
+        }
+        Util.projectObject = projectObject;
+    })(Util = Jungle.Util || (Jungle.Util = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var Util;
+    (function (Util) {
+        function typeCaseSplitR(objectOrAllFunction, arrayFunc, primativeFunc) {
+            var ofunc, afunc, pfunc;
+            if (primativeFunc == undefined && arrayFunc == undefined) {
+                ofunc = objectOrAllFunction || Util.identity;
+                afunc = objectOrAllFunction || Util.identity;
+                pfunc = objectOrAllFunction || Util.identity;
+            }
+            else {
+                ofunc = objectOrAllFunction || Util.identity;
+                afunc = arrayFunc || Util.identity;
+                pfunc = primativeFunc || Util.identity;
+            }
+            return function (inThing, initial, reductor) {
+                if (initial === void 0) { initial = null; }
+                if (reductor === void 0) { reductor = function (a, b, k) { }; }
+                var result = initial;
+                if (Util.isVanillaArray(inThing)) {
+                    for (var i = 0; i < inThing.length; i++) {
+                        var subBundle = inThing[i];
+                        result = reductor(result, afunc(subBundle, i), i);
+                    }
+                }
+                else if (Util.isVanillaObject(inThing)) {
+                    for (var k in inThing) {
+                        var subBundle = inThing[k];
+                        result = reductor(result, ofunc(subBundle, k), k);
+                    }
+                }
+                else {
+                    result = pfunc(inThing);
                 }
                 return result;
             };
-            Blender.prototype.dump = function () {
-                if (this.term) {
-                    return this.crown;
+        }
+        Util.typeCaseSplitR = typeCaseSplitR;
+        function typeCaseSplitF(objectOrAllFunction, arrayFunc, primativeFunc) {
+            var ofunc, afunc, pfunc;
+            if (primativeFunc == undefined && arrayFunc == undefined) {
+                ofunc = objectOrAllFunction || Util.identity;
+                afunc = objectOrAllFunction || Util.identity;
+                pfunc = objectOrAllFunction || Util.identity;
+            }
+            else {
+                ofunc = objectOrAllFunction || Util.identity;
+                afunc = arrayFunc || Util.identity;
+                pfunc = primativeFunc || Util.identity;
+            }
+            return function (inThing) {
+                var outThing;
+                if (Util.isVanillaArray(inThing)) {
+                    outThing = [];
+                    outThing.length = inThing.length;
+                    for (var i = 0; i < inThing.length; i++) {
+                        var subBundle = inThing[i];
+                        outThing[i] = afunc(subBundle, i);
+                    }
+                }
+                else if (Util.isVanillaObject(inThing)) {
+                    outThing = {};
+                    for (var k in inThing) {
+                        var subBundle = inThing[k];
+                        outThing[k] = ofunc(subBundle, k);
+                    }
                 }
                 else {
-                    return Util.typeCaseSplitF(function (child) {
-                        return child !== undefined ? child.dump() : undefined;
-                    })(this.crown);
+                    outThing = pfunc(inThing);
                 }
+                return outThing;
             };
-            Blender.prototype.blend = function (obj) {
-                this._blend(obj);
-                return this;
-            };
-            Blender.prototype._blend = function (obj) {
-                var mapped = this.mapper(obj);
-                var reduced;
-                if (this.term) {
-                    reduced = this.reducer(this.crown, mapped);
-                    this.crown = reduced;
+        }
+        Util.typeCaseSplitF = typeCaseSplitF;
+        function typeCaseSplitM(objectOrAllFunction, arrayFunc, primativeFunc) {
+            var ofunc, afunc, pfunc;
+            if (primativeFunc == undefined && arrayFunc == undefined) {
+                ofunc = objectOrAllFunction || Util.identity;
+                afunc = objectOrAllFunction || Util.identity;
+                pfunc = objectOrAllFunction || Util.identity;
+            }
+            else {
+                ofunc = objectOrAllFunction || Util.identity;
+                afunc = arrayFunc || Util.identity;
+                pfunc = primativeFunc || Util.identity;
+            }
+            return function (inThing) {
+                if (Util.isVanillaArray(inThing)) {
+                    for (var i = 0; i < inThing.length; i++) {
+                        var subBundle = inThing[i];
+                        inThing[i] = afunc(subBundle, i);
+                    }
+                }
+                else if (Util.isVanillaObject(inThing)) {
+                    for (var k in inThing) {
+                        var subBundle = inThing[k];
+                        inThing[k] = ofunc(subBundle, k);
+                    }
                 }
                 else {
-                    reduced = this.merge(mapped);
-                }
-                return reduced;
-            };
-            Blender.prototype.merge = function (income) {
-                var result, superkeys;
-                if (this.crown === undefined && income !== undefined) {
-                    this.init(income);
-                    return income;
-                }
-                else if (income !== undefined) {
-                    if (this.crown instanceof Array) {
-                        result = [];
-                        superkeys = Util.range(Math.max((income || []).length || 0, this.crown.length));
-                    }
-                    else {
-                        result = {};
-                        superkeys = Object.keys(this.crown || {});
-                        Object.keys(income || {}).forEach(function (key) {
-                            if (superkeys.indexOf(key) === -1) {
-                                superkeys.push(key);
-                            }
-                        });
-                    }
-                    for (var _i = 0, superkeys_1 = superkeys; _i < superkeys_1.length; _i++) {
-                        var key = superkeys_1[_i];
-                        if (key in income) {
-                            if (key in this.crown) {
-                                result[key] = this.crown[key]._blend(income[key]);
-                            }
-                            else {
-                                this.crown[key] = B(undefined, { mapper: this.mapper, reducer: this.reducer }).init(income[key]);
-                                result[key] = this.crown[key].dump();
-                            }
-                        }
-                        else if (key in this.crown) {
-                            result[key] = this.crown[key].dump();
-                        }
-                        else {
-                        }
-                    }
-                    return result;
+                    pfunc(inThing);
                 }
             };
-            return Blender;
-        }());
-        Blender.strictTypeReduce = false;
-        Util.Blender = Blender;
+        }
+        Util.typeCaseSplitM = typeCaseSplitM;
     })(Util = Jungle.Util || (Jungle.Util = {}));
 })(Jungle || (Jungle = {}));

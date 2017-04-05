@@ -96,7 +96,7 @@ declare namespace Jungle {
         protected constructActions(): Actions.Component;
         protected constructCore(crown: any, form: any): BaseCell;
         inductComponent(component: any): any;
-        prepare(prepargs?: any): BaseCell;
+        prepare(prepargs?: any): BaseCell | Util.Junction;
         completePrepare(): void;
         protected prepareChild(prepargs: any, handle: any, child: any, k: any): void;
         protected setParent(parentCell: BaseCell, dereferent: string | number): void;
@@ -132,6 +132,7 @@ declare namespace Jungle {
         host: BaseCell;
         preparator: (arg) => void;
         depreparator: (arg) => void;
+        static RFormProps: string[];
         constructor(host: BaseCell);
         parse(formObj: FormSpec): {
             iospec: any;
@@ -263,11 +264,12 @@ declare module Jungle {
     class LinkCell extends BaseCell {
         kind: string;
         constructor(crown: any, formspec: any);
+        constructCore(crown: any, form: any): LinkCell;
         constructIO(iospec: any): IO.IOComponent;
         constructForm(): LinkForm;
         protected prepareChild(prepargs: any, handle: any, child: any, k: any): void;
         completePrepare(): void;
-        resolve(resarg: any): void;
+        resolve(resarg: any): any;
     }
 }
 declare namespace Jungle {
@@ -347,8 +349,8 @@ declare namespace Jungle {
         protected constructForm(): GForm;
         protected constructIO(iospec: any): IO.ResolveIO;
         protected constructCore(crown: any, form: any): ResolutionCell;
-        private resolveDenizen(handle, args, denizen, reference);
-        private resolveCell(handle, node, carriedArgs, selection);
+        private resolveDenizen(deref, handle, args, denizen, reference);
+        private resolveCell(handle, node, carriedArgs);
         resolve(resolveArgs: any): any;
         resolveCarryThen(results: any, handle: any): any;
         resolveCrownThen(results: any, handle: any): any;
@@ -467,32 +469,89 @@ declare namespace Jungle {
 }
 declare namespace Jungle {
     namespace Util {
-        function identity(x: any): any;
-        function weightedChoice(weights: number[]): number;
-        function range(...args: any[]): any[];
-        function translator(node: any, translation: any): any;
-        function melder(node1: any, node2: any, merge?: (a: any, b: any) => any, concatArrays?: boolean, typeConstrain?: boolean): any;
-        function deeplyEquals(node1: any, node2: any, allowIdentical?: boolean): boolean;
-        function deeplyEqualsThrow(node1: any, node2: any, derefstack: any, seen: any, allowIdentical?: boolean): boolean;
-        function isDeepReplica(node1: any, node2: any): void;
-        function isDeepReplicaThrow(node1: any, node2: any): void;
-        function softAssoc(from: any, onto: any): void;
-        function parassoc(from: any, onto: any): void;
-        function assoc(from: any, onto: any): void;
-        function deepCopy<T>(thing: T): T;
-        function applyMixins(derivedCtor: any, baseCtors: any[]): void;
-        function objectArrayTranspose(objArr: any, key: string): void;
-        function flattenObject(obj: any, depth?: number, values?: any[]): any[];
-        function mapObject(obj: any, func: (key, value) => any): {};
+        function B(crown?: {}, form?: any): Blender;
+        class Blender {
+            crown: any;
+            static strictTypeReduce: boolean;
+            static defaultReduce(a: any, b: any): any;
+            static defaultMap(x: any): any;
+            block: boolean;
+            term: boolean;
+            reducer: (a, b) => any;
+            mapper: (a) => any;
+            constructor(crown: any, form?: any);
+            init(obj: any): Blender;
+            initChurn(inner: any, k: any): any;
+            dump(): any;
+            blend(obj: any): this;
+            private _blend(obj);
+            merge(income: any): any;
+        }
+    }
+}
+declare namespace Jungle {
+    namespace Util {
         function isPrimative(thing: any): boolean;
         function isVanillaObject(thing: any): boolean;
         function isVanillaArray(thing: any): boolean;
         function isTree(thing: any, stack?: any[]): any;
         function isVanillaTree(thing: any, stack?: any[]): any;
-        function typeCaseSplitR(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any, initial?: any, reductor?: (a: any, b: any, k: any) => void) => any;
-        function typeCaseSplitF(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;
-        function typeCaseSplitM(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => void;
-        function collapseValues(obj: any): any[];
+        function deeplyEquals(node1: any, node2: any, allowIdentical?: boolean): boolean;
+        function deeplyEqualsThrow(node1: any, node2: any, derefstack: any, seen: any, allowIdentical?: boolean): boolean;
+        function isDeepReplica(node1: any, node2: any): void;
+        function isDeepReplicaThrow(node1: any, node2: any): void;
+    }
+}
+declare namespace Jungle {
+    namespace Debug {
+        function dumpToDepthF(maxdepth: any, indentSym?: string): (x: any) => string;
+        class JungleError {
+            message: any;
+            fileName: any;
+            lineNumber: any;
+            constructor(message: any, fileName?: any, lineNumber?: any);
+        }
+        interface CrumbOptions {
+            header: string;
+            traceDepth: number;
+            debug: boolean | string[];
+            log: {
+                log: any;
+            };
+            format: (whatever) => any;
+            with: (whatever) => any;
+            at: (whatever) => any;
+            within: (whatever) => any;
+            as: (whatever) => any;
+        }
+        class Crumb {
+            label: string;
+            static defaultOptions: CrumbOptions;
+            static customOptions: {};
+            options: CrumbOptions;
+            previous: Crumb;
+            position: any;
+            location: any;
+            data: any;
+            situation: any;
+            message: string;
+            catchCallback: (crumb: Crumb) => void;
+            raised: boolean;
+            constructor(label: string);
+            setOptions(optionObj: any): void;
+            drop(label: string): Crumb;
+            excursion(label: any, callback: (crumb) => void): void;
+            at(position: any): this;
+            in(location: any): this;
+            as(situation: any): this;
+            with(data: any): this;
+            dump(): string;
+            describe(): string;
+            traceback(depth?: number): any;
+            catch(callback: any): this;
+            raise(error: any): void;
+            deflect(exception: any): void;
+        }
     }
 }
 declare namespace Jungle {
@@ -537,39 +596,41 @@ declare namespace Jungle {
             then(callback: (results: any, residue: any, handle: Junction) => void, thenkey?: any): Junction;
             catch(callback: Function): Junction;
         }
-        class Gate {
-            callback: any;
-            context: any;
-            private locks;
-            private locki;
-            private data;
-            constructor(callback?: any, context?: any);
-            lock(): (arg) => void;
-            reset(): void;
-            isClean(): boolean;
-            allUnlocked(): boolean;
-        }
     }
 }
 declare namespace Jungle {
     namespace Util {
-        function B(crown?: {}, form?: any): Blender;
-        class Blender {
-            crown: any;
-            static strictTypeReduce: boolean;
-            static defaultReduce(a: any, b: any): any;
-            static defaultMap(x: any): any;
-            block: boolean;
-            term: boolean;
-            reducer: (a, b) => any;
-            mapper: (a) => any;
-            constructor(crown: any, form?: any);
-            init(obj: any): Blender;
-            initChurn(inner: any, k: any): any;
-            dump(): any;
-            blend(obj: any): this;
-            private _blend(obj);
-            merge(income: any): any;
-        }
+        function isSubset(seq1: any, seq2: any): boolean;
+        function isSetEqual(seq1: any, seq2: any): boolean;
+        function weightedChoice(weights: number[]): number;
+        function range(...args: any[]): any[];
+    }
+}
+declare namespace Jungle {
+    namespace Util {
+    }
+}
+declare namespace Jungle {
+    namespace Util {
+        function identity(x: any): any;
+        function collapseValues(obj: any): any[];
+        function translator(node: any, translation: any): any;
+        function melder(node1: any, node2: any, merge?: (a: any, b: any) => any, concatArrays?: boolean, typeConstrain?: boolean): any;
+        function softAssoc(from: any, onto: any): void;
+        function parassoc(from: any, onto: any): void;
+        function assoc(from: any, onto: any): void;
+        function deepCopy<T>(thing: T): T;
+        function applyMixins(derivedCtor: any, baseCtors: any[]): void;
+        function objectArrayTranspose(objArr: any, key: string): void;
+        function flattenObject(obj: any, depth?: number, values?: any[]): any[];
+        function mapObject(obj: any, func: (key, value) => any): {};
+        function projectObject(obj: any, keys: any): any;
+    }
+}
+declare namespace Jungle {
+    namespace Util {
+        function typeCaseSplitR(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any, initial?: any, reductor?: (a: any, b: any, k: any) => void) => any;
+        function typeCaseSplitF(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => any;
+        function typeCaseSplitM(objectOrAllFunction: any, arrayFunc?: any, primativeFunc?: any): (inThing: any) => void;
     }
 }
