@@ -10,41 +10,28 @@ namespace Jungle {
             //the components of this serving roles
             roles:any;
 
-            constructor(public label:string){
+            constructor(public label:string, public membrane:Membrane, public role:string){
                 this.roles = {}
                 this.appearances = {}
-            }
-
-            produce(label:string):Crux{
-                return new Crux(label)
+                this.attachTo(membrane, role)
             }
 
             /**
-             * create a new crux that is a fusion of this and the argument
+             * Used for internal context access,
              */
-            infuse(crux:Crux):Crux{
-                let fused = this.produce(this.label);
-
-                for(let role in this.roles){
-                    fused.roles[role] = staticRoles[role].fusion(this.roles[role], crux.roles[role])
-
-                    //attach to the concatenation of both prefusors
-                    crux.appearances[role].concat(this.appearances[role]).forEach((membrane)=>{
-                        fused.attachTo(membrane, role);
-                    })
-                }
-
-                fused.postFuse()
-
-                return fused
-
+            getContext(){
+                return this.membrane.host.retrieveContext(this);
             }
 
             /**
-             * exists to be overridden, called after a fusion to integrate fused changes
+             * @param role: we ask what is this on the other side.
              */
-            postFuse(){
+            inversion(role:string):string{
+                return role
+            }
 
+            clone(label:string):Crux{
+                return new Crux(label, this.membrane, this.role)
             }
 
             /**
@@ -65,11 +52,22 @@ namespace Jungle {
                 if(i === -1){
                     this.appearances[asRole].splice(i, 1)
                 }
+            }
 
+            detachAll(){
+                for (let role in this.appearances){
+                    let appearsIn = this.appearances[role];
+
+                    this.detachFrom(appearsIn, role)
+                }
             }
 
             destroy(){
+                this.detachAll();
 
+                for (let key in this.roles) {
+                    this.roles[key].destroy();
+                }
             }
 
         }

@@ -14,8 +14,25 @@ namespace Jungle {
                 source:SourceRole
             }
 
-            produce(label){
-                return new PortCrux(label)
+
+            constructor(label, origin, initialRole){
+                super(label, origin, initialRole)
+
+                //appointment of roles
+                this.roles = {
+                    sink:{
+                        put:(data)=>{
+                            this.roles.source.callout(data)
+                        }
+                    },
+                    source:{
+                        callout:undefined
+                    }
+                }
+            }
+
+            clone(label){
+                return new PortCrux(label, this.origin, this.role)
             }
 
             put(input, trace){
@@ -52,7 +69,7 @@ namespace Jungle {
                         closure = callout.bind(null)
                     }
 
-                    this.roles.source.callout.push(closure)
+                    this.roles.source.callout = closure
 
                 }
 
@@ -91,7 +108,7 @@ namespace Jungle {
             }
 
             get sinks(){
-                return this.roles.sinks
+                return this.roles.sink
             }
 
             /**
@@ -119,10 +136,10 @@ namespace Jungle {
                         let inp = pmatch[1], label = pmatch[2], out = pmatch[3];
 
                         if(inp){
-                            this.plantSink(label)
+                            this.addCrux(new PortCrux(label), "sink")
                         }
                         if(out){
-                            this.plantSource(label)
+                            this.addCrux(new PortCrux(label), "source")
                         }
                     }else{
                         throw new Error("Invalid port label type, must be _<sink label> (leading underscore) or <source label>_ (trailing underscore)")

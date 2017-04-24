@@ -32,12 +32,12 @@ namespace Jungle {
             shell:Membrane;
             policy:ShellPolicy;
 
-            retrieveContext:(crux:P)=>any;
+            retrieveContext:(crux:Crux)=>any;
 
-            onAddCrux:(crux:P)=>void;
-            onRemoveCrux:(crux:P)=>void;
-            onRenameCrux:(crux:P)=>void;
-            onFuseCrux:(crux:P)=>void;
+            onAddCrux:(crux:Crux)=>void;
+            onRemoveCrux:(crux:Crux)=>void;
+            onRenameCrux:(crux:Crux)=>void;
+            onFuseCrux:(crux:Crux)=>void;
         }
 
         export interface CruxDesignator{
@@ -135,7 +135,7 @@ namespace Jungle {
 
                 let existing:Crux = home[crux.label];
                 if(existing != undefined){
-                    existing.infuse(crux).attachTo(this, role);
+                    throw new Debug.JungleError("")
                 }else{
                     crux.attachTo(this, role)
                 }
@@ -171,7 +171,7 @@ namespace Jungle {
 
                 for(let crux of designated){
                     //inverted or not
-                    let newRole = invert?staticRoles[designation.role].inversion:designation.role
+                    let newRole = invert?crux.inversion(designation.role):designation.role;
 
                     ripped.addCrux(crux, newRole)
 
@@ -219,8 +219,8 @@ namespace Jungle {
                     for(let cruxlabel in scanDomain){
                         let crux:Crux = scanDomain[cruxlabel];
 
-                        if((designator.cDesignator instanceof Function && designator.pDesignator(crux))||
-                           (designator.cDesignator instanceof RegExp && crux.label.match(designator.pDesignator))){
+                        if((designator.cDesignator instanceof Function && designator.cDesignator(crux))||
+                           (designator.cDesignator instanceof RegExp && crux.label.match(designator.cDesignator))){
                                 designation = designation.concat(crux)
                         }
                     }
