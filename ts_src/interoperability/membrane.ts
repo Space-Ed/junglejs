@@ -94,38 +94,6 @@ namespace Jungle {
 
             }
 
-            invert(designation:CruxDesignator):Membrane{
-                return this.propogate(designation, undefined, undefined,  true, true)
-            }
-
-            reflect(designation:CruxDesignator):Membrane{
-                return this.propogate(designation, undefined, undefined, true, false)
-            }
-
-            split(designation:CruxDesignator):Membrane{
-                return this.propogate(designation,undefined, undefined, false, false)
-            }
-
-            invertInto(designation:CruxDesignator, membrane:Membrane, subname:string){
-                this.propogate(designation, membrane, subname, true, true)
-            }
-
-            reflectInto(designation:CruxDesignator, membrane:Membrane, subname:string){
-                this.propogate(designation, membrane, subname, true, false)
-            }
-
-            transplant(designation:CruxDesignator, membrane:Membrane, subname:string){
-                this.propogate(designation, membrane, subname, false, false)
-            }
-
-            remove(designation:CruxDesignator){
-                this.propogate(designation, undefined, undefined, false, false)
-            }
-
-            delete(designation:CruxDesignator){
-                this.propogate(designation, undefined, undefined, false, false, true)
-            }
-
             addSubrane(membrane:Membrane, label:string){
                 this.subranes[label] = membrane;
             }
@@ -160,36 +128,6 @@ namespace Jungle {
                 }
             }
 
-            /**
-            * Swiss army knife of grouped crux transforms
-            */
-            propogate(designation:CruxDesignator, membrane?:Membrane, sub?:string, retain=true, invert=false, destructive=false){
-                //find the designated cruxes
-
-                let designated = this.designate(designation)
-                let ripped = new Membrane(this.host)
-
-                for(let crux of designated){
-                    //inverted or not
-                    let newRole = invert?crux.inversion(designation.role):designation.role;
-
-                    ripped.addCrux(crux, newRole)
-
-                    if(!retain){
-                        if(destructive){
-                            this.destroyCrux(crux, newRole);
-                        }else{
-                            this.removeCrux(crux, newRole);
-                        }
-                    }
-                }
-
-                if(membrane!=undefined){
-                    membrane.addSubrane(ripped, sub);
-                }
-
-                return ripped
-            }
 
             designate(designator:CruxDesignator): Crux[]{
 

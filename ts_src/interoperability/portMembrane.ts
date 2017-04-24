@@ -14,9 +14,8 @@ namespace Jungle {
                 source:SourceRole
             }
 
-
-            constructor(label, origin, initialRole){
-                super(label, origin, initialRole)
+            constructor(label:string, private host:MembraneHost, asSink:boolean){
+                super(label, host.shell, asSink?'sink':'source')
 
                 //appointment of roles
                 this.roles = {
@@ -31,8 +30,8 @@ namespace Jungle {
                 }
             }
 
-            clone(label){
-                return new PortCrux(label, this.origin, this.role)
+            inversion(role:string){
+                return role==='sink'?'source':'sink'
             }
 
             put(input, trace){
@@ -91,59 +90,6 @@ namespace Jungle {
                     return outputContext;
                 }else{
                     throw Error("Invalid context fabrication, must be object or contructor")
-                }
-            }
-
-        }
-
-        export class PortMembrane extends Membrane {
-
-            roles:{
-                source:any,
-                sink:any,
-            }
-
-            get sources(){
-                return this.roles.source
-            }
-
-            get sinks(){
-                return this.roles.sink
-            }
-
-            /**
-             * Take a designator object and, finding the sources, apply a coat
-             */
-            dress(designator:CruxDesignator, coat:OutputCoat){
-                designator.role = 'source'
-                let designation = <PortCrux[]>this.designate(designator);
-                for(let k in designation){
-                    let outport = designation[k];
-                    outport.dress(coat);
-                }
-
-            }
-
-            /**
-             * Parse the standard IO name format _sinkname sourcename_ and plant them respectively
-             */
-            populate(labels){
-                var validPortRegex = /^(_?)([a-zA-Z](?:\w*[a-zA-Z])?)(_?)$/
-                for (let i = 0; i < labels.length; i++) {
-                    let pmatch = labels[i].match(validPortRegex);
-
-                    if(pmatch){
-                        let inp = pmatch[1], label = pmatch[2], out = pmatch[3];
-
-                        if(inp){
-                            this.addCrux(new PortCrux(label), "sink")
-                        }
-                        if(out){
-                            this.addCrux(new PortCrux(label), "source")
-                        }
-                    }else{
-                        throw new Error("Invalid port label type, must be _<sink label> (leading underscore) or <source label>_ (trailing underscore)")
-                    }
                 }
             }
 

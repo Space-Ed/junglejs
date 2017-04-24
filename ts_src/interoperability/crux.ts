@@ -24,14 +24,10 @@ namespace Jungle {
             }
 
             /**
-             * @param role: we ask what is this on the other side.
+             * @param role: what is this on the other side.
              */
             inversion(role:string):string{
                 return role
-            }
-
-            clone(label:string):Crux{
-                return new Crux(label, this.membrane, this.role)
             }
 
             /**
