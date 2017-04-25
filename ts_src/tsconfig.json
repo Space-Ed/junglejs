@@ -42,7 +42,7 @@
         "./interoperability/crux.ts",
         "./interoperability/medium.ts",
         "./interoperability/membrane.ts",
-        "./interoperability/portMembrane.ts",
+        "./interoperability/portCrux.ts",
         "./interoperability/role.ts",
         "./inventory/io.ts",
         "./inventory/resolver.ts",

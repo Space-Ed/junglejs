@@ -292,13 +292,18 @@ var Jungle;
         GContext.prototype.addSourceLayer = function (layer) {
             for (var prop in layer.source.propertyLayerMap) {
                 var propVal = layer.source.propertyLayerMap[prop];
-                this.propertyLayerMap[prop] = { source: propVal.source, mode: layer.mode };
-                Object.defineProperty(this.exposed, prop, {
-                    set: this.setItem.bind(this, prop),
-                    get: this.getItem.bind(this, prop),
-                    enumerable: true,
-                    configurable: true
-                });
+                if (this.propertyLayerMap[prop] != undefined && (this.propertyLayerMap[prop].mode != propVal.mode || this.propertyLayerMap[prop].source != propVal.source)) {
+                    throw new Error("source layer introduces incompatible source/mode of property");
+                }
+                else {
+                    this.propertyLayerMap[prop] = { source: propVal.source, mode: layer.mode };
+                    Object.defineProperty(this.exposed, prop, {
+                        set: this.setItem.bind(this, prop),
+                        get: this.getItem.bind(this, prop),
+                        enumerable: true,
+                        configurable: true
+                    });
+                }
             }
         };
         return GContext;
@@ -825,6 +830,366 @@ var Jungle;
 })(Jungle || (Jungle = {}));
 var Jungle;
 (function (Jungle) {
+    var IO;
+    (function (IO) {
+        var Crux = (function () {
+            function Crux(label) {
+                this.label = label;
+                this.roles = {};
+            }
+            Crux.prototype.getContext = function () {
+                return this.originalMembrane.host.retrieveContext(this);
+            };
+            Crux.prototype.inversion = function (role) {
+                return Crux.StandardInversions[role];
+            };
+            Crux.prototype.attachTo = function (membrane, asRole) {
+                this.originalMembrane = membrane;
+                this.originalRole = asRole;
+                var place = membrane.roles[asRole] || (membrane.roles[asRole] = {});
+                place[this.label] = this;
+                this.inversionRole = this.inversion(asRole);
+                if (membrane.inverted !== undefined && this.inversionRole !== undefined) {
+                    this.inversionMembrane = membrane.inverted;
+                    var Iplace = this.inversionMembrane.roles[this.inversionRole] || (this.inversionMembrane.roles[this.inversionRole] = {});
+                    Iplace[this.label] = this;
+                }
+            };
+            Crux.prototype.detach = function () {
+                delete this.originalMembrane.roles[this.originalRole][this.label];
+                if (this.inversionMembrane !== undefined) {
+                    delete this.inversionMembrane.roles[this.inversionRole][this.label];
+                }
+            };
+            return Crux;
+        }());
+        Crux.StandardInversions = {
+            'source': 'sink',
+            'sink': 'source',
+            'master': 'slave',
+            'slave': 'master'
+        };
+        IO.Crux = Crux;
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var IO;
+    (function (IO) {
+        var BareMedium = (function () {
+            function BareMedium(host) {
+                this.host = host;
+            }
+            BareMedium.prototype.setup = function () {
+            };
+            BareMedium.prototype.teardown = function () {
+            };
+            BareMedium.prototype.inductA = function (token, a) {
+            };
+            BareMedium.prototype.inductB = function (token, b) {
+            };
+            BareMedium.prototype.check = function (tokenA, roleA, tokenB, roleB) {
+                return false;
+            };
+            BareMedium.prototype.connect = function (tokenA, roleA, tokenB, roleB) {
+            };
+            BareMedium.prototype.disconnect = function (tokenA, roleA, tokenB, roleB) {
+            };
+            return BareMedium;
+        }());
+        IO.BareMedium = BareMedium;
+        var PushMedium = (function () {
+            function PushMedium(ctx) {
+                this.ctx = ctx;
+                this.outlinks = {};
+            }
+            PushMedium.prototype.distribute = function (sourceToken, data) {
+                for (var sinkToken in this.outlinks[sourceToken]) {
+                    var outrole = this.outlinks[sourceToken][sinkToken];
+                    outrole.put(data);
+                }
+            };
+            PushMedium.prototype.teardown = function () {
+                this.outlinks = undefined;
+            };
+            PushMedium.prototype.inductA = function (token, a) {
+                this.outlinks[token] = {};
+                a.callout = this.distribute.bind(this, token);
+            };
+            PushMedium.prototype.inductB = function (token, b) {
+            };
+            PushMedium.prototype.check = function (tokenA, roleA, tokenB, roleB) {
+                return true;
+            };
+            PushMedium.prototype.connect = function (tokenA, roleA, tokenB, roleB) {
+                this.outlinks[tokenA][tokenB] = roleB;
+            };
+            PushMedium.prototype.disconnect = function (tokenA, roleA, tokenB, roleB) {
+                delete this.outlinks[tokenA][tokenB];
+            };
+            return PushMedium;
+        }());
+        IO.PushMedium = PushMedium;
+        IO.media = {
+            'source->sink': PushMedium
+        };
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var IO;
+    (function (IO) {
+        IO.FreePolicy = {
+            fussy: false,
+            allowAddition: true,
+            allowRemoval: true
+        };
+        var Membrane = (function () {
+            function Membrane(host) {
+                this.host = host;
+                this.roles = {};
+                this.subranes = {};
+            }
+            Membrane.regexifyDesignationTerm = function (term) {
+                if (term == '*') {
+                    return /.*/;
+                }
+                else if (term == '**') {
+                    return '**';
+                }
+                else {
+                    return new RegExp("^" + term + "$");
+                }
+            };
+            Membrane.parseDesignatorString = function (desigstr, targetRole) {
+                var colonSplit = desigstr.match(/^((?:(?:\w+|\*{1,2})(?:\.(?:\w+|\*{1,2}))*))?\:(\w+|\*|\$)$/);
+                if (colonSplit === null) {
+                }
+                else {
+                    var total = colonSplit[0], chain = colonSplit[1], crux = colonSplit[2];
+                }
+                var subranedesig = chain ? chain.split(/\./) : [];
+                subranedesig = subranedesig.map(function (value, index) {
+                    return Membrane.regexifyDesignationTerm(value);
+                });
+                return {
+                    role: targetRole,
+                    mDesignators: subranedesig,
+                    cDesignator: Membrane.regexifyDesignationTerm(crux)
+                };
+            };
+            Membrane.prototype.forEachCrux = function (func) {
+                for (var rk in this.roles) {
+                    var ofrole = this.roles[rk];
+                    for (var cruxlabel in ofrole) {
+                        var crux = ofrole[cruxlabel];
+                        func(crux, ofrole);
+                    }
+                }
+            };
+            Membrane.prototype.invert = function () {
+                var _this = this;
+                if (this.inverted === undefined) {
+                    this.inverted = new Membrane(this.host);
+                    this.inverted.inverted = this;
+                    this.forEachCrux(function (crux, role) {
+                        crux.attachTo(_this, crux.originalRole);
+                    });
+                }
+                return this.inverted;
+            };
+            Membrane.prototype.addSubrane = function (membrane, label) {
+                this.subranes[label] = membrane;
+            };
+            Membrane.prototype.addCrux = function (crux, role) {
+                var home = this.roles[role];
+                if (home === undefined) {
+                    home = this.roles[role] = {};
+                }
+                var existing = home[crux.label];
+                if (existing !== undefined) {
+                    throw new Jungle.Debug.JungleError("");
+                }
+                else {
+                    crux.attachTo(this, role);
+                }
+            };
+            Membrane.prototype.removeCrux = function (crux, role) {
+                var existing = this.roles[role][crux.label];
+                if (existing !== undefined) {
+                    existing.detach();
+                }
+            };
+            Membrane.prototype.treeDesignate = function (_a) {
+                var mDesignators = _a.mDesignators, cDesignator = _a.cDesignator, role = _a.role;
+                var collected = {}, glob = false, terminal = false;
+                if (mDesignators.length > 0) {
+                    var deref = void 0;
+                    if (mDesignators[0] == '**') {
+                        glob = true;
+                        if (mDesignators.length == 1) {
+                            terminal = true;
+                        }
+                        else {
+                            deref = mDesignators[1];
+                        }
+                    }
+                    else {
+                        deref = mDesignators[0];
+                    }
+                    var collectedSubs = [];
+                    for (var mk in this.subranes) {
+                        if (!terminal &&
+                            ((deref instanceof Function && deref(this.subranes[mk], mk)) ||
+                                (deref instanceof RegExp && mk.match(deref)))) {
+                            collected[mk] = this.subranes[mk].treeDesignate({
+                                mDesignators: glob ? ([mDesignators[0]].concat(mDesignators.slice(2))) : (mDesignators.slice(1)),
+                                cDesignator: cDesignator,
+                                role: role
+                            });
+                        }
+                        else if (glob) {
+                            collected[mk] = this.subranes[mk].treeDesignate({
+                                mDesignators: mDesignators,
+                                cDesignator: cDesignator,
+                                role: role
+                            });
+                        }
+                    }
+                }
+                else {
+                    terminal = true;
+                }
+                if (terminal) {
+                    var bucket = this.roles[role];
+                    for (var cruxlabel in bucket) {
+                        var crux = bucket[cruxlabel];
+                        if ((cDesignator instanceof Function && cDesignator(crux)) ||
+                            (cDesignator instanceof RegExp && crux.label.match(cDesignator))) {
+                            collected[cruxlabel] = crux;
+                        }
+                    }
+                }
+                return collected;
+            };
+            Membrane.prototype.flatDesignate = function (designator) {
+                var recur = function (dtree, collection) {
+                    for (var k in dtree) {
+                        var v = dtree[k];
+                        if (v instanceof IO.Crux) {
+                            collection.push(v);
+                        }
+                        else {
+                            recur(v, collection);
+                        }
+                    }
+                    return collection;
+                };
+                return recur(this.treeDesignate(designator), []);
+            };
+            Membrane.prototype.tokenDesignate = function (designator) {
+                var recur = function (dtree, tokens, chain) {
+                    for (var k in dtree) {
+                        var v = dtree[k];
+                        if (v instanceof IO.Crux) {
+                            tokens[chain + ':' + k + '/' + designator.role] = v;
+                        }
+                        else {
+                            var lead = chain === '' ? chain : chain + '.';
+                            recur(v, tokens, lead + k);
+                        }
+                    }
+                    return tokens;
+                };
+                return recur(this.treeDesignate(designator), {}, '');
+            };
+            Membrane.prototype.designate = function (str, role, tokenize) {
+                if (tokenize === void 0) { tokenize = true; }
+                if (tokenize) {
+                    return this.tokenDesignate(Membrane.parseDesignatorString(str, role));
+                }
+                else {
+                    return this.flatDesignate(Membrane.parseDesignatorString(str, role));
+                }
+            };
+            return Membrane;
+        }());
+        IO.Membrane = Membrane;
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var IO;
+    (function (IO) {
+        var PortCrux = (function (_super) {
+            __extends(PortCrux, _super);
+            function PortCrux(label) {
+                var _this = _super.call(this, label) || this;
+                _this.roles = {
+                    sink: {
+                        put: function (data) {
+                            _this.roles.source.callout(data);
+                        }
+                    },
+                    source: {
+                        callout: undefined
+                    }
+                };
+                return _this;
+            }
+            PortCrux.prototype.put = function (input, trace) {
+                this.roles.sink.put(input);
+            };
+            PortCrux.prototype.dress = function (coat) {
+                var context = this.prepareContext(coat.context);
+                var callout = this.prepareCallback(coat.callback);
+                if (callout) {
+                    var closure = void 0;
+                    if (context) {
+                        if (typeof (callout) == 'string') {
+                            var method = context[callout];
+                            if (method === undefined) {
+                                throw new Error("method must be accessible in provided context");
+                            }
+                            closure = method.bind(context);
+                        }
+                        else {
+                            closure = callout.bind(context);
+                        }
+                    }
+                    else {
+                        if (typeof (callout) == 'string') {
+                            throw new Error("method name can only be given with context");
+                        }
+                        closure = callout.bind(null);
+                    }
+                    this.roles.source.callout = closure;
+                }
+            };
+            PortCrux.prototype.prepareCallback = function (callout) {
+                if (!(typeof (callout) == 'string' || typeof (callout) == 'function')) {
+                    throw new Error('Callback must be method name or');
+                }
+                return callout;
+            };
+            PortCrux.prototype.prepareContext = function (outputContext) {
+                if (typeof (outputContext) == 'function') {
+                    return new outputContext(this);
+                }
+                else if (outputContext instanceof Object) {
+                    return outputContext;
+                }
+                else {
+                    throw Error("Invalid context fabrication, must be object or contructor");
+                }
+            };
+            return PortCrux;
+        }(IO.Crux));
+        IO.PortCrux = PortCrux;
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var Inv;
     (function (Inv) {
         function retract(obj, arg) {
@@ -982,9 +1347,7 @@ var Jungle;
             ;
             LinkIO.prototype.innerDress = function () {
                 var _this = this;
-                console.log('this.host.crown: ', this.host.crown);
                 Jungle.Util.typeCaseSplitF(function (item, key) {
-                    console.log("item", item, ' key:', key);
                     var cellSources = item.io.shell.sources;
                     var cellLinkMap = [];
                     for (var q in cellSources) {
@@ -998,7 +1361,6 @@ var Jungle;
                 for (var q in this.lining.sources) {
                     var source = this.lining.sources[q];
                     this.linkmap["_"][q] = [];
-                    console.log("port shell dress", q);
                     source.callback = this.follow.bind(this, '_', source);
                 }
             };
@@ -1110,7 +1472,6 @@ var Jungle;
                 }
             };
             LinkIO.prototype.forgeLink = function (linkspec, sourceCell, sinkCell, sourcePort, sinkPort) {
-                console.log("link formation: source:" + sourceCell + "." + sourcePort.label + ", sink:" + sinkCell + "." + sinkPort.label + ", closed sinks: [" + this.closed.sinks + "]");
                 this.linkmap[sourceCell][sourcePort.label].push(sinkPort);
                 this.linker.call(this.host.ctx.exposed, sourcePort.hostctx(), sinkPort.hostctx(), sourcePort.label, sinkPort.label);
                 if (linkspec.closeSink) {
@@ -1122,7 +1483,6 @@ var Jungle;
             };
             LinkIO.prototype.follow = function (sourceCell, source, throughput) {
                 var targeted = this.linkmap[sourceCell][source.label];
-                console.log("Throughput of " + throughput + " from source " + sourceCell + "." + source.label + " to ", targeted);
                 this.emmissionGate.then(function (result, handle) {
                     for (var _i = 0, targeted_1 = targeted; _i < targeted_1.length; _i++) {
                         var sink = targeted_1[_i];

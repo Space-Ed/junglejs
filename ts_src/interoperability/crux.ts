@@ -4,68 +4,67 @@ namespace Jungle {
 
         export class Crux {
 
-            //the complete map of roles to membranes that refer to this under that role
-            appearances:any;
+            static StandardInversions = {
+                'source':'sink',
+                'sink':'source',
+                'master':'slave',
+                'slave':'master'
+            }
+
+            originalMembrane:Membrane;
+            inversionMembrane:Membrane;
+
+            originalRole:string;
+            inversionRole:string;
 
             //the components of this serving roles
             roles:any;
 
-            constructor(public label:string, public membrane:Membrane, public role:string){
+            constructor(public label:string){
                 this.roles = {}
-                this.appearances = {}
-                this.attachTo(membrane, role)
             }
 
             /**
              * Used for internal context access,
              */
             getContext(){
-                return this.membrane.host.retrieveContext(this);
+                return this.originalMembrane.host.retrieveContext(this);
             }
 
             /**
              * @param role: what is this on the other side.
              */
             inversion(role:string):string{
-                return role
+                return Crux.StandardInversions[role]
             }
 
             /**
-             * create links both ways, and when there is an existing
+             * create links both ways
              */
             attachTo(membrane:Membrane, asRole:string){
-                membrane.roles[asRole][this.label] = this;
-                if(this.appearances[asRole].indexOf(membrane) === -1){
-                    this.appearances[asRole].push(membrane)
+                this.originalMembrane = membrane;
+                this.originalRole = asRole;
+
+                let place = membrane.roles[asRole]||(membrane.roles[asRole]={})
+                place[this.label] = this;
+
+                this.inversionRole = this.inversion(asRole)
+
+                if(membrane.inverted !== undefined && this.inversionRole !== undefined){
+                    this.inversionMembrane = membrane.inverted;
+                    let Iplace = this.inversionMembrane.roles[this.inversionRole]||(this.inversionMembrane.roles[this.inversionRole]={})
+                    Iplace[this.label] = this;
+
                 }
             }
 
-            detachFrom(membrane:Membrane, asRole:string){
-                membrane.roles[asRole][this.label] == undefined;
+            detach(){
+                delete this.originalMembrane.roles[this.originalRole][this.label]
 
-                let i = this.appearances[asRole].indexOf(membrane);
-
-                if(i === -1){
-                    this.appearances[asRole].splice(i, 1)
+                if(this.inversionMembrane!==undefined){
+                    delete this.inversionMembrane.roles[this.inversionRole][this.label]
                 }
             }
-
-            detachAll(){
-                for (let role in this.appearances){
-                    let appearsIn = this.appearances[role];
-
-                    this.detachFrom(appearsIn, role)
-                }
-            }
-
-            destroy(){
-                this.detachAll();
-
-                for (let key in this.roles) {
-                    this.roles[key].destroy();
-                }
-            }
-
         }
 
     }

@@ -14,8 +14,8 @@ namespace Jungle {
                 source:SourceRole
             }
 
-            constructor(label:string, private host:MembraneHost, asSink:boolean){
-                super(label, host.shell, asSink?'sink':'source')
+            constructor(label:string){
+                super(label)
 
                 //appointment of roles
                 this.roles = {
@@ -28,10 +28,6 @@ namespace Jungle {
                         callout:undefined
                     }
                 }
-            }
-
-            inversion(role:string){
-                return role==='sink'?'source':'sink'
             }
 
             put(input, trace){
@@ -71,7 +67,6 @@ namespace Jungle {
                     this.roles.source.callout = closure
 
                 }
-
 
             }
 

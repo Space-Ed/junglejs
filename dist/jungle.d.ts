@@ -248,6 +248,138 @@ declare namespace Jungle {
         }
     }
 }
+declare namespace Jungle {
+    namespace IO {
+        class Crux {
+            label: string;
+            static StandardInversions: {
+                'source': string;
+                'sink': string;
+                'master': string;
+                'slave': string;
+            };
+            originalMembrane: Membrane;
+            inversionMembrane: Membrane;
+            originalRole: string;
+            inversionRole: string;
+            roles: any;
+            constructor(label: string);
+            getContext(): any;
+            inversion(role: string): string;
+            attachTo(membrane: Membrane, asRole: string): void;
+            detach(): void;
+        }
+    }
+}
+declare namespace Jungle {
+    namespace IO {
+        interface IMedium<A, B> {
+            roleA: string;
+            roleB: string;
+            teardown(): void;
+            inductA(token: string, a: A): void;
+            inductB(token: string, b: B): void;
+            check(tokenA: string, roleA: A, tokenB: string, roleB: B): boolean;
+            connect(tokenA: string, roleA: A, tokenB: string, roleB: B): void;
+            disconnect(tokenA: string, roleA: A, tokenB: string, roleB: B): void;
+        }
+        class BareMedium<A, B> implements IMedium<A, B> {
+            host: any;
+            roleA: undefined;
+            roleB: undefined;
+            constructor(host: any);
+            setup(): void;
+            teardown(): void;
+            inductA(token: string, a: A): void;
+            inductB(token: string, b: B): void;
+            check(tokenA: string, roleA: A, tokenB: string, roleB: B): boolean;
+            connect(tokenA: string, roleA: A, tokenB: string, roleB: B): void;
+            disconnect(tokenA: string, roleA: A, tokenB: string, roleB: B): void;
+        }
+        class PushMedium implements IMedium<SourceRole, SinkRole> {
+            ctx: any;
+            roleA: 'source';
+            roleB: 'sink';
+            outlinks: any;
+            constructor(ctx: any);
+            distribute(sourceToken: string, data: any): void;
+            teardown(): void;
+            inductA(token: string, a: SourceRole): void;
+            inductB(token: string, b: SinkRole): void;
+            check(tokenA: string, roleA: SourceRole, tokenB: string, roleB: SinkRole): boolean;
+            connect(tokenA: string, roleA: SourceRole, tokenB: string, roleB: SinkRole): void;
+            disconnect(tokenA: string, roleA: SourceRole, tokenB: string, roleB: SinkRole): void;
+        }
+        const media: {
+            'source->sink': typeof PushMedium;
+        };
+    }
+}
+declare namespace Jungle {
+    namespace IO {
+        interface ShellPolicy {
+            fussy: boolean;
+            allowAddition: boolean;
+            allowRemoval: boolean;
+        }
+        const FreePolicy: ShellPolicy;
+        interface MembraneHost {
+            primary: Membrane;
+            policy: ShellPolicy;
+            retrieveContext: (crux: Crux) => any;
+            onAddCrux: (crux: Crux) => void;
+            onRemoveCrux: (crux: Crux) => void;
+        }
+        interface CruxDesignator {
+            role: string;
+            mDesignators: string[] | RegExp[] | ((membrane: Membrane, key: string) => boolean)[];
+            cDesignator: string | RegExp | ((crux: Crux) => boolean);
+        }
+        class Membrane {
+            host: MembraneHost;
+            static regexifyDesignationTerm(term: string): RegExp | "**";
+            static parseDesignatorString(desigstr: string, targetRole: string): CruxDesignator;
+            inverted: Membrane;
+            roles: any;
+            subranes: any;
+            constructor(host: MembraneHost);
+            forEachCrux(func: (crux, role) => void): void;
+            invert(): Membrane;
+            addSubrane(membrane: Membrane, label: string): void;
+            addCrux(crux: Crux, role: string): void;
+            removeCrux(crux: Crux, role: string): void;
+            treeDesignate({mDesignators, cDesignator, role}: CruxDesignator): {};
+            flatDesignate(designator: CruxDesignator): any;
+            tokenDesignate(designator: CruxDesignator): any;
+            designate(str: string, role: string, tokenize?: boolean): any;
+        }
+    }
+}
+declare namespace Jungle {
+    namespace IO {
+        class PortCrux extends Crux {
+            roles: {
+                sink: SinkRole;
+                source: SourceRole;
+            };
+            constructor(label: string);
+            put(input: any, trace: any): void;
+            dress(coat: OutputCoat): void;
+            prepareCallback(callout: any): any;
+            prepareContext(outputContext: any): any;
+        }
+    }
+}
+declare namespace Jungle {
+    namespace IO {
+        interface SourceRole {
+            callout: (data: any) => void;
+        }
+        interface SinkRole {
+            put: (data: any) => void;
+        }
+    }
+}
 declare namespace Jungle.Inv {
 }
 declare namespace Jungle.Inv {
