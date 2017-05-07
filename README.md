@@ -1,6 +1,10 @@
 
 # Jungle - Organic Programming Framework
 
+__a dual paradigm javascript framework for building modular and self-growing interconnected synthesis systems__
+
+### Note: Unstable, very likely to have foundational changes in coming months
+
 [![npm version](https://badge.fury.io/js/junglejs.svg)](https://badge.fury.io/js/junglejs)
 
 ## Abstract
