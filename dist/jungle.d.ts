@@ -264,7 +264,6 @@ declare namespace Jungle {
             inversionRole: string;
             roles: any;
             constructor(label: string);
-            getContext(): any;
             inversion(role: string): string;
             attachTo(membrane: Membrane, asRole: string): void;
             detach(): void;
@@ -274,43 +273,70 @@ declare namespace Jungle {
 declare namespace Jungle {
     namespace IO {
         interface IMedium<A, B> {
+            label: string;
             roleA: string;
             roleB: string;
-            teardown(): void;
-            inductA(token: string, a: A): void;
-            inductB(token: string, b: B): void;
-            check(tokenA: string, roleA: A, tokenB: string, roleB: B): boolean;
-            connect(tokenA: string, roleA: A, tokenB: string, roleB: B): void;
-            disconnect(tokenA: string, roleA: A, tokenB: string, roleB: B): void;
+            breakA(token: string, a: A): any;
+            breakB(token: string, b: B): any;
+            hasClaim(link: ILinkSpec<A, B>): boolean;
+            suppose(supposedLink: ILinkSpec<A, B>): boolean;
         }
-        class BareMedium<A, B> implements IMedium<A, B> {
-            host: any;
-            roleA: undefined;
-            roleB: undefined;
-            constructor(host: any);
-            setup(): void;
-            teardown(): void;
-            inductA(token: string, a: A): void;
-            inductB(token: string, b: B): void;
-            check(tokenA: string, roleA: A, tokenB: string, roleB: B): boolean;
-            connect(tokenA: string, roleA: A, tokenB: string, roleB: B): void;
-            disconnect(tokenA: string, roleA: A, tokenB: string, roleB: B): void;
+        interface ILinkSpec<A, B> {
+            tokenA: string;
+            tokenB: string;
+            roleA: A;
+            roleB: B;
+            directed: boolean;
+            destructive: boolean;
         }
-        class PushMedium implements IMedium<SourceRole, SinkRole> {
-            ctx: any;
-            roleA: 'source';
-            roleB: 'sink';
-            outlinks: any;
-            constructor(ctx: any);
+        interface IMediumSpec {
+            exclusive?: boolean;
+            multiA?: boolean;
+            multiB?: boolean;
+            directedOnly?: boolean;
+            exposed: any;
+            label: string;
+        }
+    }
+}
+declare namespace Jungle {
+    namespace IO {
+        abstract class BaseMedium<A, B> implements IMedium<A, B> {
+            exclusive: boolean;
+            multiA: boolean;
+            multiB: boolean;
+            label: string;
+            abstract roleA: string;
+            abstract roleB: string;
+            matrix: {
+                to: any;
+                from: any;
+                sym: any;
+            };
+            exposed: any;
+            constructor(spec: IMediumSpec);
+            suppose(supposedLink: ILinkSpec<A, B>): boolean;
+            hasClaim(link: ILinkSpec<A, B>): boolean;
+            breakA(token: string, a: A): void;
+            breakB(token: string, b: B): void;
+            abstract inductA(token: string, a: A): any;
+            abstract inductB(token: string, b: B): any;
+            abstract check(supposedLink: ILinkSpec<A, B>): any;
+            abstract connect(link: ILinkSpec<A, B>): any;
+            disconnect(link: ILinkSpec<A, B>): void;
+        }
+        class PushMedium extends BaseMedium<SourceRole, SinkRole> {
+            roleA: string;
+            roleB: string;
+            constructor(spec: IMediumSpec);
             distribute(sourceToken: string, data: any): void;
-            teardown(): void;
             inductA(token: string, a: SourceRole): void;
             inductB(token: string, b: SinkRole): void;
-            check(tokenA: string, roleA: SourceRole, tokenB: string, roleB: SinkRole): boolean;
-            connect(tokenA: string, roleA: SourceRole, tokenB: string, roleB: SinkRole): void;
-            disconnect(tokenA: string, roleA: SourceRole, tokenB: string, roleB: SinkRole): void;
+            check(supposedLink: ILinkSpec<SourceRole, SinkRole>): boolean;
+            connect(link: ILinkSpec<SourceRole, SinkRole>): void;
+            disconnect(link: ILinkSpec<SourceRole, SinkRole>): void;
         }
-        const media: {
+        const mediaConstructors: {
             'source->sink': typeof PushMedium;
         };
     }
@@ -324,11 +350,11 @@ declare namespace Jungle {
         }
         const FreePolicy: ShellPolicy;
         interface MembraneHost {
-            primary: Membrane;
             policy: ShellPolicy;
-            retrieveContext: (crux: Crux) => any;
-            onAddCrux: (crux: Crux) => void;
-            onRemoveCrux: (crux: Crux) => void;
+            onAddCrux: (crux: Crux, role: string, token: string) => void;
+            onRemoveCrux: (crux: Crux, role: string, token: string) => void;
+            onAddMembrane: (membrane: Membrane, token) => void;
+            onRemoveMembrane: (membrane: Membrane, token) => void;
         }
         interface CruxDesignator {
             role: string;
@@ -339,19 +365,73 @@ declare namespace Jungle {
             host: MembraneHost;
             static regexifyDesignationTerm(term: string): RegExp | "**";
             static parseDesignatorString(desigstr: string, targetRole: string): CruxDesignator;
+            static designatorToRegex(desigstr: any, role: any): RegExp;
+            static tokenDesignatedBy(token: any, designator: CruxDesignator): boolean;
+            static matchDesignationTerm(target: any, term: any): any;
             inverted: Membrane;
             roles: any;
             subranes: any;
+            parent: Membrane;
+            alias: string;
+            notify: boolean;
             constructor(host: MembraneHost);
+            notifyCruxAdd(crux: any, role: any, token?: any): void;
+            notifyCruxRemove(crux: Crux, role: string, token?: any): void;
+            notifyMembraneAdd(membrane: any, token?: any): void;
+            notifyMembraneRemove(membrane: any, token?: any): void;
             forEachCrux(func: (crux, role) => void): void;
             invert(): Membrane;
+            getMembraneToken(): string;
             addSubrane(membrane: Membrane, label: string): void;
+            removeSubrane(label: any): void;
             addCrux(crux: Crux, role: string): void;
             removeCrux(crux: Crux, role: string): void;
             treeDesignate({mDesignators, cDesignator, role}: CruxDesignator): {};
             flatDesignate(designator: CruxDesignator): any;
             tokenDesignate(designator: CruxDesignator): any;
             designate(str: string, role: string, tokenize?: boolean): any;
+        }
+    }
+}
+declare namespace Jungle {
+    namespace IO {
+        enum LINK_FILTERS {
+            PROCEED = 0,
+            DECEED = 1,
+            ELSEWHERE = 2,
+            NONE = 3,
+        }
+        interface ILinkRule {
+            designatorA: CruxDesignator;
+            designatorB: CruxDesignator;
+            closeSource: boolean;
+            closeSink: boolean;
+            matching: boolean;
+            propogation: LINK_FILTERS;
+        }
+        interface IMeshInitialiser {
+            media: string[];
+            membranes: any;
+            rules: any;
+            exposed: any;
+        }
+        class RuleMesh implements MembraneHost {
+            primary: Membrane;
+            policy: ShellPolicy;
+            roleToMedia: any;
+            rules: any;
+            media: any;
+            exposed: any;
+            constructor(initArgs: IMeshInitialiser);
+            addMedium(key: string, medium: IMedium<any, any>): void;
+            private parseRules(ruleset, mediumkey, medium);
+            private parseLink(link, medium);
+            addRule(rule: ILinkRule, mediumkey: string, medium: IMedium<any, any>): void;
+            designateCheckConnect(desigA: Object, desigB: Object, medium: IMedium<any, any>): void;
+            onAddCrux(crux: Crux, role: string, token: string): void;
+            onRemoveCrux(crux: Crux, role: string, token: string): void;
+            onAddMembrane(membrane: Membrane, token: any): void;
+            onRemoveMembrane(membrane: Membrane, token: any): void;
         }
     }
 }

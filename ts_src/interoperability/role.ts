@@ -9,7 +9,5 @@ namespace Jungle {
         export interface SinkRole {
             put:(data:any)=>void
         }
-
-
     }
 }

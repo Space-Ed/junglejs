@@ -17,13 +17,13 @@ namespace Jungle {
         }
 
         export interface MembraneHost{
-            primary:Membrane;
             policy:ShellPolicy;
 
-            retrieveContext:(crux:Crux)=>any;
+            onAddCrux:(crux:Crux, role:string, token:string)=>void;
+            onRemoveCrux:(crux:Crux, role:string, token:string)=>void;
 
-            onAddCrux:(crux:Crux)=>void;
-            onRemoveCrux:(crux:Crux)=>void;
+            onAddMembrane:(membrane:Membrane, token)=>void;
+            onRemoveMembrane:(membrane:Membrane, token)=>void;
 
         }
 
@@ -74,14 +74,132 @@ namespace Jungle {
                 }
             }
 
+            static designatorToRegex(desigstr, role){
+                //match structural consistency with xxx.xxx... ...xxx:ppp
+                let colonSplit = desigstr.match(/^((?:(?:\w+|\*{1,2})(?:\.(?:\w+|\*{1,2}))*))?\:(\w+|\*|\$)$/);
+
+                if(colonSplit === null){
+
+                }else{
+                    var [total, chain, crux] = colonSplit
+                }
+
+                let subranedesig:string[] = chain?chain.split(/\./):[];
+
+                let regex = ''
+
+                for (let i = 0; i < subranedesig.length; i++) {
+                    let term = subranedesig[i], first=i===0, last=i===subranedesig.length-1;
+
+                    if(term == '*'){
+                        regex += first?'^(\\w+)':'\.\\w+'
+                    }else if(term == '**'){
+                        regex += first?'^(\\w+(\.\\w+)*?)?':'(\.\\w+)*'
+                    }else{
+                        regex += first?`^${term}`:`\.${term}`
+                    }
+                }
+
+                regex += `:${crux=='*'?'(\\w+)':crux}/${role}$`
+
+                return new RegExp(regex)
+            }
+
+            static tokenDesignatedBy(token, designator:CruxDesignator):boolean{
+                console.log("token: ", token);
+                let [match, allSubs, crux, role] =  token.match(/^((?:(?:\w+)(?:\.(?:\w+))*))?\:(\w+)\/(\w+)$/);
+                console.log("match: ", match);
+
+                let splitSubs = allSubs?allSubs.split(/\./):[];
+
+                for (let i=0; i<splitSubs.length;i++){
+                    if(!Membrane.matchDesignationTerm(splitSubs[i], designator.mDesignators[i])){
+                         return false;
+                    }
+                }
+
+                if(!Membrane.matchDesignationTerm(crux, designator.cDesignator)){
+                     return false;
+                }
+
+                return role === designator.role
+            }
+
+            static matchDesignationTerm(target, term){
+                if(term instanceof Function){
+                    return term(target)
+                }else if(term instanceof RegExp){
+                    return target.match(term)
+                }else{
+                    return target.match(Membrane.regexifyDesignationTerm(term))
+                }
+            }
+
             inverted:Membrane;
             roles:any;
             subranes:any;
+            parent:Membrane;
+            alias:string;
+            notify:boolean;
 
             constructor (public host:MembraneHost){
                 this.roles = {};
                 this.subranes = {};
+                this.notify = true;
             }
+
+            notifyCruxAdd(crux, role, token?){
+                if(this.notify){
+                    let basic = token==undefined;
+                    let t = basic?`:${crux.label}/${role}`:token;
+                    this.host.onAddCrux(crux,role, t)
+
+                    if(this.parent){
+                        let qualified = `${this.alias}${basic?t:'.'+token}`
+                        this.parent.notifyCruxAdd(crux, role, qualified)
+                    }
+                }
+            }
+
+            notifyCruxRemove(crux:Crux, role:string, token?){
+                if(this.notify){
+                    let basic = token==undefined;
+                    let t = basic?`:${crux.label}/${role}`:token;
+                    this.host.onRemoveCrux(crux,role, t)
+
+                    if(this.parent){
+                        let qualified = `${this.alias}${basic?t:'.'+token}`
+                        this.parent.notifyCruxRemove(crux, role, qualified)
+                    }
+                }
+            }
+
+            notifyMembraneAdd(membrane, token?){
+                if(this.notify){
+                    let basic = token==undefined;
+                    let t = basic?`${membrane.alias}`:token;
+                    this.host.onAddMembrane(membrane, t)
+
+                    if(this.parent){
+                        let qualified = `${this.alias}${basic?t:'.'+token}`
+                        this.parent.notifyMembraneAdd(membrane, qualified)
+                    }
+                }
+            }
+
+            notifyMembraneRemove(membrane, token?){
+                if(this.notify){
+                    let basic = token==undefined;
+                    let t = basic?`${membrane.alias}`:token;
+                    this.host.onRemoveMembrane(membrane, t)
+
+                    if(this.parent){
+                        let qualified = `${this.alias}${basic?t:'.'+token}`
+                        this.parent.notifyMembraneRemove(membrane, qualified)
+                    }
+                }
+            }
+
 
             forEachCrux(func:(crux, role)=>void){
                 for(let rk in this.roles){
@@ -108,8 +226,34 @@ namespace Jungle {
                 return this.inverted
             }
 
+            getMembraneToken(){
+                if(this.parent==undefined){
+                    return undefined;
+                }else{
+                    let parentToken =this.parent.getMembraneToken()
+                    if(parentToken){
+                        return +'.'+this.alias;
+                    }else{
+                        return this.alias;
+                    }
+                }
+            }
+
             addSubrane(membrane:Membrane, label:string){
                 this.subranes[label] = membrane;
+                membrane.parent = this;
+                membrane.alias = label;
+
+                this.notifyMembraneAdd(membrane)
+            }
+
+            removeSubrane(label){
+                let removing = this.subranes[label]
+                delete this.subranes[label];
+                removing.parent = undefined;
+                removing.alias = undefined;
+
+                this.notifyMembraneRemove(removing)
             }
 
             addCrux(crux:Crux, role:string){
@@ -125,6 +269,7 @@ namespace Jungle {
                     throw new Debug.JungleError("")
                 }else{
                     crux.attachTo(this, role)
+                    this.notifyCruxAdd(crux, role)
                 }
             }
 
@@ -134,6 +279,7 @@ namespace Jungle {
 
                 if(existing !== undefined){
                     existing.detach();
+                    this.notifyCruxRemove(crux, role)
                 }
             }
 

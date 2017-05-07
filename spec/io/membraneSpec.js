@@ -1,61 +1,7 @@
 
-
-let Jungle = require('../dist/jungle.js');
-let Membrane = Jungle.IO.Membrane;
-let PortCrux = Jungle.IO.PortCrux;
-let Crux = Jungle.IO.Crux;
-
-class TestHost {
-
-    constructor(name){
-        this.name = name
-
-        this.primary = new Membrane(this, ['source', 'sink'])
-        this.policy = Jungle.IO.FreePolicy
-
-    }
-
-    retrieveContext(port){
-        return this
-    }
-
-    /**
-     * Take a designator object and, finding the sources, apply a coat
-     */
-    dress(designator, coat){
-        designator.role = 'source'
-        let designation = this.shell.designate(designator);
-        for(let k in designation){
-            let outport = designation[k];
-            outport.dress(coat);
-        }
-
-    }
-
-    /**
-     * Parse the standard IO name format _sinkname sourcename_ and plant them respectively
-     */
-    populate(labels){
-        var validPortRegex = /^(_?)([a-zA-Z](?:\w*[a-zA-Z])?)(_?)$/
-        for (let i = 0; i < labels.length; i++) {
-            let pmatch = labels[i].match(validPortRegex);
-
-            if(pmatch){
-                let inp = pmatch[1], label = pmatch[2], out = pmatch[3];
-
-                if(inp){
-                    this.primary.addCrux(new PortCrux(label, this, 'sink'), "sink")
-                }
-                if(out){
-                    this.primary.addCrux(new PortCrux(label, this, 'source'), "source")
-                }
-            }else{
-                throw new Error(`Invalid port label ${labels[i]}, must be _<sink label> (leading underscore) or <source label>_ (trailing underscore)`)
-            }
-        }
-    }
-
-}
+let Jungle = require('../../dist/jungle.js');
+let {Membrane, PortCrux, Crux} = Jungle.IO;
+let TestHost = require('../helpers/testHost.js')
 
 describe('basic membrane', function(){
 
@@ -70,7 +16,7 @@ describe('basic membrane', function(){
     afterEach(function(){
     })
 
-    fit('should allow addition and removal of ports', function(){
+    it('should allow addition and removal of ports', function(){
         let newb = new PortCrux('sinkA');
         let new2 = new PortCrux('source1')
 
@@ -91,7 +37,7 @@ describe('basic membrane', function(){
         beforeEach(function(){
             host.populate(['_a', '_b', 'y_', 'x_'])
         })
-        fit('populate works', function(){
+        it('populate works', function(){
             expect(memb.roles.sink.a).not.toBeUndefined();
             expect(memb.roles.sink.b).not.toBeUndefined();
             expect(memb.roles.source.y).not.toBeUndefined();
@@ -99,7 +45,7 @@ describe('basic membrane', function(){
 
         })
 
-        fit('should designate with direct IR',function(){
+        it('should designate with direct IR',function(){
             let a = memb.tokenDesignate({
                 role:'sink',
                 mDesignators:[],
@@ -112,7 +58,7 @@ describe('basic membrane', function(){
 
     })
 
-    fdescribe('inversion', function(){
+    describe('inversion', function(){
         let invert;
         beforeEach(function(){
             host.populate(['_a', '_b', 'y_', 'x_'])
@@ -161,13 +107,13 @@ describe('basic membrane', function(){
             host.populate(['_a', '_b', 'y_', 'x_'])
         })
 
-        fit('should allow designation at depth', function(){
+        it('should allow designation at depth', function(){
 
             let desig = memb.designate('sub:a', 'sink')
             expect(desig['sub:a/sink']).toBe(submemb.roles.sink.a)
         })
 
-        fit('globbing should collect at many depths',function(){
+        it('globbing should collect at many depths',function(){
             let sub2 = new Membrane(subhost)
 
             sub2.addCrux(new PortCrux('a'), 'sink');
@@ -182,6 +128,70 @@ describe('basic membrane', function(){
             //expect(desigAll[':a/sink']).toBe(memb.roles.sink.a)
 
         })
+
+        describe('membrane change notifications', function(){
+            let additions;
+
+            function scanForToken(allArgs, token, tokenArgNumber){
+
+                let scanCollection = []
+
+                for(let arglist of allArgs){
+                    if(allArgs[tokenArgNumber] === token){
+                        scanCollection.push(arglist);
+                    }
+                }
+
+                return scanCollection;
+            }
+
+            beforeEach(function(){
+                additions = host.addspy.calls.allArgs();
+            })
+            //when ports are added the host of the membrane and all parent membranes is informed
+            it('should notify  when my membrane has a crux added',function(){
+                //all additions reported
+                expect(additions.length).toEqual(6);
+            });
+
+            it('should notify when a sub membrane has a crux added',function(){
+                console.log(additions)
+                expect(scanForToken(additions, 'sub:a/sink', 2))[0][0].toBe(subhost.roles.sink.a)
+            });
+
+            it('should notify me when a membrane is added',function(){
+                let membadd = host.membaddspy.calls.allArgs()
+                console.log(membadd)
+                expect(membadd.length).toEqual(1);
+            });
+
+            it('should notify me when a crux is removed from my membrane')
+            it('should notify me when a crux is removed from a sub membrane')
+            it('should notify me when a sub membrane is added')
+
+
+        })
+
+    })
+
+
+
+    it('shoule converr designator to token regex', function(){
+        let basic = Membrane.designatorToRegex('a:p', 'role');
+        expect('a:p/role'.match(basic)).not.toBeNull();
+
+        let onewild = Membrane.designatorToRegex('*:p', 'role');
+        expect('a:p/role'.match(onewild)).not.toBeNull();
+
+        let leadingGlob = Membrane.designatorToRegex('**.a:*', 'blart');
+        expect('globby.glob.blob.a:farts/blart'.match(leadingGlob)).not.toBeNull();
+
+        let multiGlob = Membrane.designatorToRegex('**.a.**:p', 'blart');
+        expect('globby.a.globby:p/blart'.match(multiGlob)).not.toBeNull();
+
+        let trickyGlob = Membrane.designatorToRegex('**.a.**:p', 'blart');
+        console.log('trickyGlob:', trickyGlob);
+        expect('globby.a.a.a:p/blart'.match(trickyGlob)).not.toBeNull();
 
     })
 

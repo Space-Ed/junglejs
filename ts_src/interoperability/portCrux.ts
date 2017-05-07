@@ -21,7 +21,9 @@ namespace Jungle {
                 this.roles = {
                     sink:{
                         put:(data)=>{
-                            this.roles.source.callout(data)
+                            if(this.roles.source.callout instanceof Function){
+                                this.roles.source.callout(data)
+                            }
                         }
                     },
                     source:{

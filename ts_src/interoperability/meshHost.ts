@@ -1,0 +1,206 @@
+namespace Jungle {
+    export namespace IO {
+
+        export enum LINK_FILTERS {
+            PROCEED, DECEED, ELSEWHERE, NONE
+        }
+
+        export interface ILinkRule {
+            designatorA:CruxDesignator;
+            designatorB:CruxDesignator;
+            closeSource:boolean;
+            closeSink:boolean;
+            matching:boolean;
+            propogation:LINK_FILTERS;
+        }
+
+        export interface IMeshInitialiser {
+            membranes:any,
+            rules:any,
+            exposed:any
+        }
+
+        /**
+         * A multimedia connections manager with updating
+         */
+        export class RuleMesh implements MembraneHost {
+
+            primary:Membrane;
+            policy:ShellPolicy;
+            roleToMedia:any;
+            rules:any;
+            media:any;
+
+            exposed:any;
+
+
+            constructor(initArgs:IMeshInitialiser){
+
+                this.primary = new Membrane(this);
+                this.roleToMedia = {};
+                this.rules = {};
+                this.media = {};
+
+                this.exposed = initArgs.exposed;
+                for(let membraneKey in initArgs.membranes){
+                    this.primary.addSubrane(initArgs.membranes[membraneKey], membraneKey)
+                }
+
+                for (let mediakey in initArgs.rules){
+                    //Check there is an over creation of media?
+
+                    let newMedium = new mediaConstructors[mediakey]({label:mediakey, exposed:this.exposed})
+                    this.addMedium(mediakey, newMedium)
+                    this.parseRules(initArgs.rules[mediakey], mediakey, newMedium);
+                }
+
+
+            }
+
+            addMedium(key:string, medium:IMedium<any,any>){
+                //Check if we are over stacking roles?
+                this.rules[key] = [];
+                this.media[key] = medium;
+
+                this.roleToMedia[medium.roleA] = key;
+                this.roleToMedia[medium.roleB] = key;
+            }
+
+
+            private parseRules(ruleset:string[], mediumkey:string, medium:IMedium<any,any>){
+                for(let link of ruleset){
+                    let linkIR = this.parseLink(link, medium);
+                    this.addRule(linkIR, mediumkey, medium)
+                }
+            }
+
+            private parseLink(link:string, medium:IMedium<any,any>):ILinkRule{
+                let m = link.match(/^([\w\*\:\.]+)(\|?)(<?)([\+\-\!]?)([=\-])(>?)(\|?)([\w\*\:\.]+)/)
+
+                if(!m){throw new Error(`Unable to parse link description, expression ${link} did not match regex`)};
+                let [match, srcDesig, srcClose, viceVersa, filter, matching, persistent, snkClose, snkDesig] = m;
+
+                return {
+                    designatorA:Membrane.parseDesignatorString(srcDesig, medium.roleA),
+                    designatorB:Membrane.parseDesignatorString(snkDesig, medium.roleB),
+                    closeSource:srcClose==='|',
+                    closeSink:snkClose==='|',
+                    matching:matching==="=",
+                    propogation:filter !== ''?{'+':LINK_FILTERS.PROCEED,'-':LINK_FILTERS.DECEED, '!':LINK_FILTERS.ELSEWHERE}[filter]:LINK_FILTERS.NONE
+                }
+
+            }
+
+            /**
+             * Rule must be applied to existing contacts, .
+             */
+            addRule(rule:ILinkRule, mediumkey:string, medium:IMedium<any,any>){
+                console.log(rule)
+                this.rules[mediumkey].push(rule);
+                let dA = this.primary.tokenDesignate(rule.designatorA);
+                let dB = this.primary.tokenDesignate(rule.designatorB);
+                this.designateCheckConnect(dA, dB, medium)
+            }
+
+            designateCheckConnect(desigA:Object, desigB:Object, medium:IMedium<any,any>){
+
+                console.log(`dA: ${desigA}, dB: ${desigB}`)
+                for(let tokenA in desigA){
+                    let designatedA = desigA[tokenA];
+
+                    for (let tokenB in desigB){
+                        let designatedB = desigB[tokenB];
+
+                        let link:ILinkSpec<any, any> = {
+                            tokenA:tokenA,
+                            tokenB:tokenB,
+                            roleA:designatedA.roles[medium.roleA],
+                            roleB:designatedB.roles[medium.roleB],
+                            directed:true,
+                            destructive:false
+                        }
+
+                        //if all other media do not hold an exclusive claim to the relevant crux
+                        for(let mk in this.media){
+                            let claimer = this.media[mk]
+                            if(claimer !== medium && claimer.hasClaim()){
+                                throw new Error('Unable to suppose link when another medium has claimed the token')
+                            }
+                        }
+
+                        medium.suppose(link)
+                    }
+                }
+
+            }
+
+            onAddCrux(crux:Crux, role:string, token:string){
+                //introduce to medium
+                let medium:IMedium<any,any> = this.media[this.roleToMedia[role]];
+                let linkRules = <ILinkRule[]>this.rules[this.roleToMedia[role]];
+                let designator;
+
+                if(role === medium.roleA){
+                    for(let rule of linkRules){
+                        if(Membrane.tokenDesignatedBy(token, rule.designatorA)){
+                            let dB = this.primary.tokenDesignate(rule.designatorB)
+                            let dA = {}; dA[token] = crux;
+                            this.designateCheckConnect(dA, dB, medium);
+                        }
+                    }
+                }else if(role === medium.roleB){
+                    for(let rule of linkRules){
+                        if(Membrane.tokenDesignatedBy(token, rule.designatorB)){
+                            let dA = this.primary.tokenDesignate(rule.designatorA);
+                            let dB = {}; dB[token] = crux;
+                            this.designateCheckConnect(dA, dB, medium);
+                        }
+                    }
+                }else{
+                    throw new Error("Not a valid crux addition role does not match medium")
+                }
+            }
+
+            onRemoveCrux(crux:Crux, role:string, token:string){
+
+                let location:IMedium<any,any> = this.media[this.roleToMedia[role]]
+
+                if(role === location.roleA){
+                    location.breakA(token, role)
+                }else if (role === location.roleB){
+                    location.breakB(token, role)
+                }
+
+            }
+
+            onAddMembrane(membrane:Membrane, token){
+                //All of the roles used in any of the media of the mesh are used to fund the cruxes
+                //therefore it will not include yet unseen roles
+
+                for(let role in this.roleToMedia){
+                    let cruxscan = membrane.designate("**:*", role, true)
+
+                    for(let token in cruxscan){
+                        this.onAddCrux(cruxscan[token], role, membrane.getMembraneToken()+token)
+                    }
+                }
+
+            }
+
+            onRemoveMembrane(membrane:Membrane, token){
+                for(let role in this.roleToMedia){
+                    let cruxscan = membrane.designate("**:*", role, true)
+
+                    for(let token in cruxscan){
+                        this.onRemoveCrux(cruxscan[token], role, membrane.getMembraneToken()+token)
+                    }
+                }
+
+            }
+
+        }
+
+
+    }
+
+}

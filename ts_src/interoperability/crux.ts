@@ -25,13 +25,6 @@ namespace Jungle {
             }
 
             /**
-             * Used for internal context access,
-             */
-            getContext(){
-                return this.originalMembrane.host.retrieveContext(this);
-            }
-
-            /**
              * @param role: what is this on the other side.
              */
             inversion(role:string):string{
