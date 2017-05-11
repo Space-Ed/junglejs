@@ -92,7 +92,7 @@ namespace Jungle {
                 header:"Crumb",
                 traceDepth:-1,
                 debug:false,
-                log:undefined,
+                log:console,
                 format:(x)=>{return x},
                 with:undefined,
                 at:undefined,
@@ -100,6 +100,7 @@ namespace Jungle {
                 as:undefined,
             }
 
+            //Set when you wan't a certain debug option for particularly labelled crumbs
             static customOptions = {
 
             }
@@ -243,25 +244,28 @@ ${this.traceback(this.options.traceDepth)}\
                 `
             }
 
-            describe(){
-                return `\
-* ${this.options.header}: ${this.label}\
-${this.position !== undefined?`\n|    at: ${this.position}`:''}\
-${this.location !== undefined?`\n|    within: ${this.location}`:''}\
-`
-            }
-
             traceback(depth=-1){
                 if(this.previous !== undefined && (depth > 0 || depth === -1)){
                     return `
 ${this.describe()}
 |
-${this.previous.traceback(depth-1)}
-                    `
+${this.previous.traceback(depth===-1?depth:depth-1)}
+`
                 }else{
                     return this.describe()
                 }
             }
+
+            describe(){
+                return `\
+* ${this.options.header}: ${this.label}\
+${this.position !== undefined?`\n|    at stage: ${this.position}`:''}\
+${this.location !== undefined?`\n|    within location: ${this.location}`:''}\
+${this.situation !== undefined?`\n|    as situation: ${this.situation}`:''}\
+${this.data !== undefined?`\n|    with data: ${this.data}`:''}\
+`
+            }
+
 
             catch(callback){
                 this.catchCallback = callback;

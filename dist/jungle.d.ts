@@ -272,6 +272,25 @@ declare namespace Jungle {
 }
 declare namespace Jungle {
     namespace IO {
+        enum LINK_FILTERS {
+            PROCEED = 0,
+            DECEED = 1,
+            ELSEWHERE = 2,
+            NONE = 3,
+        }
+        interface ILinkRule {
+            designatorA: CruxDesignator;
+            designatorB: CruxDesignator;
+            closeSource: boolean;
+            closeSink: boolean;
+            matching: boolean;
+            propogation: LINK_FILTERS;
+        }
+        interface IMeshInitialiser {
+            membranes: any;
+            rules: any;
+            exposed: any;
+        }
         interface IMedium<A, B> {
             label: string;
             roleA: string;
@@ -297,6 +316,24 @@ declare namespace Jungle {
             exposed: any;
             label: string;
         }
+        interface ShellPolicy {
+            fussy: boolean;
+            allowAddition: boolean;
+            allowRemoval: boolean;
+        }
+        const FreePolicy: ShellPolicy;
+        interface MembraneHost {
+            policy: ShellPolicy;
+            onAddCrux: (crux: Crux, role: string, token: string) => void;
+            onRemoveCrux: (crux: Crux, role: string, token: string) => void;
+            onAddMembrane: (membrane: Membrane, token) => void;
+            onRemoveMembrane: (membrane: Membrane, token) => void;
+        }
+        interface CruxDesignator {
+            role: string;
+            mDesignators: string[] | RegExp[] | ((membrane: Membrane, key: string) => boolean)[];
+            cDesignator: string | RegExp | ((crux: Crux) => boolean);
+        }
     }
 }
 declare namespace Jungle {
@@ -319,48 +356,17 @@ declare namespace Jungle {
             hasClaim(link: ILinkSpec<A, B>): boolean;
             breakA(token: string, a: A): void;
             breakB(token: string, b: B): void;
+            check(link: ILinkSpec<A, B>): boolean;
             abstract inductA(token: string, a: A): any;
             abstract inductB(token: string, b: B): any;
-            abstract check(supposedLink: ILinkSpec<A, B>): any;
             abstract connect(link: ILinkSpec<A, B>): any;
             disconnect(link: ILinkSpec<A, B>): void;
         }
-        class PushMedium extends BaseMedium<SourceRole, SinkRole> {
-            roleA: string;
-            roleB: string;
-            constructor(spec: IMediumSpec);
-            distribute(sourceToken: string, data: any): void;
-            inductA(token: string, a: SourceRole): void;
-            inductB(token: string, b: SinkRole): void;
-            check(supposedLink: ILinkSpec<SourceRole, SinkRole>): boolean;
-            connect(link: ILinkSpec<SourceRole, SinkRole>): void;
-            disconnect(link: ILinkSpec<SourceRole, SinkRole>): void;
-        }
-        const mediaConstructors: {
-            'source->sink': typeof PushMedium;
-        };
+        const mediaConstructors: {};
     }
 }
 declare namespace Jungle {
     namespace IO {
-        interface ShellPolicy {
-            fussy: boolean;
-            allowAddition: boolean;
-            allowRemoval: boolean;
-        }
-        const FreePolicy: ShellPolicy;
-        interface MembraneHost {
-            policy: ShellPolicy;
-            onAddCrux: (crux: Crux, role: string, token: string) => void;
-            onRemoveCrux: (crux: Crux, role: string, token: string) => void;
-            onAddMembrane: (membrane: Membrane, token) => void;
-            onRemoveMembrane: (membrane: Membrane, token) => void;
-        }
-        interface CruxDesignator {
-            role: string;
-            mDesignators: string[] | RegExp[] | ((membrane: Membrane, key: string) => boolean)[];
-            cDesignator: string | RegExp | ((crux: Crux) => boolean);
-        }
         class Membrane {
             host: MembraneHost;
             static regexifyDesignationTerm(term: string): RegExp | "**";
@@ -383,7 +389,7 @@ declare namespace Jungle {
             invert(): Membrane;
             getMembraneToken(): string;
             addSubrane(membrane: Membrane, label: string): void;
-            removeSubrane(label: any): void;
+            removeSubrane(label: any): Membrane;
             addCrux(crux: Crux, role: string): void;
             removeCrux(crux: Crux, role: string): void;
             treeDesignate({mDesignators, cDesignator, role}: CruxDesignator): {};
@@ -395,26 +401,6 @@ declare namespace Jungle {
 }
 declare namespace Jungle {
     namespace IO {
-        enum LINK_FILTERS {
-            PROCEED = 0,
-            DECEED = 1,
-            ELSEWHERE = 2,
-            NONE = 3,
-        }
-        interface ILinkRule {
-            designatorA: CruxDesignator;
-            designatorB: CruxDesignator;
-            closeSource: boolean;
-            closeSink: boolean;
-            matching: boolean;
-            propogation: LINK_FILTERS;
-        }
-        interface IMeshInitialiser {
-            media: string[];
-            membranes: any;
-            rules: any;
-            exposed: any;
-        }
         class RuleMesh implements MembraneHost {
             primary: Membrane;
             policy: ShellPolicy;
@@ -427,11 +413,41 @@ declare namespace Jungle {
             private parseRules(ruleset, mediumkey, medium);
             private parseLink(link, medium);
             addRule(rule: ILinkRule, mediumkey: string, medium: IMedium<any, any>): void;
-            designateCheckConnect(desigA: Object, desigB: Object, medium: IMedium<any, any>): void;
+            designateCheckConnect(rule: ILinkRule, desigA: Object, desigB: Object, medium: IMedium<any, any>): void;
             onAddCrux(crux: Crux, role: string, token: string): void;
             onRemoveCrux(crux: Crux, role: string, token: string): void;
             onAddMembrane(membrane: Membrane, token: any): void;
             onRemoveMembrane(membrane: Membrane, token: any): void;
+        }
+    }
+}
+declare namespace Jungle {
+    namespace IO {
+        class RequestCrux extends Crux {
+            roles: {
+                req: Request;
+                resp: Response;
+            };
+            constructor(label: string);
+        }
+    }
+}
+declare namespace Jungle {
+    namespace IO {
+        interface Request {
+            request: (data: any, tracking: Debug.Crumb) => Util.Junction;
+        }
+        interface Response {
+            response: (data: any, tracking: Debug.Crumb) => Util.Junction;
+        }
+        class PullMedium extends BaseMedium<Request, Response> {
+            roleA: string;
+            roleB: string;
+            constructor(spec: IMediumSpec);
+            inductA(token: string, a: Request): void;
+            inductB(token: string, b: Response): void;
+            connect(link: ILinkSpec<Request, Response>): void;
+            disconnect(link: ILinkSpec<Request, Response>): void;
         }
     }
 }
@@ -447,6 +463,20 @@ declare namespace Jungle {
             dress(coat: OutputCoat): void;
             prepareCallback(callout: any): any;
             prepareContext(outputContext: any): any;
+        }
+    }
+}
+declare namespace Jungle {
+    namespace IO {
+        class PushMedium extends BaseMedium<SourceRole, SinkRole> {
+            roleA: string;
+            roleB: string;
+            constructor(spec: IMediumSpec);
+            distribute(sourceToken: string, data: any): void;
+            inductA(token: string, a: SourceRole): void;
+            inductB(token: string, b: SinkRole): void;
+            connect(link: ILinkSpec<SourceRole, SinkRole>): void;
+            disconnect(link: ILinkSpec<SourceRole, SinkRole>): void;
         }
     }
 }
@@ -758,8 +788,8 @@ declare namespace Jungle {
             as(situation: any): this;
             with(data: any): this;
             dump(): string;
-            describe(): string;
             traceback(depth?: number): any;
+            describe(): string;
             catch(callback: any): this;
             raise(error: any): void;
             deflect(exception: any): void;

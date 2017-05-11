@@ -24,7 +24,7 @@ describe("The Push Medium", function () {
 
     })
 
-    fit('should connect A to B on the same membrane',function(){
+    it('should connect A to B on the same membrane',function(){
 
         let link = {
             roleA:roleA,

@@ -2,6 +2,24 @@ namespace Jungle {
 
     export namespace IO {
 
+        export enum LINK_FILTERS {
+            PROCEED, DECEED, ELSEWHERE, NONE
+        }
+
+        export interface ILinkRule {
+            designatorA:CruxDesignator;
+            designatorB:CruxDesignator;
+            closeSource:boolean;
+            closeSink:boolean;
+            matching:boolean;
+            propogation:LINK_FILTERS;
+        }
+
+        export interface IMeshInitialiser {
+            membranes:any,
+            rules:any,
+            exposed:any
+        }
 
         export interface IMedium<A,B>{
             label:string;
@@ -32,6 +50,37 @@ namespace Jungle {
             exposed:any;
             label:string;
         }
+
+        export interface ShellPolicy {
+            fussy:boolean;
+            allowAddition:boolean;
+            allowRemoval:boolean;
+
+        }
+
+        export const FreePolicy:ShellPolicy = {
+            fussy:false,
+            allowAddition:true,
+            allowRemoval:true
+        }
+
+        export interface MembraneHost{
+            policy:ShellPolicy;
+
+            onAddCrux:(crux:Crux, role:string, token:string)=>void;
+            onRemoveCrux:(crux:Crux, role:string, token:string)=>void;
+
+            onAddMembrane:(membrane:Membrane, token)=>void;
+            onRemoveMembrane:(membrane:Membrane, token)=>void;
+
+        }
+
+        export interface CruxDesignator{
+            role:string;
+            mDesignators:string[]|RegExp[]|((membrane:Membrane, key:string)=>boolean)[];
+            cDesignator:string|RegExp|((crux:Crux)=>boolean);
+        }
+
 
     }
 

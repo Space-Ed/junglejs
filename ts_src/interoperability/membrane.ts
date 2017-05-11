@@ -3,36 +3,6 @@ namespace Jungle {
     export namespace IO {
 
 
-        export interface ShellPolicy {
-            fussy:boolean;
-            allowAddition:boolean;
-            allowRemoval:boolean;
-
-        }
-
-        export const FreePolicy:ShellPolicy = {
-            fussy:false,
-            allowAddition:true,
-            allowRemoval:true
-        }
-
-        export interface MembraneHost{
-            policy:ShellPolicy;
-
-            onAddCrux:(crux:Crux, role:string, token:string)=>void;
-            onRemoveCrux:(crux:Crux, role:string, token:string)=>void;
-
-            onAddMembrane:(membrane:Membrane, token)=>void;
-            onRemoveMembrane:(membrane:Membrane, token)=>void;
-
-        }
-
-        export interface CruxDesignator{
-            role:string;
-            mDesignators:string[]|RegExp[]|((membrane:Membrane, key:string)=>boolean)[];
-            cDesignator:string|RegExp|((crux:Crux)=>boolean);
-        }
-
         export class Membrane {
 
             /**
@@ -247,13 +217,16 @@ namespace Jungle {
                 this.notifyMembraneAdd(membrane)
             }
 
-            removeSubrane(label){
+            removeSubrane(label):Membrane{
                 let removing = this.subranes[label]
                 delete this.subranes[label];
+
+                this.notifyMembraneRemove(removing)
+
                 removing.parent = undefined;
                 removing.alias = undefined;
 
-                this.notifyMembraneRemove(removing)
+                return removing
             }
 
             addCrux(crux:Crux, role:string){

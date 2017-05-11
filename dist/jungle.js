@@ -873,6 +873,24 @@ var Jungle;
 (function (Jungle) {
     var IO;
     (function (IO) {
+        var LINK_FILTERS;
+        (function (LINK_FILTERS) {
+            LINK_FILTERS[LINK_FILTERS["PROCEED"] = 0] = "PROCEED";
+            LINK_FILTERS[LINK_FILTERS["DECEED"] = 1] = "DECEED";
+            LINK_FILTERS[LINK_FILTERS["ELSEWHERE"] = 2] = "ELSEWHERE";
+            LINK_FILTERS[LINK_FILTERS["NONE"] = 3] = "NONE";
+        })(LINK_FILTERS = IO.LINK_FILTERS || (IO.LINK_FILTERS = {}));
+        IO.FreePolicy = {
+            fussy: false,
+            allowAddition: true,
+            allowRemoval: true
+        };
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var IO;
+    (function (IO) {
         var BaseMedium = (function () {
             function BaseMedium(spec) {
                 this.exclusive = false;
@@ -918,6 +936,17 @@ var Jungle;
                     this.disconnect(connections[other]);
                 }
             };
+            BaseMedium.prototype.check = function (link) {
+                if (link.directed) {
+                    return (this.multiA || (this.matrix.to[link.tokenA] == undefined) || this.matrix.to[link.tokenA][link.tokenB] === undefined) &&
+                        (this.multiB || (this.matrix.from[link.tokenB] == undefined) || this.matrix.from[link.tokenB][link.tokenA] === undefined);
+                }
+                else {
+                    return (this.multiA || this.matrix.sym[link.tokenA][link.tokenB] === undefined) &&
+                        (this.multiB || this.matrix.sym[link.tokenB][link.tokenA] === undefined);
+                }
+            };
+            ;
             BaseMedium.prototype.disconnect = function (link) {
                 console.log('disconnect');
                 if (link.directed) {
@@ -929,52 +958,13 @@ var Jungle;
             return BaseMedium;
         }());
         IO.BaseMedium = BaseMedium;
-        var PushMedium = (function (_super) {
-            __extends(PushMedium, _super);
-            function PushMedium(spec) {
-                var _this = _super.call(this, spec) || this;
-                _this.roleA = 'source';
-                _this.roleB = 'sink';
-                return _this;
-            }
-            PushMedium.prototype.distribute = function (sourceToken, data) {
-                for (var sinkToken in this.matrix.to[sourceToken]) {
-                    var outrole = this.matrix.to[sourceToken][sinkToken].roleB;
-                    outrole.put(data);
-                }
-            };
-            PushMedium.prototype.inductA = function (token, a) {
-                a.callout = this.distribute.bind(this, token);
-            };
-            PushMedium.prototype.inductB = function (token, b) {
-            };
-            PushMedium.prototype.check = function (supposedLink) {
-                return true;
-            };
-            PushMedium.prototype.connect = function (link) {
-                this.matrix.to[link.tokenA][link.tokenB].outhook = link.roleB;
-            };
-            PushMedium.prototype.disconnect = function (link) {
-                _super.prototype.disconnect.call(this, link);
-                link.roleA.callout = undefined;
-            };
-            return PushMedium;
-        }(BaseMedium));
-        IO.PushMedium = PushMedium;
-        IO.mediaConstructors = {
-            'source->sink': PushMedium
-        };
+        IO.mediaConstructors = {};
     })(IO = Jungle.IO || (Jungle.IO = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
 (function (Jungle) {
     var IO;
     (function (IO) {
-        IO.FreePolicy = {
-            fussy: false,
-            allowAddition: true,
-            allowRemoval: true
-        };
         var Membrane = (function () {
             function Membrane(host) {
                 this.host = host;
@@ -1147,9 +1137,10 @@ var Jungle;
             Membrane.prototype.removeSubrane = function (label) {
                 var removing = this.subranes[label];
                 delete this.subranes[label];
+                this.notifyMembraneRemove(removing);
                 removing.parent = undefined;
                 removing.alias = undefined;
-                this.notifyMembraneRemove(removing);
+                return removing;
             };
             Membrane.prototype.addCrux = function (crux, role) {
                 var home = this.roles[role];
@@ -1273,13 +1264,6 @@ var Jungle;
 (function (Jungle) {
     var IO;
     (function (IO) {
-        var LINK_FILTERS;
-        (function (LINK_FILTERS) {
-            LINK_FILTERS[LINK_FILTERS["PROCEED"] = 0] = "PROCEED";
-            LINK_FILTERS[LINK_FILTERS["DECEED"] = 1] = "DECEED";
-            LINK_FILTERS[LINK_FILTERS["ELSEWHERE"] = 2] = "ELSEWHERE";
-            LINK_FILTERS[LINK_FILTERS["NONE"] = 3] = "NONE";
-        })(LINK_FILTERS = IO.LINK_FILTERS || (IO.LINK_FILTERS = {}));
         var RuleMesh = (function () {
             function RuleMesh(initArgs) {
                 this.primary = new IO.Membrane(this);
@@ -1322,18 +1306,16 @@ var Jungle;
                     closeSource: srcClose === '|',
                     closeSink: snkClose === '|',
                     matching: matching === "=",
-                    propogation: filter !== '' ? { '+': LINK_FILTERS.PROCEED, '-': LINK_FILTERS.DECEED, '!': LINK_FILTERS.ELSEWHERE }[filter] : LINK_FILTERS.NONE
+                    propogation: filter !== '' ? { '+': IO.LINK_FILTERS.PROCEED, '-': IO.LINK_FILTERS.DECEED, '!': IO.LINK_FILTERS.ELSEWHERE }[filter] : IO.LINK_FILTERS.NONE
                 };
             };
             RuleMesh.prototype.addRule = function (rule, mediumkey, medium) {
-                console.log(rule);
                 this.rules[mediumkey].push(rule);
                 var dA = this.primary.tokenDesignate(rule.designatorA);
                 var dB = this.primary.tokenDesignate(rule.designatorB);
-                this.designateCheckConnect(dA, dB, medium);
+                this.designateCheckConnect(rule, dA, dB, medium);
             };
-            RuleMesh.prototype.designateCheckConnect = function (desigA, desigB, medium) {
-                console.log("dA: " + desigA + ", dB: " + desigB);
+            RuleMesh.prototype.designateCheckConnect = function (rule, desigA, desigB, medium) {
                 for (var tokenA in desigA) {
                     var designatedA = desigA[tokenA];
                     for (var tokenB in desigB) {
@@ -1352,7 +1334,10 @@ var Jungle;
                                 throw new Error('Unable to suppose link when another medium has claimed the token');
                             }
                         }
-                        medium.suppose(link);
+                        console.log(designatedA.label, " , ", designatedB.label);
+                        if (!rule.matching || (designatedA.label === designatedB.label)) {
+                            medium.suppose(link);
+                        }
                     }
                 }
             };
@@ -1367,7 +1352,7 @@ var Jungle;
                             var dB = this.primary.tokenDesignate(rule.designatorB);
                             var dA = {};
                             dA[token] = crux;
-                            this.designateCheckConnect(dA, dB, medium);
+                            this.designateCheckConnect(rule, dA, dB, medium);
                         }
                     }
                 }
@@ -1378,7 +1363,7 @@ var Jungle;
                             var dA = this.primary.tokenDesignate(rule.designatorA);
                             var dB = {};
                             dB[token] = crux;
-                            this.designateCheckConnect(dA, dB, medium);
+                            this.designateCheckConnect(rule, dA, dB, medium);
                         }
                     }
                 }
@@ -1389,6 +1374,7 @@ var Jungle;
             RuleMesh.prototype.onRemoveCrux = function (crux, role, token) {
                 var location = this.media[this.roleToMedia[role]];
                 if (role === location.roleA) {
+                    console.log('remove crux: ', crux, ' , token:', token);
                     location.breakA(token, role);
                 }
                 else if (role === location.roleB) {
@@ -1407,13 +1393,77 @@ var Jungle;
                 for (var role in this.roleToMedia) {
                     var cruxscan = membrane.designate("**:*", role, true);
                     for (var token_2 in cruxscan) {
-                        this.onRemoveCrux(cruxscan[token_2], role, token_2);
+                        this.onRemoveCrux(cruxscan[token_2], role, membrane.getMembraneToken() + token_2);
                     }
                 }
             };
             return RuleMesh;
         }());
         IO.RuleMesh = RuleMesh;
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var IO;
+    (function (IO) {
+        var RequestCrux = (function (_super) {
+            __extends(RequestCrux, _super);
+            function RequestCrux(label) {
+                var _this = _super.call(this, label) || this;
+                _this.roles = {
+                    req: {
+                        request: undefined
+                    }, resp: {
+                        response: function (data, tracking) {
+                            var crumb = tracking.drop("Request Crux")
+                                .with(data)
+                                .at(_this.label);
+                            if (_this.roles.req.request != undefined) {
+                                return _this.roles.req.request(data, crumb);
+                            }
+                            else {
+                                tracking.raise("You didn't make it ");
+                            }
+                        }
+                    }
+                };
+                return _this;
+            }
+            return RequestCrux;
+        }(IO.Crux));
+        IO.RequestCrux = RequestCrux;
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var IO;
+    (function (IO) {
+        var PullMedium = (function (_super) {
+            __extends(PullMedium, _super);
+            function PullMedium(spec) {
+                var _this = _super.call(this, spec) || this;
+                _this.exclusive = true;
+                _this.roleA = 'req';
+                _this.roleB = 'resp';
+                _this.multiA = false,
+                    _this.multiB = false;
+                return _this;
+            }
+            PullMedium.prototype.inductA = function (token, a) {
+            };
+            PullMedium.prototype.inductB = function (token, b) {
+            };
+            PullMedium.prototype.connect = function (link) {
+                this.matrix.to[link.tokenA][link.tokenB].roleA.request = link.roleB.response;
+            };
+            PullMedium.prototype.disconnect = function (link) {
+                this.matrix.to[link.tokenA][link.tokenB].roleA.request = undefined;
+                _super.prototype.disconnect.call(this, link);
+            };
+            return PullMedium;
+        }(IO.BaseMedium));
+        IO.PullMedium = PullMedium;
+        IO.mediaConstructors['req->resp'] = PullMedium;
     })(IO = Jungle.IO || (Jungle.IO = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
@@ -1487,6 +1537,42 @@ var Jungle;
             return PortCrux;
         }(IO.Crux));
         IO.PortCrux = PortCrux;
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var IO;
+    (function (IO) {
+        var PushMedium = (function (_super) {
+            __extends(PushMedium, _super);
+            function PushMedium(spec) {
+                var _this = _super.call(this, spec) || this;
+                _this.roleA = 'source';
+                _this.roleB = 'sink';
+                return _this;
+            }
+            PushMedium.prototype.distribute = function (sourceToken, data) {
+                for (var sinkToken in this.matrix.to[sourceToken]) {
+                    var outrole = this.matrix.to[sourceToken][sinkToken].roleB;
+                    outrole.put(data);
+                }
+            };
+            PushMedium.prototype.inductA = function (token, a) {
+                a.callout = this.distribute.bind(this, token);
+            };
+            PushMedium.prototype.inductB = function (token, b) {
+            };
+            PushMedium.prototype.connect = function (link) {
+                this.matrix.to[link.tokenA][link.tokenB].outhook = link.roleB;
+            };
+            PushMedium.prototype.disconnect = function (link) {
+                _super.prototype.disconnect.call(this, link);
+                link.roleA.callout = undefined;
+            };
+            return PushMedium;
+        }(IO.BaseMedium));
+        IO.PushMedium = PushMedium;
+        IO.mediaConstructors['source->sink'] = PushMedium;
     })(IO = Jungle.IO || (Jungle.IO = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
@@ -2964,17 +3050,17 @@ var Jungle;
             Crumb.prototype.dump = function () {
                 return "\n" + (this.message !== undefined ? "Error: " + this.message : '') + "\n\nCrumb Trail(most recent at top):\n" + this.traceback(this.options.traceDepth) + "                ";
             };
-            Crumb.prototype.describe = function () {
-                return "* " + this.options.header + ": " + this.label + (this.position !== undefined ? "\n|    at: " + this.position : '') + (this.location !== undefined ? "\n|    within: " + this.location : '');
-            };
             Crumb.prototype.traceback = function (depth) {
                 if (depth === void 0) { depth = -1; }
                 if (this.previous !== undefined && (depth > 0 || depth === -1)) {
-                    return "\n" + this.describe() + "\n|\n" + this.previous.traceback(depth - 1) + "\n                    ";
+                    return "\n" + this.describe() + "\n|\n" + this.previous.traceback(depth === -1 ? depth : depth - 1) + "\n";
                 }
                 else {
                     return this.describe();
                 }
+            };
+            Crumb.prototype.describe = function () {
+                return "* " + this.options.header + ": " + this.label + (this.position !== undefined ? "\n|    at stage: " + this.position : '') + (this.location !== undefined ? "\n|    within location: " + this.location : '') + (this.situation !== undefined ? "\n|    as situation: " + this.situation : '') + (this.data !== undefined ? "\n|    with data: " + this.data : '');
             };
             Crumb.prototype.catch = function (callback) {
                 this.catchCallback = callback;
@@ -3005,7 +3091,7 @@ var Jungle;
             header: "Crumb",
             traceDepth: -1,
             debug: false,
-            log: undefined,
+            log: console,
             format: function (x) { return x; },
             with: undefined,
             at: undefined,

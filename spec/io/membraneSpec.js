@@ -3,7 +3,7 @@ let Jungle = require('../../dist/jungle.js');
 let {Membrane, PortCrux, Crux} = Jungle.IO;
 let TestHost = require('../helpers/testHost.js')
 
-describe('basic membrane', function(){
+fdescribe('basic membrane', function(){
 
     let memb, host;
 
@@ -137,7 +137,7 @@ describe('basic membrane', function(){
                 let scanCollection = []
 
                 for(let arglist of allArgs){
-                    if(allArgs[tokenArgNumber] === token){
+                    if(arglist[tokenArgNumber] === token){
                         scanCollection.push(arglist);
                     }
                 }
@@ -156,7 +156,7 @@ describe('basic membrane', function(){
 
             it('should notify when a sub membrane has a crux added',function(){
                 console.log(additions)
-                expect(scanForToken(additions, 'sub:a/sink', 2))[0][0].toBe(subhost.roles.sink.a)
+                expect(scanForToken(additions, 'sub:a/sink', 2)[0][0]).toBe(subhost.primary.roles.sink.a)
             });
 
             it('should notify me when a membrane is added',function(){

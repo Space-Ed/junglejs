@@ -1,25 +1,6 @@
 namespace Jungle {
     export namespace IO {
 
-        export enum LINK_FILTERS {
-            PROCEED, DECEED, ELSEWHERE, NONE
-        }
-
-        export interface ILinkRule {
-            designatorA:CruxDesignator;
-            designatorB:CruxDesignator;
-            closeSource:boolean;
-            closeSink:boolean;
-            matching:boolean;
-            propogation:LINK_FILTERS;
-        }
-
-        export interface IMeshInitialiser {
-            membranes:any,
-            rules:any,
-            exposed:any
-        }
-
         /**
          * A multimedia connections manager with updating
          */
@@ -47,8 +28,7 @@ namespace Jungle {
                 }
 
                 for (let mediakey in initArgs.rules){
-                    //Check there is an over creation of media?
-
+                    //Check there is an over creation of
                     let newMedium = new mediaConstructors[mediakey]({label:mediakey, exposed:this.exposed})
                     this.addMedium(mediakey, newMedium)
                     this.parseRules(initArgs.rules[mediakey], mediakey, newMedium);
@@ -95,16 +75,13 @@ namespace Jungle {
              * Rule must be applied to existing contacts, .
              */
             addRule(rule:ILinkRule, mediumkey:string, medium:IMedium<any,any>){
-                console.log(rule)
                 this.rules[mediumkey].push(rule);
                 let dA = this.primary.tokenDesignate(rule.designatorA);
                 let dB = this.primary.tokenDesignate(rule.designatorB);
-                this.designateCheckConnect(dA, dB, medium)
+                this.designateCheckConnect(rule, dA, dB, medium)
             }
 
-            designateCheckConnect(desigA:Object, desigB:Object, medium:IMedium<any,any>){
-
-                console.log(`dA: ${desigA}, dB: ${desigB}`)
+            designateCheckConnect(rule:ILinkRule, desigA:Object, desigB:Object, medium:IMedium<any,any>){
                 for(let tokenA in desigA){
                     let designatedA = desigA[tokenA];
 
@@ -128,7 +105,12 @@ namespace Jungle {
                             }
                         }
 
-                        medium.suppose(link)
+                        console.log(designatedA.label, " , " ,designatedB.label)
+
+                        if(!rule.matching || (designatedA.label === designatedB.label)){
+                            medium.suppose(link)
+                        }
+
                     }
                 }
 
@@ -145,7 +127,7 @@ namespace Jungle {
                         if(Membrane.tokenDesignatedBy(token, rule.designatorA)){
                             let dB = this.primary.tokenDesignate(rule.designatorB)
                             let dA = {}; dA[token] = crux;
-                            this.designateCheckConnect(dA, dB, medium);
+                            this.designateCheckConnect(rule, dA, dB, medium);
                         }
                     }
                 }else if(role === medium.roleB){
@@ -153,7 +135,7 @@ namespace Jungle {
                         if(Membrane.tokenDesignatedBy(token, rule.designatorB)){
                             let dA = this.primary.tokenDesignate(rule.designatorA);
                             let dB = {}; dB[token] = crux;
-                            this.designateCheckConnect(dA, dB, medium);
+                            this.designateCheckConnect(rule, dA, dB, medium);
                         }
                     }
                 }else{
@@ -166,6 +148,7 @@ namespace Jungle {
                 let location:IMedium<any,any> = this.media[this.roleToMedia[role]]
 
                 if(role === location.roleA){
+                    console.log('remove crux: ', crux, ' , token:', token)
                     location.breakA(token, role)
                 }else if (role === location.roleB){
                     location.breakB(token, role)

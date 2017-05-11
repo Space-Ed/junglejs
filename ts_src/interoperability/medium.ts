@@ -76,9 +76,20 @@ namespace Jungle {
                 }
             }
 
+            check(link: ILinkSpec<A,B>){
+                //check fan out
+
+                if(link.directed){
+                    return (this.multiA || ( this.matrix.to[link.tokenA]==undefined)||this.matrix.to[link.tokenA][link.tokenB] === undefined)&&
+                    (this.multiB || (this.matrix.from[link.tokenB]== undefined)||this.matrix.from[link.tokenB][link.tokenA] === undefined)
+                }else{
+                    return (this.multiA || this.matrix.sym[link.tokenA][link.tokenB] === undefined)&&
+                    (this.multiB || this.matrix.sym[link.tokenB][link.tokenA] === undefined)
+                }
+            };
+
             abstract inductA(token:string, a:A);
             abstract inductB(token:string, b:B);
-            abstract check(supposedLink: ILinkSpec<A,B>);
             abstract connect(link: ILinkSpec<A,B>);
 
             disconnect(link: ILinkSpec<A,B>){
@@ -92,48 +103,9 @@ namespace Jungle {
 
         }
 
-        export class PushMedium extends BaseMedium<SourceRole,SinkRole> {
-            roleA:string;
-            roleB:string;
 
-            constructor(spec:IMediumSpec){
-                super(spec);
 
-                this.roleA = 'source'
-                this.roleB = 'sink'
-            }
-
-            distribute(sourceToken:string, data:any){
-                for(let sinkToken in this.matrix.to[sourceToken]){
-                    let outrole = this.matrix.to[sourceToken][sinkToken].roleB
-                    outrole.put(data)
-                }
-            }
-
-            inductA(token:string, a:SourceRole){
-                a.callout = this.distribute.bind(this, token)
-            }
-
-            inductB(token:string, b:SinkRole){
-            }
-
-            check(supposedLink: ILinkSpec<SourceRole, SinkRole>){
-                return true
-            }
-
-            connect(link: ILinkSpec<SourceRole, SinkRole>){
-                this.matrix.to[link.tokenA][link.tokenB].outhook = link.roleB
-            }
-
-            disconnect(link: ILinkSpec<SourceRole, SinkRole>){
-                super.disconnect(link)
-                link.roleA.callout = undefined;
-            }
-        }
-
-        export const mediaConstructors = {
-            'source->sink':PushMedium
-        }
+        export const mediaConstructors = { }
 
     }
 }

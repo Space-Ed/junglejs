@@ -4,7 +4,7 @@ let {Membrane, PortCrux, Crux, RuleMesh} = Jungle.IO;
 let TestHost = require('../helpers/testHost.js')
 
 
-fdescribe('The Mesh Host', function () {
+describe('The Mesh Host', function () {
 
     let host, memb, exposed, mesh, portA, portB, roleA, roleB;
 
@@ -46,7 +46,7 @@ fdescribe('The Mesh Host', function () {
         expect(outspy).toHaveBeenCalledWith("Hello?")
     });
 
-    fit('Should successfully disconnect when one is removed', function(){
+    it('Should successfully disconnect when one is removed', function(){
 
         memb.removeCrux(portB, 'sink')
 
@@ -55,7 +55,7 @@ fdescribe('The Mesh Host', function () {
 
     })
 
-    fit('should gracefully connect to an added membrane',function () {
+    it('should gracefully connect to an added membrane',function () {
         let h2 = new TestHost();
         h2.populate(['_b']);
         let m2 = h2.primary;
@@ -78,6 +78,70 @@ fdescribe('The Mesh Host', function () {
     })
 
     it("should gracefully drop connections when subrane disappears", function () {
+        let h2 = new TestHost();
+        h2.populate(['_b']);
+        let m2 = h2.primary;
+        let pB2 = m2.roles.sink.b;
 
-    });
+        let h3 = new TestHost();
+        h3.populate(['a_']);
+        let m3 = h3.primary;
+        let pA3 = m3.roles.source.a;
+
+
+        mesh.primary.addSubrane(m2, "m2");
+        mesh.primary.addSubrane(m3, "m3");
+        mesh.primary.removeSubrane('m');
+
+        console.log(mesh.media['source->sink'].matrix.from)
+
+        expect(mesh.media['source->sink'].matrix.from['m2:b/sink']['m:a/source']).toBeUndefined();
+        expect(mesh.media['source->sink'].matrix.to['m3:a/source']['m:b/sink']).toBeUndefined();
+
+    })
+
+    it('should allow match connection', function(){
+        let h2 = new TestHost();
+        h2.populate(['_a', 'b_']);
+        let m2 = h2.primary;
+        let portB2 = m2.roles.source.b;
+        let portA2 = m2.roles.sink.a;
+
+        mesh.primary.removeSubrane('m')
+
+        mesh = new RuleMesh({
+            membranes:{
+                m1:memb,
+                m2:m2
+            },
+            exposed:exposed,
+            rules:{
+                'source->sink':[
+                    'm1:*=>m2:*',
+                    'm2:*=>m1:*'
+                ]
+            }
+        })
+
+        let outspy = jasmine.createSpy("1");
+        portB.roles.source.callout = outspy;
+
+        let outspy2 = jasmine.createSpy("2");
+        portA2.roles.source.callout = outspy2;
+
+        //each calls the corresponding and not the other a -> a2, b2 -> b
+
+        portA.roles.sink.put("Hello?");
+        expect(outspy).not.toHaveBeenCalledWith("Hello?")
+        expect(outspy2).toHaveBeenCalledWith("Hello?")
+
+        outspy.calls.reset();
+        outspy2.calls.reset();
+
+        portB2.roles.sink.put("Hola?");
+        expect(outspy).toHaveBeenCalledWith("Hola?")
+        expect(outspy2).not.toHaveBeenCalledWith("Hola?")
+
+
+    })
 })
