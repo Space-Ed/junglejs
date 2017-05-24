@@ -830,6 +830,529 @@ var Jungle;
 })(Jungle || (Jungle = {}));
 var Jungle;
 (function (Jungle) {
+    var Inv;
+    (function (Inv) {
+        function retract(obj, arg) {
+            return arg;
+        }
+        Inv.retract = retract;
+    })(Inv = Jungle.Inv || (Jungle.Inv = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var Inv;
+    (function (Inv) {
+        function selectNone() {
+            return [];
+        }
+        Inv.selectNone = selectNone;
+    })(Inv = Jungle.Inv || (Jungle.Inv = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var Inv;
+    (function (Inv) {
+        function pass(x) {
+            return x;
+        }
+        Inv.pass = pass;
+        function abstain(x) {
+        }
+        Inv.abstain = abstain;
+    })(Inv = Jungle.Inv || (Jungle.Inv = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var LinkCell = (function (_super) {
+        __extends(LinkCell, _super);
+        function LinkCell(crown, formspec) {
+            var _this = _super.call(this, crown, formspec) || this;
+            _this.kind = "Link";
+            return _this;
+        }
+        LinkCell.prototype.constructCore = function (crown, form) {
+            return new LinkCell(crown, form);
+        };
+        LinkCell.prototype.constructIO = function (iospec) {
+            return new Jungle.IO.LinkIO(this, iospec);
+        };
+        LinkCell.prototype.constructForm = function () {
+            return new Jungle.LinkForm(this);
+        };
+        LinkCell.prototype.prepareChild = function (prepargs, handle, child, k) {
+            var mergekey = k === undefined ? false : k;
+            if (child instanceof Jungle.BaseCell) {
+                var replica = child.replicate();
+                replica.setParent(this, k);
+                var prep = replica.prepare(prepargs);
+                var aftershell = new Jungle.Util.Junction().merge(prep, false).then(function (preparedReplica) {
+                    preparedReplica.enshell();
+                    return preparedReplica;
+                }, false);
+                handle.merge(aftershell, mergekey);
+            }
+            else {
+                handle.merge(child, mergekey);
+            }
+        };
+        LinkCell.prototype.completePrepare = function () {
+            this.prepared = true;
+            this.enshell();
+        };
+        LinkCell.prototype.resolve = function (resarg) {
+            var called = false;
+            var result;
+            var cachecb = this.io.shell.sources.$.callback;
+            this.io.shell.sources.$.callback = function (output) {
+                called = true;
+                result = output;
+            };
+            this.io.shell.sinks.$.handle(resarg);
+            this.io.shell.sources.$.callback = cachecb;
+            if (called) {
+                this.io.shell.sources.$.handle(result);
+            }
+            return result;
+        };
+        return LinkCell;
+    }(Jungle.BaseCell));
+    Jungle.LinkCell = LinkCell;
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var LinkForm = (function (_super) {
+        __extends(LinkForm, _super);
+        function LinkForm() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        LinkForm.prototype.parse = function (formObj) {
+            var ctxdeclare = formObj.x || "";
+            this.preparator = formObj.p || function (x) { };
+            var links = formObj.link || [];
+            var linkf = formObj.lf || function (a, b) { };
+            var context = {};
+            var specialInHook;
+            var specialOutHook;
+            var portlabels = this.parsePorts(formObj.port || []);
+            var labels = {};
+            var contextprops = [];
+            var linkPropRegex = /^[a-zA-Z](?:\w*[a-zA-Z])?$/;
+            for (var k in formObj) {
+                if (Jungle.GForm.RFormProps.indexOf(k) > -1)
+                    continue;
+                if (k.match(linkPropRegex)) {
+                    contextprops.push({ key: k, type: Jungle.CTXPropertyTypes.NORMAL, value: formObj[k] });
+                }
+                else {
+                    throw new Error("Invalid property for link context, use ports");
+                }
+            }
+            return { iospec: { ports: portlabels, links: links, linkFunciton: linkf }, contextspec: { properties: contextprops, declaration: ctxdeclare } };
+        };
+        return LinkForm;
+    }(Jungle.BaseForm));
+    Jungle.LinkForm = LinkForm;
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var IO;
+    (function (IO) {
+        var LINK_FILTERS;
+        (function (LINK_FILTERS) {
+            LINK_FILTERS[LINK_FILTERS["PROCEED"] = 0] = "PROCEED";
+            LINK_FILTERS[LINK_FILTERS["DECEED"] = 1] = "DECEED";
+            LINK_FILTERS[LINK_FILTERS["ELSEWHERE"] = 2] = "ELSEWHERE";
+            LINK_FILTERS[LINK_FILTERS["NONE"] = 3] = "NONE";
+        })(LINK_FILTERS || (LINK_FILTERS = {}));
+        var LinkIO = (function (_super) {
+            __extends(LinkIO, _super);
+            function LinkIO(host, spec) {
+                var _this = _super.call(this, host, spec) || this;
+                _this.links = spec.links;
+                _this.ports = spec.ports;
+                _this.linkmap = {};
+                _this.linker = spec.linkFunciton;
+                _this.emmissionGate = new Jungle.Util.Junction();
+                _this.closed = { sinks: [], sources: [] };
+                _this.shell = new IO.BaseShell(_this, _this.ports);
+                _this.lining = _this.shell.invert();
+                return _this;
+            }
+            LinkIO.prototype.enshell = function () {
+                this.innerDress();
+                this.applyLinks();
+                this.hostAlias();
+                return this.shell;
+            };
+            ;
+            LinkIO.prototype.innerDress = function () {
+                var _this = this;
+                Jungle.Util.typeCaseSplitF(function (item, key) {
+                    var cellSources = item.io.shell.sources;
+                    var cellLinkMap = [];
+                    for (var q in cellSources) {
+                        var source = cellSources[q];
+                        cellLinkMap[q] = [];
+                        source.callback = _this.follow.bind(_this, key, source);
+                    }
+                    _this.linkmap[key === undefined ? "undefined" : key] = cellLinkMap;
+                })(this.host.crown);
+                this.linkmap['_'] = {};
+                for (var q in this.lining.sources) {
+                    var source = this.lining.sources[q];
+                    this.linkmap["_"][q] = [];
+                    source.callback = this.follow.bind(this, '_', source);
+                }
+            };
+            LinkIO.prototype.applyLinks = function () {
+                for (var _i = 0, _a = this.links; _i < _a.length; _i++) {
+                    var link = _a[_i];
+                    var linkir = this.parseLink(link);
+                    this.interpretLink(linkir);
+                }
+            };
+            LinkIO.prototype.parseLink = function (link) {
+                var m = link.match(/(\w+|\*)(?:\.(\w+|\*|\$))?(\|?)(<?)([\+\-\!]?)([=\-])(>{1,2})(\|?)(\w+|\*)(?:\.(\w+|\*|\$))?/);
+                if (!m) {
+                    throw new Error("Unable to parse link description, expression " + link + " did not match regex");
+                }
+                ;
+                var match = m[0], srcCell = m[1], srcPort = m[2], srcClose = m[3], viceVersa = m[4], filter = m[5], matching = m[6], persistent = m[7], snkClose = m[8], snkCell = m[9], snkPort = m[10];
+                var srcDesig = {
+                    direction: IO.Orientation.OUTPUT,
+                    type: (srcPort == '*') ? IO.DesignationTypes.ALL : IO.DesignationTypes.MATCH,
+                    data: (!srcPort ? '$' : srcPort)
+                };
+                var snkDesig = {
+                    direction: IO.Orientation.INPUT,
+                    type: (snkPort == '*') ? IO.DesignationTypes.ALL : IO.DesignationTypes.MATCH,
+                    data: (!snkPort ? '$' : snkPort)
+                };
+                return {
+                    sourceCell: srcCell,
+                    sourcePort: srcDesig,
+                    sinkCell: snkCell,
+                    sinkPort: snkDesig,
+                    closeSource: srcClose === '|',
+                    closeSink: snkClose === '|',
+                    persistent: false,
+                    matching: matching === "=",
+                    propogation: filter !== '' ? { '+': LINK_FILTERS.PROCEED, '-': LINK_FILTERS.DECEED, '!': LINK_FILTERS.ELSEWHERE }[filter] : LINK_FILTERS.NONE
+                };
+            };
+            LinkIO.prototype.interpretLink = function (linkspec) {
+                var sourceShells = {};
+                var sinkShells = {};
+                var sourceShellLabels = [];
+                var sinkShellLabels = [];
+                if (linkspec.sourceCell === "*") {
+                    sourceShells = Jungle.Util.mapObject(this.host.crown, function (k, src) { sourceShellLabels.push(k); return src.io.shell; });
+                }
+                else if (linkspec.sourceCell === '_') {
+                    sourceShells['_'] = this.host.io.lining;
+                    sourceShellLabels = ['_'];
+                }
+                else if (linkspec.sourceCell in this.host.crown) {
+                    sourceShells[linkspec.sourceCell] = this.host.crown[linkspec.sourceCell].io.shell;
+                    sourceShellLabels = [linkspec.sourceCell];
+                }
+                if (linkspec.sinkCell === "*") {
+                    sinkShells = Jungle.Util.mapObject(this.host.crown, function (k, src) { sinkShellLabels.push(k); return src.io.shell; });
+                }
+                else if (linkspec.sinkCell === '_') {
+                    sinkShells['_'] = this.host.io.lining;
+                    sinkShellLabels = ['_'];
+                }
+                else if (linkspec.sinkCell in this.host.crown) {
+                    sinkShells[linkspec.sinkCell] = this.host.crown[linkspec.sinkCell].io.shell;
+                    sinkShellLabels = [linkspec.sinkCell];
+                }
+                for (var _i = 0, sourceShellLabels_1 = sourceShellLabels; _i < sourceShellLabels_1.length; _i++) {
+                    var sourceLb = sourceShellLabels_1[_i];
+                    for (var _a = 0, sinkShellLabels_1 = sinkShellLabels; _a < sinkShellLabels_1.length; _a++) {
+                        var sinkLb = sinkShellLabels_1[_a];
+                        var sourcePorts = sourceShells[sourceLb].designate(linkspec.sourcePort);
+                        var sinkPorts = sinkShells[sinkLb].designate(linkspec.sinkPort);
+                        for (var _b = 0, sourcePorts_1 = sourcePorts; _b < sourcePorts_1.length; _b++) {
+                            var sourceP = sourcePorts_1[_b];
+                            for (var _c = 0, sinkPorts_1 = sinkPorts; _c < sinkPorts_1.length; _c++) {
+                                var sinkP = sinkPorts_1[_c];
+                                if (this.checkLink(linkspec, sourceLb, sinkLb, sourceP, sinkP)) {
+                                    this.forgeLink(linkspec, sourceLb, sinkLb, sourceP, sinkP);
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            LinkIO.prototype.checkLink = function (linkspec, sourceCellLabel, sinkCellLabel, sourceP, sinkP) {
+                var matched = (!linkspec.matching || sourceP.label === sinkP.label), openSource = (this.closed.sources.indexOf(sourceCellLabel) === -1), openSink = this.closed.sinks.indexOf(sinkCellLabel) === -1, unfiltered = this.filterCheck(sourceCellLabel, sinkCellLabel, linkspec);
+                return matched && openSource && openSink && unfiltered;
+            };
+            LinkIO.prototype.filterCheck = function (sourceLabel, sinkLabel, linkspec) {
+                var srcnum = Number(sourceLabel), snknum = Number(sinkLabel);
+                if (!isNaN(srcnum) && !isNaN(snknum) && linkspec.propogation != LINK_FILTERS.NONE) {
+                    if (linkspec.propogation == LINK_FILTERS.PROCEED) {
+                        return srcnum === snknum - 1;
+                    }
+                    else if (linkspec.propogation == LINK_FILTERS.DECEED) {
+                        return srcnum === snknum + 1;
+                    }
+                    else {
+                        return srcnum !== snknum;
+                    }
+                }
+                else {
+                    if (linkspec.propogation == LINK_FILTERS.ELSEWHERE) {
+                        return sourceLabel !== sinkLabel;
+                    }
+                    else {
+                        return true;
+                    }
+                }
+            };
+            LinkIO.prototype.forgeLink = function (linkspec, sourceCell, sinkCell, sourcePort, sinkPort) {
+                this.linkmap[sourceCell][sourcePort.label].push(sinkPort);
+                this.linker.call(this.host.ctx.exposed, sourcePort.hostctx(), sinkPort.hostctx(), sourcePort.label, sinkPort.label);
+                if (linkspec.closeSink) {
+                    this.closed.sinks.push(sinkCell);
+                }
+                if (linkspec.closeSource) {
+                    this.closed.sources.push(sourceCell);
+                }
+            };
+            LinkIO.prototype.follow = function (sourceCell, source, throughput) {
+                var targeted = this.linkmap[sourceCell][source.label];
+                this.emmissionGate.then(function (result, handle) {
+                    for (var _i = 0, targeted_1 = targeted; _i < targeted_1.length; _i++) {
+                        var sink = targeted_1[_i];
+                        sink.handle(throughput);
+                    }
+                });
+            };
+            LinkIO.prototype.prepare = function (parg) {
+            };
+            ;
+            LinkIO.prototype.extract = function () {
+                return {
+                    port: this.shell.extractPorts(),
+                    link: this.links,
+                    lf: this.linker
+                };
+            };
+            return LinkIO;
+        }(IO.BaseIO));
+        IO.LinkIO = LinkIO;
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+(function () {
+    var root = this;
+    var define = define || undefined;
+    if (typeof exports !== 'undefined') {
+        if (typeof module !== 'undefined' && module.exports) {
+            exports = module.exports = Jungle;
+        }
+        exports.Jungle = Jungle;
+    }
+    else if (typeof define !== 'undefined' && define.amd) {
+        define('Jungle', (function () { return root.Jungle = Jungle; })());
+    }
+    else {
+        root.Jungle = Jungle;
+    }
+}).call(this);
+var Jungle;
+(function (Jungle) {
+    var Nova;
+    (function (Nova) {
+        var Construct = (function () {
+            function Construct(spec) {
+                this.cache = spec;
+                this.alive = false;
+            }
+            Construct.isConstructSpec = function (construct) {
+                return "basis" in construct && "patch" in construct;
+            };
+            Construct.prototype.induct = function (host, key) {
+                this.parent = host;
+                this.domain = host.domain.locateDomain(this.cache.locator || "");
+            };
+            ;
+            Construct.prototype.extend = function (patch) {
+                var ext = Jungle.Util.B()
+                    .init(this.extract())
+                    .merge({ patch: patch })
+                    .dump();
+                return this.domain.recover(ext);
+            };
+            return Construct;
+        }());
+        Nova.Construct = Construct;
+    })(Nova = Jungle.Nova || (Jungle.Nova = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var Nova;
+    (function (Nova) {
+        var Domain = (function () {
+            function Domain() {
+                this.registry = {};
+                this.subdomain = {};
+            }
+            Domain.prototype.branch = function (key) {
+                this.subdomain[key] = new Domain();
+                return this.subdomain[key];
+            };
+            Domain.prototype.register = function (key, construct) {
+                if (key in this.registry) {
+                    throw new Error("Domain cannot contain duplicates \"" + key + "\" is already registered");
+                }
+                else {
+                    this.registry[key] = construct;
+                }
+            };
+            Domain.prototype.locateDomain = function (dotpath) {
+                if (dotpath.match(/^(?:[\w\$]+\.)*(?:[\w\$]+)$/)) {
+                    var subdomains = dotpath.split(/\./);
+                    var ns = this;
+                    for (var _i = 0, subdomains_1 = subdomains; _i < subdomains_1.length; _i++) {
+                        var spacederef = subdomains_1[_i];
+                        if (spacederef in this.subdomain) {
+                            ns = this.subdomain[spacederef];
+                        }
+                        else {
+                            throw new Error("Unable to locate Domain of basis");
+                        }
+                    }
+                    return ns;
+                }
+                else {
+                    throw new Error("invalid dotpath syntax: " + dotpath);
+                }
+            };
+            Domain.prototype.recover = function (construct) {
+                var basis = this.locateDomain(construct.locator).registry[construct.basis];
+                if (basis instanceof Function) {
+                    var seed = new basis(construct.patch, this, construct.locator);
+                    return seed;
+                }
+                else if (basis instanceof Nova.Construct) {
+                    return basis.extend(construct.patch);
+                }
+                else if (Nova.Construct.isConstructSpec(basis)) {
+                    this.recover(basis).extend(construct.patch);
+                }
+                else {
+                    throw new Error("Unable to recover construct");
+                }
+            };
+            return Domain;
+        }());
+        Nova.Domain = Domain;
+    })(Nova = Jungle.Nova || (Jungle.Nova = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var Nova;
+    (function (Nova) {
+        var Composite = (function (_super) {
+            __extends(Composite, _super);
+            function Composite(spec) {
+                var _this = _super.call(this, spec) || this;
+                _this.crown = {};
+                return _this;
+            }
+            Composite.prototype.prime = function () {
+                this.alive = true;
+                for (var k in this.cache.patch) {
+                    var v = this.cache.patch[k];
+                    this.add(k, v);
+                }
+            };
+            ;
+            Composite.prototype.add = function (k, v) {
+                this.cache[k] = v;
+                if (this.alive) {
+                    var spec = void 0;
+                    try {
+                        spec = Nova.normalise(k, v);
+                    }
+                    catch (e) {
+                        return;
+                    }
+                    var construct = this.domain.recover(spec);
+                    construct.induct(this, k);
+                    construct.prime();
+                }
+            };
+            Composite.prototype.remove = function (k) {
+                var removing = this.crown[k];
+                if (removing !== undefined) {
+                    var final = removing.dispose();
+                    delete this.crown[k];
+                    return final;
+                }
+            };
+            Composite.prototype.dispose = function () {
+                for (var key in this.crown) {
+                    var construct = this.crown[key];
+                    construct.dispose();
+                }
+            };
+            Composite.prototype.extract = function () {
+                var extracted = {};
+                for (var key in this.crown) {
+                    var construct = this.crown[key];
+                    extracted[key] = construct.extract();
+                }
+                return this.cache;
+            };
+            Composite.prototype.graft = function (patch) {
+            };
+            Composite.prototype.extend = function (patch) {
+                var ext = Jungle.Util.B()
+                    .init(this.extract())
+                    .merge({ patch: patch })
+                    .dump();
+                return this.domain.recover(ext);
+            };
+            return Composite;
+        }(Nova.Construct));
+        Nova.Composite = Composite;
+    })(Nova = Jungle.Nova || (Jungle.Nova = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var Nova;
+    (function (Nova) {
+        var Cell = (function (_super) {
+            __extends(Cell, _super);
+            function Cell(spec) {
+                return _super.call(this, spec) || this;
+            }
+            return Cell;
+        }(Nova.Composite));
+        Nova.Cell = Cell;
+    })(Nova = Jungle.Nova || (Jungle.Nova = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var Nova;
+    (function (Nova) {
+        var StateCell = (function (_super) {
+            __extends(StateCell, _super);
+            function StateCell() {
+                return _super !== null && _super.apply(this, arguments) || this;
+            }
+            StateCell.prototype.prime = function () {
+            };
+            return StateCell;
+        }(Nova.Composite));
+        Nova.StateCell = StateCell;
+    })(Nova = Jungle.Nova || (Jungle.Nova = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
     var IO;
     (function (IO) {
         var Crux = (function () {
@@ -864,10 +1387,219 @@ var Jungle;
             'source': 'sink',
             'sink': 'source',
             'master': 'slave',
-            'slave': 'master'
+            'slave': 'master',
+            'caller': 'called',
+            'called': 'caller'
         };
         IO.Crux = Crux;
     })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var IO;
+    (function (IO) {
+        var CallCrux = (function (_super) {
+            __extends(CallCrux, _super);
+            function CallCrux(spec) {
+                var _this = _super.call(this, spec.label) || this;
+                var capin, capout, reqfunc;
+                if (spec.hook === true) {
+                    capin = true;
+                    capout = false;
+                }
+                else if (spec.hook instanceof Function) {
+                    capout = true;
+                    capin = false;
+                    reqfunc = spec.hook;
+                }
+                _this.roles = {
+                    caller: {
+                        capped: capout,
+                        func: reqfunc
+                    }, called: {
+                        capped: capin,
+                        func: function (data, tracking) {
+                            var crumb;
+                            if (spec.tracking && tracking !== undefined) {
+                                crumb = tracking.drop("Caller Crux")
+                                    .with(data)
+                                    .at("crux-label:" + _this.label);
+                            }
+                            if (_this.roles.caller.func !== undefined) {
+                                if (crumb) {
+                                    return _this.roles.caller.func(data, crumb);
+                                }
+                                else {
+                                    return _this.roles.caller.func(data);
+                                }
+                            }
+                            else {
+                                if (tracking) {
+                                    tracking.raise("Called crux with no assigned caller, missing link");
+                                }
+                            }
+                        }
+                    }
+                };
+                return _this;
+            }
+            return CallCrux;
+        }(IO.Crux));
+        IO.CallCrux = CallCrux;
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var Nova;
+    (function (Nova) {
+        var CallHook = (function (_super) {
+            __extends(CallHook, _super);
+            function CallHook(spec) {
+                return _super.call(this, {
+                    basis: 'CallHook',
+                    patch: spec
+                }) || this;
+            }
+            CallHook.prototype.produceHook = function (host, key) {
+                var _this = this;
+                var _a = this.patch, hook = _a.hook, mode = _a.mode, contact = _a.contact;
+                var cruxHook;
+                var propVal;
+                var line;
+                if (hook instanceof Function) {
+                }
+                else if (Jungle.Util.isPrimative(hook)) {
+                }
+                else {
+                    if (mode == "push" && contact == "callin") {
+                        cruxHook = function (inp, crumb) {
+                            crumb.drop("Value Deposit Hook");
+                            host.nucleus[key] = inp;
+                        };
+                        propVal = this.patch.default;
+                    }
+                    else if (mode == "pull" && contact == "callin") {
+                        cruxHook = function (inp, crumb) {
+                            crumb.drop("Value Provider Hook");
+                            return host.nucleus[key];
+                        };
+                        propVal = this.patch.default;
+                    }
+                    else if (mode == "push" && contact == "callout" && this.patch.default !== undefined) {
+                        cruxHook = true;
+                        propVal = {
+                            set: function (value) {
+                                host.membranes[_this.patch.target].inversion.roles[_this.patch.contact][key].func(value);
+                                host.nucleus[key] = value;
+                            }, get: function () {
+                                return host.nucleus[key];
+                            },
+                            value: this.patch.default
+                        };
+                    }
+                    else if (mode == "push" && contact == "callout" && this.patch.default !== undefined) {
+                        cruxHook = true;
+                        propVal = {
+                            value: function (value) {
+                                host.membranes[_this.patch.target].inversion.roles[_this.patch.contact][key].func(value);
+                                host.nucleus[key] = value;
+                            }
+                        };
+                    }
+                    else if (mode == "push" && contact == "callout") {
+                        cruxHook = true;
+                        propVal = {
+                            get: function () {
+                                var promised = host.membranes[_this.patch.target].inversion.roles[_this.patch.contact][key].request(key);
+                                if (_this.patch.sync) {
+                                    var zalgo = promised.realize();
+                                    if (zalgo instanceof Jungle.Util.Junction) {
+                                        zalgo.then(function (result) {
+                                            _this.patch.default = result;
+                                        });
+                                        return _this.patch.default;
+                                    }
+                                    else {
+                                        return zalgo;
+                                    }
+                                }
+                                else {
+                                    return promised;
+                                }
+                            },
+                            value: this.patch.default
+                        };
+                    }
+                }
+                return {
+                    hook: cruxHook,
+                    sinker: propVal
+                };
+            };
+            CallHook.prototype.induct = function (host, key) {
+                var _a = this.produceHook(host, key), hook = _a.hook, sinker = _a.sinker;
+                var cruxargs = {
+                    label: key,
+                    hook: hook,
+                    tracking: true
+                };
+                this.crux = new Jungle.IO.CallCrux(cruxargs);
+                host.membranes[this.patch.target].addCrux(this.crux, this.patch.contact);
+                host.nucleus.define(key, sinker);
+            };
+            CallHook.prototype.prime = function () {
+            };
+            CallHook.prototype.graft = function (patch) {
+            };
+            CallHook.prototype.dispose = function () {
+            };
+            CallHook.prototype.extract = function () {
+                return {
+                    basis: this.cache.basis,
+                    patch: {
+                        target: this.patch.target,
+                        contact: this.patch.contact,
+                        mode: this.patch.mode,
+                        hook: this.patch.hook,
+                        default: this.parent.nucleus[this.crux.label],
+                        sync: this.patch.sync
+                    }
+                };
+            };
+            return CallHook;
+        }(Nova.Construct));
+        Nova.CallHook = CallHook;
+    })(Nova = Jungle.Nova || (Jungle.Nova = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var Nova;
+    (function (Nova) {
+        function normalise(key, value) {
+            if (Jungle.Util.isPrimative(value)) {
+                return {
+                    basis: 'primative',
+                    patch: value
+                };
+            }
+            else if (Jungle.Util.isVanillaObject(value)) {
+                return {
+                    basis: 'state',
+                    patch: value
+                };
+            }
+            else if (value instanceof Nova.Construct) {
+                return value.extract();
+            }
+            else if (Nova.Construct.isConstructSpec(value)) {
+                return value;
+            }
+            else {
+                throw new Error("Form property not normalisable");
+            }
+        }
+        Nova.normalise = normalise;
+    })(Nova = Jungle.Nova || (Jungle.Nova = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
 (function (Jungle) {
@@ -1406,64 +2138,68 @@ var Jungle;
 (function (Jungle) {
     var IO;
     (function (IO) {
-        var RequestCrux = (function (_super) {
-            __extends(RequestCrux, _super);
-            function RequestCrux(label) {
-                var _this = _super.call(this, label) || this;
-                _this.roles = {
-                    req: {
-                        request: undefined
-                    }, resp: {
-                        response: function (data, tracking) {
-                            var crumb = tracking.drop("Request Crux")
-                                .with(data)
-                                .at(_this.label);
-                            if (_this.roles.req.request != undefined) {
-                                return _this.roles.req.request(data, crumb);
-                            }
-                            else {
-                                tracking.raise("You didn't make it ");
-                            }
-                        }
-                    }
-                };
+        var DistributeMedium = (function (_super) {
+            __extends(DistributeMedium, _super);
+            function DistributeMedium(spec) {
+                var _this = _super.call(this, spec) || this;
+                _this.roleA = 'caller';
+                _this.roleB = 'called';
                 return _this;
             }
-            return RequestCrux;
-        }(IO.Crux));
-        IO.RequestCrux = RequestCrux;
+            DistributeMedium.prototype.distribute = function (sourceToken, data, crumb) {
+                for (var sinkToken in this.matrix.to[sourceToken]) {
+                    var source = this.matrix.to[sourceToken];
+                    var outrole = source[sinkToken].roleB;
+                    outrole.func(data, crumb);
+                }
+            };
+            DistributeMedium.prototype.inductA = function (token, a) {
+                a.func = this.distribute.bind(this, token);
+            };
+            DistributeMedium.prototype.inductB = function (token, b) {
+            };
+            DistributeMedium.prototype.connect = function (link) {
+            };
+            DistributeMedium.prototype.disconnect = function (link) {
+                _super.prototype.disconnect.call(this, link);
+                link.roleA.func = undefined;
+            };
+            return DistributeMedium;
+        }(IO.BaseMedium));
+        IO.DistributeMedium = DistributeMedium;
+        IO.mediaConstructors['distribute'] = DistributeMedium;
     })(IO = Jungle.IO || (Jungle.IO = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
 (function (Jungle) {
     var IO;
     (function (IO) {
-        var PullMedium = (function (_super) {
-            __extends(PullMedium, _super);
-            function PullMedium(spec) {
+        var InjectiveMedium = (function (_super) {
+            __extends(InjectiveMedium, _super);
+            function InjectiveMedium(spec) {
                 var _this = _super.call(this, spec) || this;
                 _this.exclusive = true;
-                _this.roleA = 'req';
-                _this.roleB = 'resp';
+                _this.roleA = 'caller';
+                _this.roleB = 'called';
                 _this.multiA = false,
                     _this.multiB = false;
                 return _this;
             }
-            PullMedium.prototype.inductA = function (token, a) {
+            InjectiveMedium.prototype.inductA = function (token, a) {
             };
-            PullMedium.prototype.inductB = function (token, b) {
+            InjectiveMedium.prototype.inductB = function (token, b) {
             };
-            PullMedium.prototype.connect = function (link) {
-                this.matrix.to[link.tokenA][link.tokenB].roleA.request = link.roleB.response;
+            InjectiveMedium.prototype.connect = function (link) {
+                this.matrix.to[link.tokenA][link.tokenB].roleA.func = link.roleB.func;
             };
-            PullMedium.prototype.disconnect = function (link) {
-                this.matrix.to[link.tokenA][link.tokenB].roleA.request = undefined;
+            InjectiveMedium.prototype.disconnect = function (link) {
+                this.matrix.to[link.tokenA][link.tokenB].roleA.func = undefined;
                 _super.prototype.disconnect.call(this, link);
             };
-            return PullMedium;
+            return InjectiveMedium;
         }(IO.BaseMedium));
-        IO.PullMedium = PullMedium;
-        IO.mediaConstructors['req->resp'] = PullMedium;
+        IO.InjectiveMedium = InjectiveMedium;
+        IO.mediaConstructors['inject'] = InjectiveMedium;
     })(IO = Jungle.IO || (Jungle.IO = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
@@ -1473,441 +2209,67 @@ var Jungle;
         var PortCrux = (function (_super) {
             __extends(PortCrux, _super);
             function PortCrux(label) {
-                var _this = _super.call(this, label) || this;
-                _this.roles = {
-                    sink: {
-                        put: function (data) {
-                            if (_this.roles.source.callout instanceof Function) {
-                                _this.roles.source.callout(data);
-                            }
-                        }
-                    },
-                    source: {
-                        callout: undefined
-                    }
-                };
+                var _this = _super.call(this, { label: label, tracking: true }) || this;
+                _this.roles.source = _this.roles.caller;
+                _this.roles.sink = _this.roles.called;
                 return _this;
             }
-            PortCrux.prototype.put = function (input, trace) {
-                this.roles.sink.put(input);
-            };
-            PortCrux.prototype.dress = function (coat) {
-                var context = this.prepareContext(coat.context);
-                var callout = this.prepareCallback(coat.callback);
-                if (callout) {
-                    var closure = void 0;
-                    if (context) {
-                        if (typeof (callout) == 'string') {
-                            var method = context[callout];
-                            if (method === undefined) {
-                                throw new Error("method must be accessible in provided context");
-                            }
-                            closure = method.bind(context);
-                        }
-                        else {
-                            closure = callout.bind(context);
-                        }
-                    }
-                    else {
-                        if (typeof (callout) == 'string') {
-                            throw new Error("method name can only be given with context");
-                        }
-                        closure = callout.bind(null);
-                    }
-                    this.roles.source.callout = closure;
-                }
-            };
-            PortCrux.prototype.prepareCallback = function (callout) {
-                if (!(typeof (callout) == 'string' || typeof (callout) == 'function')) {
-                    throw new Error('Callback must be method name or');
-                }
-                return callout;
-            };
-            PortCrux.prototype.prepareContext = function (outputContext) {
-                if (typeof (outputContext) == 'function') {
-                    return new outputContext(this);
-                }
-                else if (outputContext instanceof Object) {
-                    return outputContext;
-                }
-                else {
-                    throw Error("Invalid context fabrication, must be object or contructor");
-                }
-            };
+            ;
             return PortCrux;
-        }(IO.Crux));
+        }(IO.CallCrux));
         IO.PortCrux = PortCrux;
-    })(IO = Jungle.IO || (Jungle.IO = {}));
-})(Jungle || (Jungle = {}));
-var Jungle;
-(function (Jungle) {
-    var IO;
-    (function (IO) {
         var PushMedium = (function (_super) {
             __extends(PushMedium, _super);
-            function PushMedium(spec) {
-                var _this = _super.call(this, spec) || this;
-                _this.roleA = 'source';
-                _this.roleB = 'sink';
+            function PushMedium() {
+                var _this = _super !== null && _super.apply(this, arguments) || this;
+                _this.roleA = "source";
+                _this.roleB = "sink";
                 return _this;
             }
-            PushMedium.prototype.distribute = function (sourceToken, data) {
-                for (var sinkToken in this.matrix.to[sourceToken]) {
-                    var outrole = this.matrix.to[sourceToken][sinkToken].roleB;
-                    outrole.put(data);
-                }
-            };
-            PushMedium.prototype.inductA = function (token, a) {
-                a.callout = this.distribute.bind(this, token);
-            };
-            PushMedium.prototype.inductB = function (token, b) {
-            };
-            PushMedium.prototype.connect = function (link) {
-                this.matrix.to[link.tokenA][link.tokenB].outhook = link.roleB;
-            };
-            PushMedium.prototype.disconnect = function (link) {
-                _super.prototype.disconnect.call(this, link);
-                link.roleA.callout = undefined;
-            };
             return PushMedium;
-        }(IO.BaseMedium));
+        }(IO.DistributeMedium));
         IO.PushMedium = PushMedium;
         IO.mediaConstructors['source->sink'] = PushMedium;
     })(IO = Jungle.IO || (Jungle.IO = {}));
 })(Jungle || (Jungle = {}));
-var Jungle;
-(function (Jungle) {
-    var Inv;
-    (function (Inv) {
-        function retract(obj, arg) {
-            return arg;
-        }
-        Inv.retract = retract;
-    })(Inv = Jungle.Inv || (Jungle.Inv = {}));
-})(Jungle || (Jungle = {}));
-var Jungle;
-(function (Jungle) {
-    var Inv;
-    (function (Inv) {
-        function selectNone() {
-            return [];
-        }
-        Inv.selectNone = selectNone;
-    })(Inv = Jungle.Inv || (Jungle.Inv = {}));
-})(Jungle || (Jungle = {}));
-var Jungle;
-(function (Jungle) {
-    var Inv;
-    (function (Inv) {
-        function pass(x) {
-            return x;
-        }
-        Inv.pass = pass;
-        function abstain(x) {
-        }
-        Inv.abstain = abstain;
-    })(Inv = Jungle.Inv || (Jungle.Inv = {}));
-})(Jungle || (Jungle = {}));
-var Jungle;
-(function (Jungle) {
-    var LinkCell = (function (_super) {
-        __extends(LinkCell, _super);
-        function LinkCell(crown, formspec) {
-            var _this = _super.call(this, crown, formspec) || this;
-            _this.kind = "Link";
+var Test;
+(function (Test) {
+    var MockConstruct = (function (_super) {
+        __extends(MockConstruct, _super);
+        function MockConstruct(spec) {
+            var _this = _super.call(this, {
+                basis: "Mocked",
+                patch: {
+                    message: "Hello"
+                }
+            }) || this;
+            _this.state = _this.cache.patch;
+            _this.spies = jasmine.createSpyObj('mock-construct', [
+                'prime',
+                'dispose',
+                'extract',
+                'graft'
+            ]);
             return _this;
         }
-        LinkCell.prototype.constructCore = function (crown, form) {
-            return new LinkCell(crown, form);
+        MockConstruct.prototype.prime = function () {
+            this.spies.prime(this.state.message);
         };
-        LinkCell.prototype.constructIO = function (iospec) {
-            return new Jungle.IO.LinkIO(this, iospec);
+        MockConstruct.prototype.dispose = function () {
+            this.spies.dispose(this.state.message);
         };
-        LinkCell.prototype.constructForm = function () {
-            return new Jungle.LinkForm(this);
+        MockConstruct.prototype.extract = function () {
+            this.spies.extract(this.state.message);
+            return this.cache;
         };
-        LinkCell.prototype.prepareChild = function (prepargs, handle, child, k) {
-            var mergekey = k === undefined ? false : k;
-            if (child instanceof Jungle.BaseCell) {
-                var replica = child.replicate();
-                replica.setParent(this, k);
-                var prep = replica.prepare(prepargs);
-                var aftershell = new Jungle.Util.Junction().merge(prep, false).then(function (preparedReplica) {
-                    preparedReplica.enshell();
-                    return preparedReplica;
-                }, false);
-                handle.merge(aftershell, mergekey);
-            }
-            else {
-                handle.merge(child, mergekey);
-            }
+        MockConstruct.prototype.graft = function (patch) {
+            this.state.message = patch.message;
+            this.spies.graft(this.state.message);
         };
-        LinkCell.prototype.completePrepare = function () {
-            this.prepared = true;
-            this.enshell();
-        };
-        LinkCell.prototype.resolve = function (resarg) {
-            var called = false;
-            var result;
-            var cachecb = this.io.shell.sources.$.callback;
-            this.io.shell.sources.$.callback = function (output) {
-                called = true;
-                result = output;
-            };
-            this.io.shell.sinks.$.handle(resarg);
-            this.io.shell.sources.$.callback = cachecb;
-            if (called) {
-                this.io.shell.sources.$.handle(result);
-            }
-            return result;
-        };
-        return LinkCell;
-    }(Jungle.BaseCell));
-    Jungle.LinkCell = LinkCell;
-})(Jungle || (Jungle = {}));
-var Jungle;
-(function (Jungle) {
-    var LinkForm = (function (_super) {
-        __extends(LinkForm, _super);
-        function LinkForm() {
-            return _super !== null && _super.apply(this, arguments) || this;
-        }
-        LinkForm.prototype.parse = function (formObj) {
-            var ctxdeclare = formObj.x || "";
-            this.preparator = formObj.p || function (x) { };
-            var links = formObj.link || [];
-            var linkf = formObj.lf || function (a, b) { };
-            var context = {};
-            var specialInHook;
-            var specialOutHook;
-            var portlabels = this.parsePorts(formObj.port || []);
-            var labels = {};
-            var contextprops = [];
-            var linkPropRegex = /^[a-zA-Z](?:\w*[a-zA-Z])?$/;
-            for (var k in formObj) {
-                if (Jungle.GForm.RFormProps.indexOf(k) > -1)
-                    continue;
-                if (k.match(linkPropRegex)) {
-                    contextprops.push({ key: k, type: Jungle.CTXPropertyTypes.NORMAL, value: formObj[k] });
-                }
-                else {
-                    throw new Error("Invalid property for link context, use ports");
-                }
-            }
-            return { iospec: { ports: portlabels, links: links, linkFunciton: linkf }, contextspec: { properties: contextprops, declaration: ctxdeclare } };
-        };
-        return LinkForm;
-    }(Jungle.BaseForm));
-    Jungle.LinkForm = LinkForm;
-})(Jungle || (Jungle = {}));
-var Jungle;
-(function (Jungle) {
-    var IO;
-    (function (IO) {
-        var LINK_FILTERS;
-        (function (LINK_FILTERS) {
-            LINK_FILTERS[LINK_FILTERS["PROCEED"] = 0] = "PROCEED";
-            LINK_FILTERS[LINK_FILTERS["DECEED"] = 1] = "DECEED";
-            LINK_FILTERS[LINK_FILTERS["ELSEWHERE"] = 2] = "ELSEWHERE";
-            LINK_FILTERS[LINK_FILTERS["NONE"] = 3] = "NONE";
-        })(LINK_FILTERS || (LINK_FILTERS = {}));
-        var LinkIO = (function (_super) {
-            __extends(LinkIO, _super);
-            function LinkIO(host, spec) {
-                var _this = _super.call(this, host, spec) || this;
-                _this.links = spec.links;
-                _this.ports = spec.ports;
-                _this.linkmap = {};
-                _this.linker = spec.linkFunciton;
-                _this.emmissionGate = new Jungle.Util.Junction();
-                _this.closed = { sinks: [], sources: [] };
-                _this.shell = new IO.BaseShell(_this, _this.ports);
-                _this.lining = _this.shell.invert();
-                return _this;
-            }
-            LinkIO.prototype.enshell = function () {
-                this.innerDress();
-                this.applyLinks();
-                this.hostAlias();
-                return this.shell;
-            };
-            ;
-            LinkIO.prototype.innerDress = function () {
-                var _this = this;
-                Jungle.Util.typeCaseSplitF(function (item, key) {
-                    var cellSources = item.io.shell.sources;
-                    var cellLinkMap = [];
-                    for (var q in cellSources) {
-                        var source = cellSources[q];
-                        cellLinkMap[q] = [];
-                        source.callback = _this.follow.bind(_this, key, source);
-                    }
-                    _this.linkmap[key === undefined ? "undefined" : key] = cellLinkMap;
-                })(this.host.crown);
-                this.linkmap['_'] = {};
-                for (var q in this.lining.sources) {
-                    var source = this.lining.sources[q];
-                    this.linkmap["_"][q] = [];
-                    source.callback = this.follow.bind(this, '_', source);
-                }
-            };
-            LinkIO.prototype.applyLinks = function () {
-                for (var _i = 0, _a = this.links; _i < _a.length; _i++) {
-                    var link = _a[_i];
-                    var linkir = this.parseLink(link);
-                    this.interpretLink(linkir);
-                }
-            };
-            LinkIO.prototype.parseLink = function (link) {
-                var m = link.match(/(\w+|\*)(?:\.(\w+|\*|\$))?(\|?)(<?)([\+\-\!]?)([=\-])(>{1,2})(\|?)(\w+|\*)(?:\.(\w+|\*|\$))?/);
-                if (!m) {
-                    throw new Error("Unable to parse link description, expression " + link + " did not match regex");
-                }
-                ;
-                var match = m[0], srcCell = m[1], srcPort = m[2], srcClose = m[3], viceVersa = m[4], filter = m[5], matching = m[6], persistent = m[7], snkClose = m[8], snkCell = m[9], snkPort = m[10];
-                var srcDesig = {
-                    direction: IO.Orientation.OUTPUT,
-                    type: (srcPort == '*') ? IO.DesignationTypes.ALL : IO.DesignationTypes.MATCH,
-                    data: (!srcPort ? '$' : srcPort)
-                };
-                var snkDesig = {
-                    direction: IO.Orientation.INPUT,
-                    type: (snkPort == '*') ? IO.DesignationTypes.ALL : IO.DesignationTypes.MATCH,
-                    data: (!snkPort ? '$' : snkPort)
-                };
-                return {
-                    sourceCell: srcCell,
-                    sourcePort: srcDesig,
-                    sinkCell: snkCell,
-                    sinkPort: snkDesig,
-                    closeSource: srcClose === '|',
-                    closeSink: snkClose === '|',
-                    persistent: false,
-                    matching: matching === "=",
-                    propogation: filter !== '' ? { '+': LINK_FILTERS.PROCEED, '-': LINK_FILTERS.DECEED, '!': LINK_FILTERS.ELSEWHERE }[filter] : LINK_FILTERS.NONE
-                };
-            };
-            LinkIO.prototype.interpretLink = function (linkspec) {
-                var sourceShells = {};
-                var sinkShells = {};
-                var sourceShellLabels = [];
-                var sinkShellLabels = [];
-                if (linkspec.sourceCell === "*") {
-                    sourceShells = Jungle.Util.mapObject(this.host.crown, function (k, src) { sourceShellLabels.push(k); return src.io.shell; });
-                }
-                else if (linkspec.sourceCell === '_') {
-                    sourceShells['_'] = this.host.io.lining;
-                    sourceShellLabels = ['_'];
-                }
-                else if (linkspec.sourceCell in this.host.crown) {
-                    sourceShells[linkspec.sourceCell] = this.host.crown[linkspec.sourceCell].io.shell;
-                    sourceShellLabels = [linkspec.sourceCell];
-                }
-                if (linkspec.sinkCell === "*") {
-                    sinkShells = Jungle.Util.mapObject(this.host.crown, function (k, src) { sinkShellLabels.push(k); return src.io.shell; });
-                }
-                else if (linkspec.sinkCell === '_') {
-                    sinkShells['_'] = this.host.io.lining;
-                    sinkShellLabels = ['_'];
-                }
-                else if (linkspec.sinkCell in this.host.crown) {
-                    sinkShells[linkspec.sinkCell] = this.host.crown[linkspec.sinkCell].io.shell;
-                    sinkShellLabels = [linkspec.sinkCell];
-                }
-                for (var _i = 0, sourceShellLabels_1 = sourceShellLabels; _i < sourceShellLabels_1.length; _i++) {
-                    var sourceLb = sourceShellLabels_1[_i];
-                    for (var _a = 0, sinkShellLabels_1 = sinkShellLabels; _a < sinkShellLabels_1.length; _a++) {
-                        var sinkLb = sinkShellLabels_1[_a];
-                        var sourcePorts = sourceShells[sourceLb].designate(linkspec.sourcePort);
-                        var sinkPorts = sinkShells[sinkLb].designate(linkspec.sinkPort);
-                        for (var _b = 0, sourcePorts_1 = sourcePorts; _b < sourcePorts_1.length; _b++) {
-                            var sourceP = sourcePorts_1[_b];
-                            for (var _c = 0, sinkPorts_1 = sinkPorts; _c < sinkPorts_1.length; _c++) {
-                                var sinkP = sinkPorts_1[_c];
-                                if (this.checkLink(linkspec, sourceLb, sinkLb, sourceP, sinkP)) {
-                                    this.forgeLink(linkspec, sourceLb, sinkLb, sourceP, sinkP);
-                                }
-                            }
-                        }
-                    }
-                }
-            };
-            LinkIO.prototype.checkLink = function (linkspec, sourceCellLabel, sinkCellLabel, sourceP, sinkP) {
-                var matched = (!linkspec.matching || sourceP.label === sinkP.label), openSource = (this.closed.sources.indexOf(sourceCellLabel) === -1), openSink = this.closed.sinks.indexOf(sinkCellLabel) === -1, unfiltered = this.filterCheck(sourceCellLabel, sinkCellLabel, linkspec);
-                return matched && openSource && openSink && unfiltered;
-            };
-            LinkIO.prototype.filterCheck = function (sourceLabel, sinkLabel, linkspec) {
-                var srcnum = Number(sourceLabel), snknum = Number(sinkLabel);
-                if (!isNaN(srcnum) && !isNaN(snknum) && linkspec.propogation != LINK_FILTERS.NONE) {
-                    if (linkspec.propogation == LINK_FILTERS.PROCEED) {
-                        return srcnum === snknum - 1;
-                    }
-                    else if (linkspec.propogation == LINK_FILTERS.DECEED) {
-                        return srcnum === snknum + 1;
-                    }
-                    else {
-                        return srcnum !== snknum;
-                    }
-                }
-                else {
-                    if (linkspec.propogation == LINK_FILTERS.ELSEWHERE) {
-                        return sourceLabel !== sinkLabel;
-                    }
-                    else {
-                        return true;
-                    }
-                }
-            };
-            LinkIO.prototype.forgeLink = function (linkspec, sourceCell, sinkCell, sourcePort, sinkPort) {
-                this.linkmap[sourceCell][sourcePort.label].push(sinkPort);
-                this.linker.call(this.host.ctx.exposed, sourcePort.hostctx(), sinkPort.hostctx(), sourcePort.label, sinkPort.label);
-                if (linkspec.closeSink) {
-                    this.closed.sinks.push(sinkCell);
-                }
-                if (linkspec.closeSource) {
-                    this.closed.sources.push(sourceCell);
-                }
-            };
-            LinkIO.prototype.follow = function (sourceCell, source, throughput) {
-                var targeted = this.linkmap[sourceCell][source.label];
-                this.emmissionGate.then(function (result, handle) {
-                    for (var _i = 0, targeted_1 = targeted; _i < targeted_1.length; _i++) {
-                        var sink = targeted_1[_i];
-                        sink.handle(throughput);
-                    }
-                });
-            };
-            LinkIO.prototype.prepare = function (parg) {
-            };
-            ;
-            LinkIO.prototype.extract = function () {
-                return {
-                    port: this.shell.extractPorts(),
-                    link: this.links,
-                    lf: this.linker
-                };
-            };
-            return LinkIO;
-        }(IO.BaseIO));
-        IO.LinkIO = LinkIO;
-    })(IO = Jungle.IO || (Jungle.IO = {}));
-})(Jungle || (Jungle = {}));
-(function () {
-    var root = this;
-    var define = define || undefined;
-    if (typeof exports !== 'undefined') {
-        if (typeof module !== 'undefined' && module.exports) {
-            exports = module.exports = Jungle;
-        }
-        exports.Jungle = Jungle;
-    }
-    else if (typeof define !== 'undefined' && define.amd) {
-        define('Jungle', (function () { return root.Jungle = Jungle; })());
-    }
-    else {
-        root.Jungle = Jungle;
-    }
-}).call(this);
+        return MockConstruct;
+    }(Jungle.Nova.Construct));
+    Test.MockConstruct = MockConstruct;
+})(Test || (Test = {}));
 var Jungle;
 (function (Jungle) {
     var ObjectFunctionCache = (function () {

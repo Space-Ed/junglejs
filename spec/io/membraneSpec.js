@@ -1,9 +1,9 @@
 
 let Jungle = require('../../dist/jungle.js');
-let {Membrane, PortCrux, Crux} = Jungle.IO;
+let {Membrane, CallCrux, Crux, PortCrux} = Jungle.IO;
 let TestHost = require('../helpers/testHost.js')
 
-fdescribe('basic membrane', function(){
+describe('basic membrane', function(){
 
     let memb, host;
 
@@ -17,45 +17,44 @@ fdescribe('basic membrane', function(){
     })
 
     it('should allow addition and removal of ports', function(){
-        let newb = new PortCrux('sinkA');
-        let new2 = new PortCrux('source1')
+        let newb = new CallCrux({label: 'calledA'});
+        let new2 = new CallCrux({label: 'caller1'})
 
-        memb.addCrux(newb, 'sink');
-        memb.addCrux(new2, 'source');
+        memb.addCrux(newb, 'called');
+        memb.addCrux(new2, 'caller');
 
-        expect(memb.roles.sink.sinkA).toBe(newb);
-        expect(memb.roles.source.source1).toBe(new2);
+        expect(memb.roles.called.calledA).toBe(newb);
+        expect(memb.roles.caller.caller1).toBe(new2);
 
-        memb.removeCrux(newb, 'sink');
-        memb.removeCrux(new2, 'source');
+        memb.removeCrux(newb, 'called');
+        memb.removeCrux(new2, 'caller');
 
-        expect(memb.roles.sink.sinkA).toBeUndefined();
-        expect(memb.roles.sink.source1).toBeUndefined();
+        expect(memb.roles.called.calledA).toBeUndefined();
+        expect(memb.roles.caller.caller1).toBeUndefined();
     })
 
     describe('designation', function(){
         beforeEach(function(){
             host.populate(['_a', '_b', 'y_', 'x_'])
         })
+
         it('populate works', function(){
-            expect(memb.roles.sink.a).not.toBeUndefined();
-            expect(memb.roles.sink.b).not.toBeUndefined();
-            expect(memb.roles.source.y).not.toBeUndefined();
-            expect(memb.roles.source.x).not.toBeUndefined();
+            // expect(memb.roles.called.a).not.toBeUndefined();
+            // expect(memb.roles.called.b).not.toBeUndefined();
+            // expect(memb.roles.caller.y).not.toBeUndefined();
+            // expect(memb.roles.caller.x).not.toBeUndefined();
 
         })
 
         it('should designate with direct IR',function(){
             let a = memb.tokenDesignate({
-                role:'sink',
+                role:'called',
                 mDesignators:[],
                 cDesignator:/.*/
             });
 
-            expect(a[':a/sink'].label).toBe('a')
+            expect(a[':a/called'].label).toBe('a')
         })
-
-
     })
 
     describe('inversion', function(){
@@ -66,29 +65,30 @@ fdescribe('basic membrane', function(){
         })
 
         it('should have inverted those cruxes already present', function(){
-            let desall = invert.designate(":*", 'sink');
+            let desall = invert.designate(":*", 'called');
 
-            expect(desall[':y/sink']).not.toBeUndefined();
-            expect(desall[':x/sink']).not.toBeUndefined();
+            expect(desall[':y/called']).not.toBeUndefined();
+            expect(desall[':x/called']).not.toBeUndefined();
         })
 
         it('should invert further cruxes added', function(){
-            memb.addCrux(new PortCrux('lame-o'), 'source');
+            memb.addCrux(new PortCrux('lame-o'), 'caller');
 
-            let desall = invert.designate(":*", 'sink');
-            expect(desall[':lame-o/sink']).not.toBeUndefined();
+            //console.log(invert.roles.called)
+            let desall = invert.designate(":*", 'called');
+            expect(desall[':lame-o/called']).not.toBeUndefined();
 
-            //a source in the inversion is a sink in the original
-            invert.addCrux(new PortCrux('cool-cat'), 'source');
-            let desallop = memb.designate(":*", 'sink');
-            expect(desallop[':cool-cat/sink']).not.toBeUndefined();
+            //a caller in the inversion is a called in the original
+            invert.addCrux(new PortCrux('cool-cat'), 'caller');
+            let desallop = memb.designate(":*", 'called');
+            expect(desallop[':cool-cat/called']).not.toBeUndefined();
         })
 
         it('should remove from both sides', function(){
-            let desiga = invert.designate(':a','source', false);
+            let desiga = invert.designate(':a','caller', false);
 
-            invert.removeCrux(desiga[0],'source');
-            expect(invert.designate(':a', "source", false)[0]).toBeUndefined();
+            invert.removeCrux(desiga[0],'caller');
+            expect(invert.designate(':a', "caller", false)[0]).toBeUndefined();
 
         })
 
@@ -109,23 +109,23 @@ fdescribe('basic membrane', function(){
 
         it('should allow designation at depth', function(){
 
-            let desig = memb.designate('sub:a', 'sink')
-            expect(desig['sub:a/sink']).toBe(submemb.roles.sink.a)
+            let desig = memb.designate('sub:a', 'called')
+            expect(desig['sub:a/called']).toBe(submemb.roles.called.a)
         })
 
         it('globbing should collect at many depths',function(){
             let sub2 = new Membrane(subhost)
 
-            sub2.addCrux(new PortCrux('a'), 'sink');
+            sub2.addCrux(new PortCrux('a'), 'called');
             submemb.addSubrane(sub2, 'sub')
 
-            let desig = memb.designate('sub.sub:a', 'sink')
-            expect(desig['sub.sub:a/sink']).toBe(sub2.roles.sink.a)
+            let desig = memb.designate('sub.sub:a', 'called')
+            expect(desig['sub.sub:a/called']).toBe(sub2.roles.called.a)
 
-            let desigAll = memb.designate('**.sub:a', 'sink')
-            expect(desigAll['sub.sub:a/sink']).toBe(sub2.roles.sink.a)
-            expect(desigAll['sub:a/sink']).toBe(submemb.roles.sink.a)
-            //expect(desigAll[':a/sink']).toBe(memb.roles.sink.a)
+            let desigAll = memb.designate('**.sub:a', 'called')
+            expect(desigAll['sub.sub:a/called']).toBe(sub2.roles.called.a)
+            expect(desigAll['sub:a/called']).toBe(submemb.roles.called.a)
+            //expect(desigAll[':a/called']).toBe(memb.roles.called.a)
 
         })
 
@@ -155,13 +155,13 @@ fdescribe('basic membrane', function(){
             });
 
             it('should notify when a sub membrane has a crux added',function(){
-                console.log(additions)
-                expect(scanForToken(additions, 'sub:a/sink', 2)[0][0]).toBe(subhost.primary.roles.sink.a)
+                //console.log(additions)
+                expect(scanForToken(additions, 'sub:a/called', 2)[0][0]).toBe(subhost.primary.roles.called.a)
             });
 
             it('should notify me when a membrane is added',function(){
                 let membadd = host.membaddspy.calls.allArgs()
-                console.log(membadd)
+                //console.log(membadd)
                 expect(membadd.length).toEqual(1);
             });
 
@@ -173,8 +173,6 @@ fdescribe('basic membrane', function(){
         })
 
     })
-
-
 
     it('shoule converr designator to token regex', function(){
         let basic = Membrane.designatorToRegex('a:p', 'role');
@@ -190,7 +188,7 @@ fdescribe('basic membrane', function(){
         expect('globby.a.globby:p/blart'.match(multiGlob)).not.toBeNull();
 
         let trickyGlob = Membrane.designatorToRegex('**.a.**:p', 'blart');
-        console.log('trickyGlob:', trickyGlob);
+        //console.log('trickyGlob:', trickyGlob);
         expect('globby.a.a.a:p/blart'.match(trickyGlob)).not.toBeNull();
 
     })

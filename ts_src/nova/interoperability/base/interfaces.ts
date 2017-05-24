@@ -21,7 +21,7 @@ namespace Jungle {
             exposed:any
         }
 
-        export interface IMedium<A,B>{
+        export interface IMedium<A extends IContact,B extends IContact>{
             label:string;
             roleA:string;
             roleB:string;
@@ -81,6 +81,13 @@ namespace Jungle {
             cDesignator:string|RegExp|((crux:Crux)=>boolean);
         }
 
+        /**
+            The interface for generic behaviours all mesh exposed contacts need to define,
+            capped: - whether the contact has been covered by a close link or hook.
+         */
+        export interface IContact {
+            capped:boolean;
+        }
 
     }
 

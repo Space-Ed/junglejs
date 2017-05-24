@@ -4,6 +4,8 @@ const {Util, Debug} = require('../../dist/jungle.js');
 let fs = require('fs')
 
 describe('crumbs', function(){
+    pending("Manual Review Only")
+
 
     var crumb1;
 

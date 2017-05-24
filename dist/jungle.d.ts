@@ -248,6 +248,144 @@ declare namespace Jungle {
         }
     }
 }
+declare namespace Jungle.Inv {
+}
+declare namespace Jungle.Inv {
+    function retract(obj: any, arg: any): any;
+}
+declare namespace Jungle.Inv {
+    function selectNone(): any[];
+}
+declare namespace Jungle.Inv {
+    function pass(x: any): any;
+    function abstain(x: any): void;
+}
+declare module Jungle {
+    class LinkCell extends BaseCell {
+        kind: string;
+        constructor(crown: any, formspec: any);
+        constructCore(crown: any, form: any): LinkCell;
+        constructIO(iospec: any): IO.IOComponent;
+        constructForm(): LinkForm;
+        protected prepareChild(prepargs: any, handle: any, child: any, k: any): void;
+        completePrepare(): void;
+        resolve(resarg: any): any;
+    }
+}
+declare namespace Jungle {
+    interface IOLinkSpec {
+        ports: IO.PortSpec[];
+        linkFunciton: (a, b) => void;
+        links: string[];
+    }
+    class LinkForm extends BaseForm {
+        parse(formObj: FormSpec): {
+            iospec: IOLinkSpec;
+            contextspec: ContextSpec;
+        };
+    }
+}
+declare namespace Jungle {
+    namespace IO {
+        class LinkIO extends BaseIO {
+            shell: BaseShell;
+            specialGate: boolean;
+            lining: Shell;
+            linkmap: any;
+            closed: {
+                sinks: string[];
+                sources: string[];
+            };
+            linker: (porta, portb) => void;
+            links: string[];
+            emmissionGate: Util.Junction;
+            ports: PortSpec[];
+            constructor(host: LinkCell, spec: IOLinkSpec);
+            enshell(): Shell;
+            innerDress(): void;
+            applyLinks(): void;
+            private parseLink(link);
+            private interpretLink(linkspec);
+            private checkLink(linkspec, sourceCellLabel, sinkCellLabel, sourceP, sinkP);
+            private filterCheck(sourceLabel, sinkLabel, linkspec);
+            private forgeLink(linkspec, sourceCell, sinkCell, sourcePort, sinkPort);
+            follow(sourceCell: string, source: Port, throughput: any): void;
+            prepare(parg: any): void;
+            extract(): {
+                port: string[];
+                link: string[];
+                lf: (porta: any, portb: any) => void;
+            };
+        }
+    }
+}
+declare namespace Jungle {
+    namespace Nova {
+        interface ConstructSpec {
+            basis: string;
+            patch: any;
+            locator?: string;
+        }
+        abstract class Construct<HOST extends Composite> {
+            static isConstructSpec(construct: any): boolean;
+            alive: boolean;
+            parent: HOST;
+            cache: ConstructSpec;
+            domain: Domain;
+            constructor(spec: ConstructSpec);
+            induct(host: HOST, key: string): void;
+            abstract prime(): any;
+            abstract dispose(): any;
+            abstract extract(): ConstructSpec;
+            abstract graft(patch: any): any;
+            extend(patch: any): Construct<HOST>;
+        }
+    }
+}
+declare namespace Jungle {
+    namespace Nova {
+        class Domain {
+            registry: {};
+            subdomain: {};
+            constructor();
+            branch(key: any): any;
+            register(key: any, construct: any): void;
+            locateDomain(dotpath: string): Domain;
+            recover(construct: ConstructSpec): Construct<any>;
+        }
+    }
+}
+declare namespace Jungle {
+    namespace Nova {
+        class Composite extends Construct<any> {
+            crown: any;
+            constructor(spec: ConstructSpec);
+            prime(): void;
+            add(k: any, v: any): void;
+            remove(k: any): any;
+            dispose(): any;
+            extract(): ConstructSpec;
+            graft(patch: any): void;
+            extend(patch: any): Construct<any>;
+        }
+    }
+}
+declare namespace Jungle {
+    namespace Nova {
+        class Cell extends Composite {
+            membranes: any;
+            nucleus: any;
+            constructor(spec: ConstructSpec);
+        }
+    }
+}
+declare namespace Jungle {
+    namespace Nova {
+        class StateCell extends Composite {
+            prime(): void;
+        }
+    }
+}
 declare namespace Jungle {
     namespace IO {
         class Crux {
@@ -257,6 +395,8 @@ declare namespace Jungle {
                 'sink': string;
                 'master': string;
                 'slave': string;
+                'caller': string;
+                'called': string;
             };
             originalMembrane: Membrane;
             inversionMembrane: Membrane;
@@ -268,6 +408,63 @@ declare namespace Jungle {
             attachTo(membrane: Membrane, asRole: string): void;
             detach(): void;
         }
+    }
+}
+declare namespace Jungle {
+    namespace IO {
+        interface CallCruxSpec {
+            label: string;
+            hook?: boolean | ((data: any, crumb: Debug.Crumb) => any);
+            tracking: boolean;
+        }
+        class CallCrux extends Crux {
+            roles: {
+                caller: any;
+                called: Called;
+            };
+            constructor(spec: CallCruxSpec);
+        }
+    }
+}
+declare namespace Jungle {
+    namespace Nova {
+        interface CallHookSpec {
+            target: string;
+            contact: "callin" | "callout";
+            mode: "push" | "pull";
+            hook: any;
+            default: any;
+            sync: boolean;
+        }
+        class CallHook extends Construct<Cell> {
+            crux: IO.CallCrux;
+            patch: CallHookSpec;
+            constructor(spec: CallHookSpec);
+            produceHook(host: Cell, key: string): {
+                hook: boolean | ((inp: any, crumb: Debug.Crumb) => any);
+                sinker: any;
+            };
+            induct(host: Cell, key: string): void;
+            prime(): void;
+            graft(patch: any): void;
+            dispose(): void;
+            extract(): {
+                basis: string;
+                patch: {
+                    target: string;
+                    contact: "callin" | "callout";
+                    mode: "push" | "pull";
+                    hook: any;
+                    default: any;
+                    sync: boolean;
+                };
+            };
+        }
+    }
+}
+declare namespace Jungle {
+    namespace Nova {
+        function normalise(key: any, value: any): ConstructSpec;
     }
 }
 declare namespace Jungle {
@@ -291,7 +488,7 @@ declare namespace Jungle {
             rules: any;
             exposed: any;
         }
-        interface IMedium<A, B> {
+        interface IMedium<A extends IContact, B extends IContact> {
             label: string;
             roleA: string;
             roleB: string;
@@ -334,11 +531,14 @@ declare namespace Jungle {
             mDesignators: string[] | RegExp[] | ((membrane: Membrane, key: string) => boolean)[];
             cDesignator: string | RegExp | ((crux: Crux) => boolean);
         }
+        interface IContact {
+            capped: boolean;
+        }
     }
 }
 declare namespace Jungle {
     namespace IO {
-        abstract class BaseMedium<A, B> implements IMedium<A, B> {
+        abstract class BaseMedium<A extends IContact, B extends IContact> implements IMedium<A, B> {
             exclusive: boolean;
             multiA: boolean;
             multiB: boolean;
@@ -423,142 +623,65 @@ declare namespace Jungle {
 }
 declare namespace Jungle {
     namespace IO {
-        class RequestCrux extends Crux {
-            roles: {
-                req: Request;
-                resp: Response;
-            };
-            constructor(label: string);
-        }
-    }
-}
-declare namespace Jungle {
-    namespace IO {
-        interface Request {
-            request: (data: any, tracking: Debug.Crumb) => Util.Junction;
-        }
-        interface Response {
-            response: (data: any, tracking: Debug.Crumb) => Util.Junction;
-        }
-        class PullMedium extends BaseMedium<Request, Response> {
+        class DistributeMedium extends BaseMedium<Caller, Called> {
             roleA: string;
             roleB: string;
             constructor(spec: IMediumSpec);
-            inductA(token: string, a: Request): void;
-            inductB(token: string, b: Response): void;
-            connect(link: ILinkSpec<Request, Response>): void;
-            disconnect(link: ILinkSpec<Request, Response>): void;
+            distribute(sourceToken: string, data: any, crumb: any): void;
+            inductA(token: string, a: Caller): void;
+            inductB(token: string, b: Called): void;
+            connect(link: ILinkSpec<Caller, Called>): void;
+            disconnect(link: ILinkSpec<Caller, Called>): void;
         }
     }
 }
 declare namespace Jungle {
     namespace IO {
-        class PortCrux extends Crux {
-            roles: {
-                sink: SinkRole;
-                source: SourceRole;
-            };
-            constructor(label: string);
-            put(input: any, trace: any): void;
-            dress(coat: OutputCoat): void;
-            prepareCallback(callout: any): any;
-            prepareContext(outputContext: any): any;
+        interface Called extends IContact {
+            func: (data: any, tracking: Debug.Crumb) => Util.Junction;
         }
-    }
-}
-declare namespace Jungle {
-    namespace IO {
-        class PushMedium extends BaseMedium<SourceRole, SinkRole> {
+        interface Caller extends IContact {
+            func?: (data: any, tracking: Debug.Crumb) => Util.Junction;
+        }
+        class InjectiveMedium extends BaseMedium<Caller, Called> {
             roleA: string;
             roleB: string;
             constructor(spec: IMediumSpec);
-            distribute(sourceToken: string, data: any): void;
-            inductA(token: string, a: SourceRole): void;
-            inductB(token: string, b: SinkRole): void;
-            connect(link: ILinkSpec<SourceRole, SinkRole>): void;
-            disconnect(link: ILinkSpec<SourceRole, SinkRole>): void;
+            inductA(token: string, a: Caller): void;
+            inductB(token: string, b: Called): void;
+            connect(link: ILinkSpec<Caller, Called>): void;
+            disconnect(link: ILinkSpec<Caller, Called>): void;
         }
     }
 }
 declare namespace Jungle {
     namespace IO {
-        interface SourceRole {
-            callout: (data: any) => void;
-        }
-        interface SinkRole {
-            put: (data: any) => void;
-        }
-    }
-}
-declare namespace Jungle.Inv {
-}
-declare namespace Jungle.Inv {
-    function retract(obj: any, arg: any): any;
-}
-declare namespace Jungle.Inv {
-    function selectNone(): any[];
-}
-declare namespace Jungle.Inv {
-    function pass(x: any): any;
-    function abstain(x: any): void;
-}
-declare module Jungle {
-    class LinkCell extends BaseCell {
-        kind: string;
-        constructor(crown: any, formspec: any);
-        constructCore(crown: any, form: any): LinkCell;
-        constructIO(iospec: any): IO.IOComponent;
-        constructForm(): LinkForm;
-        protected prepareChild(prepargs: any, handle: any, child: any, k: any): void;
-        completePrepare(): void;
-        resolve(resarg: any): any;
-    }
-}
-declare namespace Jungle {
-    interface IOLinkSpec {
-        ports: IO.PortSpec[];
-        linkFunciton: (a, b) => void;
-        links: string[];
-    }
-    class LinkForm extends BaseForm {
-        parse(formObj: FormSpec): {
-            iospec: IOLinkSpec;
-            contextspec: ContextSpec;
-        };
-    }
-}
-declare namespace Jungle {
-    namespace IO {
-        class LinkIO extends BaseIO {
-            shell: BaseShell;
-            specialGate: boolean;
-            lining: Shell;
-            linkmap: any;
-            closed: {
-                sinks: string[];
-                sources: string[];
+        class PortCrux extends CallCrux {
+            roles: {
+                caller: any;
+                called: Called;
+                source: any;
+                sink: Called;
             };
-            linker: (porta, portb) => void;
-            links: string[];
-            emmissionGate: Util.Junction;
-            ports: PortSpec[];
-            constructor(host: LinkCell, spec: IOLinkSpec);
-            enshell(): Shell;
-            innerDress(): void;
-            applyLinks(): void;
-            private parseLink(link);
-            private interpretLink(linkspec);
-            private checkLink(linkspec, sourceCellLabel, sinkCellLabel, sourceP, sinkP);
-            private filterCheck(sourceLabel, sinkLabel, linkspec);
-            private forgeLink(linkspec, sourceCell, sinkCell, sourcePort, sinkPort);
-            follow(sourceCell: string, source: Port, throughput: any): void;
-            prepare(parg: any): void;
-            extract(): {
-                port: string[];
-                link: string[];
-                lf: (porta: any, portb: any) => void;
-            };
+            constructor(label: any);
         }
+        class PushMedium extends DistributeMedium {
+            roleA: string;
+            roleB: string;
+        }
+    }
+}
+declare namespace Test {
+    class MockConstruct extends Jungle.Nova.Construct<Jungle.Nova.Composite> {
+        state: any;
+        spies: any;
+        constructor(spec: {
+            patch: "message";
+        });
+        prime(): void;
+        dispose(): any;
+        extract(): Jungle.Nova.ConstructSpec;
+        graft(patch: any): void;
     }
 }
 declare namespace Jungle {

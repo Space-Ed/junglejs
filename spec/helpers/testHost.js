@@ -1,5 +1,5 @@
 let Jungle = require('../../dist/jungle.js');
-let {Membrane, PortCrux, Crux, RequestCrux} = Jungle.IO;
+let {Membrane, CallCrux, Crux, RequestCrux} = Jungle.IO;
 
 (function(){
 
@@ -8,7 +8,7 @@ let {Membrane, PortCrux, Crux, RequestCrux} = Jungle.IO;
         constructor(name){
             this.name = name
 
-            this.primary = new Membrane(this, ['source', 'sink'])
+            this.primary = new Membrane(this)
             this.policy = Jungle.IO.FreePolicy
 
             this.addspy = jasmine.createSpy()
@@ -38,18 +38,7 @@ let {Membrane, PortCrux, Crux, RequestCrux} = Jungle.IO;
             return this
         }
 
-        /**
-         * Take a designator object and, finding the sources, apply a coat
-         */
-        dress(designator, coat){
-            designator.role = 'source'
-            let designation = this.shell.designate(designator);
-            for(let k in designation){
-                let outport = designation[k];
-                outport.dress(coat);
-            }
 
-        }
 
         /**
          * Parse the standard IO name format _sinkname sourcename_ and plant them respectively
@@ -63,17 +52,10 @@ let {Membrane, PortCrux, Crux, RequestCrux} = Jungle.IO;
                     let inp = pmatch[1], label = pmatch[2], out = pmatch[3];
 
                     if(inp == '_'){
-                        this.primary.addCrux(new PortCrux(label), "sink")
+                        this.primary.addCrux(new CallCrux({label:label, tracking:true}), "called")
                     }
                     if(out == '_'){
-                        this.primary.addCrux(new PortCrux(label), "source")
-                    }
-
-                    if(inp == '$'){
-                        this.primary.addCrux(new RequestCrux(label), "resp")
-                    }
-                    if(out == '$'){
-                        this.primary.addCrux(new RequestCrux(label), "req")
+                        this.primary.addCrux(new CallCrux({label:label, tracking:true}), "caller")
                     }
 
                 }else{

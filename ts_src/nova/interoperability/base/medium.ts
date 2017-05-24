@@ -2,7 +2,7 @@ namespace Jungle {
 
     export namespace IO {
 
-        export abstract class BaseMedium <A,B> implements IMedium<A,B>{
+        export abstract class BaseMedium <A extends IContact,B extends IContact> implements IMedium<A,B>{
             exclusive = false;
             multiA = true;
             multiB = true;
@@ -103,9 +103,7 @@ namespace Jungle {
 
         }
 
-
-
-        export const mediaConstructors = { }
+        export const mediaConstructors = {}
 
     }
 }

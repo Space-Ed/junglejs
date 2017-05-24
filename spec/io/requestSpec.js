@@ -18,18 +18,18 @@ describe("request medium and cruxes", function () {
 
         memb = host.primary
 
-        host.populate(['a$', '$b'])
+        host.populate(['a_', '_b'])
 
-        cruxA = memb.roles.req.a
-        cruxB = memb.roles.resp.b
-        roleA = cruxA.roles.req
-        roleB = cruxB.roles.resp
+        cruxA = memb.roles.caller.a
+        cruxB = memb.roles.called.b
+        roleA = cruxA.roles.caller
+        roleB = cruxB.roles.called
 
         exposed = {}
 
         mesh = new RuleMesh({
             rules:{
-                'req->resp':[
+                'inject':[
                     '*:a->*:b',
                 ]
             },
@@ -46,7 +46,8 @@ describe("request medium and cruxes", function () {
 
         crumb.at('Pretest')
 
-        cruxB.roles.req.request = (data, crumb)=>{
+        //Request Terminal
+        cruxB.roles.caller.func = (data, crumb)=>{
             let j = new Util.Junction()
 
             let crumb2 = crumb.drop("final request")
@@ -59,23 +60,17 @@ describe("request medium and cruxes", function () {
             return j
         }
 
-        expect(cruxA.roles.req.request).toBe(cruxB.roles.resp.response)
+        expect(cruxA.roles.caller.func).toBe(cruxB.roles.called.func)
 
-        cruxA.roles.resp.response("Hello?", crumb).then(({data, crumb})=>{
+        //Request Entry
+        cruxA.roles.called.func("Hello?", crumb).then(({data, crumb})=>{
             let nextCrumb = crumb.drop("Final Response")
                 .with(data)
 
-            console.log(nextCrumb.dump())
+            //console.log(nextCrumb.dump())
             expect(data).toEqual("Hello?")
             done()
         })
-    })
-
-    describe('dual membrane', function(){
-        let host2 = new TestHost();
-        let memb2 = host2.primary;
-
-        memb.addSubrane(memb2, "deep");
     })
 
     it("should allow only single output contacts", function(){

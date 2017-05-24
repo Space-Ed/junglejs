@@ -1,7 +1,10 @@
 
 let Jungle = require('../../dist/jungle.js');
-let {Membrane, PortCrux, Crux, PushMedium} = Jungle.IO;
+let Debug = Jungle.Debug;
+let {Membrane, PortCrux, Crux, DistributeMedium} = Jungle.IO;
 let TestHost = require('../helpers/testHost.js')
+Debug.Crumb.defaultOptions.debug = true;
+Debug.Crumb.defaultOptions.log = console;
 
 describe("The Push Medium", function () {
     let host, memb, mockmesh, portA, portB, roleA, roleB, medium
@@ -10,17 +13,18 @@ describe("The Push Medium", function () {
     beforeEach(function(){
         host = new TestHost();
         memb = host.primary;
+
         mockmesh = {
             label:'testMedium', exposed:{}
         }
 
         host.populate(['a_', '_b'])
 
-        portA = memb.roles.source.a
-        portB = memb.roles.sink.b
-        roleA = portA.roles.source
-        roleB = portB.roles.sink
-        medium = new PushMedium(mockmesh);
+        portA = memb.roles.caller.a
+        portB = memb.roles.called.b
+        roleA = portA.roles.caller
+        roleB = portB.roles.called
+        medium = new DistributeMedium(mockmesh);
 
     })
 
@@ -28,18 +32,30 @@ describe("The Push Medium", function () {
 
         let link = {
             roleA:roleA,
-            tokenA:':a/source',
+            tokenA:':a/caller',
             roleB:roleB,
-            tokenB:':b/sink'
+            tokenB:':b/called'
         }
 
         medium.suppose(link)
 
         let outspy =  jasmine.createSpy();
-        portB.roles.source.callout = outspy;
+        portB.roles.caller.func = outspy;
 
-        portA.roles.sink.put("Hello?")
+        let crumb = new Debug.Crumb("Beginning")
+            .catch((err)=>{
+                //console.log("Crumb error caught: ", err.message)
+            })
 
-        expect(outspy).toHaveBeenCalledWith('Hello?')
+        portA.roles.called.func("Hello?", crumb)
+
+        let final = outspy.calls.allArgs()[0][1]
+            .drop("Finished")
+            .dump()
+
+        //console.log(final)
+
+
+        expect(outspy.calls.allArgs()[0][0]).toEqual('Hello?')
     })
 });

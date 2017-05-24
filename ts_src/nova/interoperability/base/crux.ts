@@ -8,7 +8,9 @@ namespace Jungle {
                 'source':'sink',
                 'sink':'source',
                 'master':'slave',
-                'slave':'master'
+                'slave':'master',
+                'caller':'called',
+                'called':'caller'
             }
 
             originalMembrane:Membrane;
