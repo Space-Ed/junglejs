@@ -321,23 +321,19 @@ declare namespace Jungle {
 }
 declare namespace Jungle {
     namespace Nova {
-        interface ConstructSpec {
-            basis: string;
-            patch: any;
-            locator?: string;
-        }
         abstract class Construct<HOST extends Composite> {
-            static isConstructSpec(construct: any): boolean;
             alive: boolean;
             parent: HOST;
-            cache: ConstructSpec;
+            cache: any;
             domain: Domain;
-            constructor(spec: ConstructSpec);
+            locator: string;
+            constructor(spec: any);
+            private ensureObject(spec);
             induct(host: HOST, key: string): void;
             abstract prime(): any;
             abstract dispose(): any;
-            abstract extract(): ConstructSpec;
-            abstract graft(patch: any): any;
+            extract(): any;
+            abstract patch(patch: any): any;
             extend(patch: any): Construct<HOST>;
         }
     }
@@ -351,38 +347,55 @@ declare namespace Jungle {
             branch(key: any): any;
             register(key: any, construct: any): void;
             locateDomain(dotpath: string): Domain;
-            recover(construct: ConstructSpec): Construct<any>;
+            recover(construct: any): Construct<any>;
         }
+        const JungleDomain: Domain;
     }
 }
 declare namespace Jungle {
     namespace Nova {
         class Composite extends Construct<any> {
-            crown: any;
-            constructor(spec: ConstructSpec);
+            keywords: {
+                basis: any;
+                domain: any;
+            };
+            subconstructs: any;
+            constructor(spec: any);
             prime(): void;
             add(k: any, v: any): void;
+            addStrange(k: any, v: any): void;
+            ensureRecoverable(value: any): any;
             remove(k: any): any;
             dispose(): any;
-            extract(): ConstructSpec;
-            graft(patch: any): void;
+            extract(): any;
+            patch(patch: any): void;
             extend(patch: any): Construct<any>;
         }
     }
 }
 declare namespace Jungle {
     namespace Nova {
-        class Cell extends Composite {
+        class Cell extends Composite implements IO.MembraneHost {
+            mesh: IO.RuleMesh;
             membranes: any;
             nucleus: any;
-            constructor(spec: ConstructSpec);
+            policy: Jungle.IO.ShellPolicy;
+            constructor(spec: any);
+            addStrange(k: any, v: any): void;
+            onAddCrux(crux: any, role: any, token: any): void;
+            onRemoveCrux(crux: any, role: any, token: any): void;
+            onAddMembrane(membrane: any, token: any): void;
+            onRemoveMembrane(membrane: any, token: any): void;
         }
     }
 }
 declare namespace Jungle {
     namespace Nova {
         class StateCell extends Composite {
+            proxy: any;
+            constructor(spec: any);
             prime(): void;
+            define(key: any, value: any): void;
         }
     }
 }
@@ -430,7 +443,7 @@ declare namespace Jungle {
     namespace Nova {
         interface CallHookSpec {
             target: string;
-            contact: "callin" | "callout";
+            contact: "called" | "caller";
             mode: "push" | "pull";
             hook: any;
             default: any;
@@ -438,33 +451,40 @@ declare namespace Jungle {
         }
         class CallHook extends Construct<Cell> {
             crux: IO.CallCrux;
-            patch: CallHookSpec;
-            constructor(spec: CallHookSpec);
+            cache: CallHookSpec;
+            constructor(spec: any);
             produceHook(host: Cell, key: string): {
                 hook: boolean | ((inp: any, crumb: Debug.Crumb) => any);
                 sinker: any;
             };
             induct(host: Cell, key: string): void;
             prime(): void;
-            graft(patch: any): void;
+            patch(patch: any): void;
             dispose(): void;
-            extract(): {
-                basis: string;
-                patch: {
-                    target: string;
-                    contact: "callin" | "callout";
-                    mode: "push" | "pull";
-                    hook: any;
-                    default: any;
-                    sync: boolean;
-                };
-            };
+            extract(): CallHookSpec;
         }
     }
 }
 declare namespace Jungle {
-    namespace Nova {
-        function normalise(key: any, value: any): ConstructSpec;
+    namespace IO {
+        namespace Designate {
+            function regexifyDesignationTerm(term: string): RegExp | "**";
+            function parseDesignatorString(desigstr: string, targetRole: string): CruxDesignator;
+            function designatorToRegex(desigstr: any, role: any): RegExp;
+            function tokenDesignatedBy(token: any, designator: CruxDesignator): boolean;
+            function matchDesignationTerm(target: any, term: any): any;
+        }
+        class BasicDesignable {
+            private groupName;
+            private finalName;
+            visors: Visor[];
+            constructor(groupName: string, finalName: string);
+            treeDesignate({mDesignators, cDesignator, role}: CruxDesignator): {};
+            flatDesignate(designator: CruxDesignator): any;
+            tokenDesignate(designator: CruxDesignator): any;
+            designate(str: string, role: string, tokenize?: boolean): any;
+            createVisor(designation: string | string[], host: any): void;
+        }
     }
 }
 declare namespace Jungle {
@@ -526,6 +546,9 @@ declare namespace Jungle {
             onAddMembrane: (membrane: Membrane, token) => void;
             onRemoveMembrane: (membrane: Membrane, token) => void;
         }
+        interface Designable {
+            treeDesignate(desig: CruxDesignator): any;
+        }
         interface CruxDesignator {
             role: string;
             mDesignators: string[] | RegExp[] | ((membrane: Membrane, key: string) => boolean)[];
@@ -567,19 +590,15 @@ declare namespace Jungle {
 }
 declare namespace Jungle {
     namespace IO {
-        class Membrane {
+        class Membrane extends BasicDesignable {
             host: MembraneHost;
-            static regexifyDesignationTerm(term: string): RegExp | "**";
-            static parseDesignatorString(desigstr: string, targetRole: string): CruxDesignator;
-            static designatorToRegex(desigstr: any, role: any): RegExp;
-            static tokenDesignatedBy(token: any, designator: CruxDesignator): boolean;
-            static matchDesignationTerm(target: any, term: any): any;
             inverted: Membrane;
             roles: any;
             subranes: any;
             parent: Membrane;
             alias: string;
             notify: boolean;
+            visors: Visor[];
             constructor(host: MembraneHost);
             notifyCruxAdd(crux: any, role: any, token?: any): void;
             notifyCruxRemove(crux: Crux, role: string, token?: any): void;
@@ -588,14 +607,11 @@ declare namespace Jungle {
             forEachCrux(func: (crux, role) => void): void;
             invert(): Membrane;
             getMembraneToken(): string;
+            createVisor(designation: string | string[], host: any): void;
             addSubrane(membrane: Membrane, label: string): void;
             removeSubrane(label: any): Membrane;
             addCrux(crux: Crux, role: string): void;
             removeCrux(crux: Crux, role: string): void;
-            treeDesignate({mDesignators, cDesignator, role}: CruxDesignator): {};
-            flatDesignate(designator: CruxDesignator): any;
-            tokenDesignate(designator: CruxDesignator): any;
-            designate(str: string, role: string, tokenize?: boolean): any;
         }
     }
 }
@@ -618,6 +634,16 @@ declare namespace Jungle {
             onRemoveCrux(crux: Crux, role: string, token: string): void;
             onAddMembrane(membrane: Membrane, token: any): void;
             onRemoveMembrane(membrane: Membrane, token: any): void;
+        }
+    }
+}
+declare namespace Jungle {
+    namespace IO {
+        class Visor extends BasicDesignable {
+            private target;
+            subranes: any;
+            roles: any;
+            constructor(target: BasicDesignable, designator: any);
         }
     }
 }
@@ -680,8 +706,8 @@ declare namespace Test {
         });
         prime(): void;
         dispose(): any;
-        extract(): Jungle.Nova.ConstructSpec;
-        graft(patch: any): void;
+        extract(): any;
+        patch(patch: any): void;
     }
 }
 declare namespace Jungle {

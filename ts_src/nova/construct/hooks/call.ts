@@ -1,5 +1,5 @@
-/// <reference path="../interoperability/call/crux.ts"/>
-/// <reference path="./base/construct.ts"/>
+/// <reference path="../../interoperability/call/crux.ts"/>
+/// <reference path="../base/construct.ts"/>
 
 namespace Jungle {
 
@@ -7,7 +7,7 @@ namespace Jungle {
 
         export interface CallHookSpec {
             target:string,
-            contact:"callin"|"callout",
+            contact:"called"|"caller",
             mode:"push"|"pull",
             hook:any,
             default:any,
@@ -17,92 +17,90 @@ namespace Jungle {
         export class CallHook extends Construct<Cell> {
 
             crux:IO.CallCrux;
-            patch:CallHookSpec;
+            cache:CallHookSpec
 
-            constructor(spec:CallHookSpec){
-                super({
-                    basis:'CallHook',
-                    patch:spec
-                })
+            constructor(spec:any){
+                spec.basis = 'CallHook';
+                super(spec);
             }
 
             produceHook(host:Cell, key:string):{hook:boolean|((inp:any, crumb:Debug.Crumb)=>any), sinker:any} {
-                let {hook, mode, contact} = this.patch
+                let {hook, mode, contact} = this.cache
                 let cruxHook:(boolean|((inp:any, crumb:Debug.Crumb)=>any));
                 let propVal:any;
                 let line:string;
 
                 if(hook instanceof Function){
-
-                }else if(Util.isPrimative(hook)){
-
+                    if(contact == "called"){
+                        propVal = this.cache.default;
+                        cruxHook = hook.bind(host.nucleus);
+                    }
                 }else{
 
                     //all types of hook function
-                    if(mode == "push" && contact == "callin"){
+                    if(mode == "push" && contact == "called"){
                         //depositor push in
                         cruxHook = (inp:any, crumb:Debug.Crumb)=>{
                             crumb.drop("Value Deposit Hook")
-
                             host.nucleus[key] = inp;
                         }
 
-                        propVal = this.patch.default;
+                        propVal = this.cache.default;
 
-                    }else if(mode == "pull" && contact == "callin"){
+                    }else if(mode == "pull" && contact == "called"){
                         //provisor: out pulls from in
                         cruxHook = (inp:any, crumb:Debug.Crumb)=>{
                             crumb.drop("Value Provider Hook")
                             return host.nucleus[key]
                         }
 
-                        propVal = this.patch.default;
+                        propVal = this.cache.default;
 
-                    }else if(mode == "push" && contact == "callout" && this.patch.default !== undefined){
+                    }else if(mode == "push" && contact == "caller" && this.cache.default !== undefined){
                         //react push out
                         cruxHook = true;
 
                         propVal = {
                             set:(value)=>{
                                 //access the membrane and plug the value
-                                host.membranes[this.patch.target].inversion.roles[this.patch.contact][key].func(value);
+                                host.membranes[this.cache.target].inversion.roles[this.cache.contact][key].func(value);
                                 host.nucleus[key] = value;
                             },get:()=>{
                                 return host.nucleus[key];
                             },
-                            value:this.patch.default
+                            value:this.cache.default
                         }
 
-                    }else if(mode == "push" && contact == "callout" && this.patch.default !== undefined){
+                    }else if(mode == "push" && contact == "caller" && this.cache.default !== undefined){
                         //hook out
                         cruxHook = true;
 
                         propVal = {
                             value:(value)=>{
                                 //access the membrane and plug the value
-                                host.membranes[this.patch.target].inversion.roles[this.patch.contact][key].func(value);
+                                host.membranes[this.cache.target].inversion.roles[this.cache.contact][key].func(value);
                                 host.nucleus[key] = value;
                             }
                         }
 
-                    }else if(mode == "push" && contact == "callout"){
+                    }else if(mode == "push" && contact == "caller"){
                         //requestor: in pulls from out
                         cruxHook = true;
 
                         propVal = {
                             get:()=>{
-                                let promised = host.membranes[this.patch.target].inversion.roles[this.patch.contact][key].request(key)
+                                let promised = host.membranes[this.cache.target].inversion.roles[this.cache.contact][key].request(key)
 
                                 //
-                                if(this.patch.sync){
+                                if(this.cache.sync){
                                     let zalgo = promised.realize();
 
                                     if(zalgo instanceof Util.Junction){
                                         zalgo.then((result)=>{
-                                            this.patch.default = result; // update the default later
+                                            this.cache.default = result; // update the default later
                                         })
 
-                                        return this.patch.default //return a default now
+                                        return this.cache.default //return a default now
                                     }else{
                                         return zalgo //ok to give sync
                                     }
@@ -110,7 +108,7 @@ namespace Jungle {
                                     return promised
                                 }
                             },
-                            value:this.patch.default
+                            value:this.cache.default
                         }
                     }
                 }
@@ -123,6 +121,9 @@ namespace Jungle {
             }
 
             induct(host:Cell, key:string){
+                super.induct(host, key);
+
+                console.log('Induct Hook Yay!')
 
                 //the crux this rule and the state
                 let {hook, sinker} = this.produceHook(host, key)
@@ -135,40 +136,38 @@ namespace Jungle {
 
                 //create membrane hook
                 this.crux = new IO.CallCrux(cruxargs);
-                host.membranes[this.patch.target].addCrux(this.crux, this.patch.contact)
+                host.membranes[this.cache.target].addCrux(this.crux, this.cache.contact)
 
                 //create context side hook/property
-                host.nucleus.define(key, sinker);
+                host.nucleus[key] = sinker;
             }
 
             prime(){
                 //nothing to do
             }
 
-            graft(patch){
+            patch(patch){
 
             }
 
             dispose(){
+                this.parent.membranes[this.cache.target].removeCrux(this.crux, this.cache.contact)
 
+                //retracting the effect on state
             }
 
             extract(){
-
-                return {
-                    basis: this.cache.basis,
-                    patch: {
-                        target:this.patch.target,
-                        contact:this.patch.contact,
-                        mode:this.patch.mode,
-                        hook:this.patch.hook,
-                        default:this.parent.nucleus[this.crux.label],
-                        sync:this.patch.sync
-                    }
+                let cp = Util.deepCopy(this.cache);
+                if(this.alive){
+                    cp.default = this.parent.nucleus[this.crux.label]; //the only thing that changes
                 }
+
+                return cp;
             }
 
         }
+
+        JungleDomain.register('CallHook', CallHook)
 
     }
 

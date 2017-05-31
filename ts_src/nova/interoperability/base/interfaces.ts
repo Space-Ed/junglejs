@@ -75,6 +75,10 @@ namespace Jungle {
 
         }
 
+        export interface Designable {
+            treeDesignate(desig:CruxDesignator)
+        }
+
         export interface CruxDesignator{
             role:string;
             mDesignators:string[]|RegExp[]|((membrane:Membrane, key:string)=>boolean)[];

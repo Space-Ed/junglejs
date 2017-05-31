@@ -1167,21 +1167,40 @@ var Jungle;
     (function (Nova) {
         var Construct = (function () {
             function Construct(spec) {
-                this.cache = spec;
+                this.cache = this.ensureObject(spec);
+                this.cache.basis = this.cache.basis || 'cell';
+                console.log("Create Construct, ", this.cache);
+                if (spec.domain instanceof Nova.Domain) {
+                    this.domain = spec.domain;
+                }
+                else {
+                    this.locator = spec.domain || "";
+                }
                 this.alive = false;
             }
-            Construct.isConstructSpec = function (construct) {
-                return "basis" in construct && "patch" in construct;
+            Construct.prototype.ensureObject = function (spec) {
+                if (spec === undefined) {
+                    return {};
+                }
+                else if (Jungle.Util.isVanillaObject(spec)) {
+                    return spec;
+                }
+                else {
+                    throw new Error("Invalid Specification for base Construct, must be object or undefined");
+                }
             };
             Construct.prototype.induct = function (host, key) {
                 this.parent = host;
-                this.domain = host.domain.locateDomain(this.cache.locator || "");
+                this.domain = this.domain || host.domain.locateDomain(this.locator);
             };
             ;
+            Construct.prototype.extract = function () {
+                return this.cache;
+            };
             Construct.prototype.extend = function (patch) {
                 var ext = Jungle.Util.B()
                     .init(this.extract())
-                    .merge({ patch: patch })
+                    .merge(patch)
                     .dump();
                 return this.domain.recover(ext);
             };
@@ -1204,12 +1223,7 @@ var Jungle;
                 return this.subdomain[key];
             };
             Domain.prototype.register = function (key, construct) {
-                if (key in this.registry) {
-                    throw new Error("Domain cannot contain duplicates \"" + key + "\" is already registered");
-                }
-                else {
-                    this.registry[key] = construct;
-                }
+                this.registry[key] = construct;
             };
             Domain.prototype.locateDomain = function (dotpath) {
                 if (dotpath.match(/^(?:[\w\$]+\.)*(?:[\w\$]+)$/)) {
@@ -1226,29 +1240,27 @@ var Jungle;
                     }
                     return ns;
                 }
+                else if (dotpath === "") {
+                    return this;
+                }
                 else {
                     throw new Error("invalid dotpath syntax: " + dotpath);
                 }
             };
             Domain.prototype.recover = function (construct) {
-                var basis = this.locateDomain(construct.locator).registry[construct.basis];
-                if (basis instanceof Function) {
-                    var seed = new basis(construct.patch, this, construct.locator);
-                    return seed;
+                var basis = this.registry[construct.basis];
+                try {
+                    return new basis(construct);
                 }
-                else if (basis instanceof Nova.Construct) {
-                    return basis.extend(construct.patch);
-                }
-                else if (Nova.Construct.isConstructSpec(basis)) {
-                    this.recover(basis).extend(construct.patch);
-                }
-                else {
-                    throw new Error("Unable to recover construct");
+                catch (e) {
+                    console.error("basis: ", construct.basis, " not a constructor in registry");
+                    throw e;
                 }
             };
             return Domain;
         }());
         Nova.Domain = Domain;
+        Nova.JungleDomain = new Domain();
     })(Nova = Jungle.Nova || (Jungle.Nova = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
@@ -1259,60 +1271,92 @@ var Jungle;
             __extends(Composite, _super);
             function Composite(spec) {
                 var _this = _super.call(this, spec) || this;
-                _this.crown = {};
+                _this.keywords = { basis: null, domain: null };
+                _this.subconstructs = {};
                 return _this;
             }
             Composite.prototype.prime = function () {
                 this.alive = true;
-                for (var k in this.cache.patch) {
-                    var v = this.cache.patch[k];
-                    this.add(k, v);
+                console.log("Composite prime: ", this.cache);
+                for (var k in this.cache) {
+                    if (!(k in this.keywords)) {
+                        var v = this.cache[k];
+                        this.add(k, v);
+                    }
                 }
             };
-            ;
             Composite.prototype.add = function (k, v) {
-                this.cache[k] = v;
                 if (this.alive) {
-                    var spec = void 0;
-                    try {
-                        spec = Nova.normalise(k, v);
+                    var spec = this.ensureRecoverable(v);
+                    if (spec) {
+                        var construct = this.domain.recover(spec);
+                        construct.induct(this, k);
+                        construct.prime();
+                        this.subconstructs[k] = construct;
                     }
-                    catch (e) {
-                        return;
+                    else {
+                        this.addStrange(k, v);
                     }
-                    var construct = this.domain.recover(spec);
-                    construct.induct(this, k);
-                    construct.prime();
+                }
+                else {
+                    this.cache[k] = v;
+                }
+            };
+            Composite.prototype.addStrange = function (k, v) {
+            };
+            Composite.prototype.ensureRecoverable = function (value) {
+                if (Jungle.Util.isPrimative(value)) {
+                    return false;
+                }
+                else if (value instanceof Nova.Construct) {
+                    console.log("construct value extracted");
+                    return value.extract();
+                }
+                else if (Jungle.Util.isVanillaObject(value)) {
+                    value.basis = 'composite';
+                    return value;
+                }
+                else {
+                    return false;
                 }
             };
             Composite.prototype.remove = function (k) {
-                var removing = this.crown[k];
+                var removing = this.subconstructs[k];
                 if (removing !== undefined) {
                     var final = removing.dispose();
-                    delete this.crown[k];
+                    delete this.subconstructs[k];
                     return final;
                 }
             };
             Composite.prototype.dispose = function () {
-                for (var key in this.crown) {
-                    var construct = this.crown[key];
+                for (var key in this.subconstructs) {
+                    var construct = this.subconstructs[key];
                     construct.dispose();
                 }
+                this.alive = false;
             };
             Composite.prototype.extract = function () {
-                var extracted = {};
-                for (var key in this.crown) {
-                    var construct = this.crown[key];
-                    extracted[key] = construct.extract();
+                if (this.alive) {
+                    var extracted = {};
+                    for (var key in this.subconstructs) {
+                        var construct = this.subconstructs[key];
+                        extracted[key] = construct.extract();
+                    }
+                    return Jungle.Util.B()
+                        .init(this.cache)
+                        .blend(extracted)
+                        .dump();
                 }
-                return this.cache;
+                else {
+                    return this.cache;
+                }
             };
-            Composite.prototype.graft = function (patch) {
+            Composite.prototype.patch = function (patch) {
             };
             Composite.prototype.extend = function (patch) {
                 var ext = Jungle.Util.B()
                     .init(this.extract())
-                    .merge({ patch: patch })
+                    .merge(patch)
                     .dump();
                 return this.domain.recover(ext);
             };
@@ -1328,11 +1372,38 @@ var Jungle;
         var Cell = (function (_super) {
             __extends(Cell, _super);
             function Cell(spec) {
-                return _super.call(this, spec) || this;
+                var _this = this;
+                spec.domain = spec.domain || Nova.JungleDomain;
+                _this = _super.call(this, spec) || this;
+                _this.nucleus = {};
+                _this.policy = Jungle.IO.FreePolicy;
+                _this.membranes = {};
+                _this.membranes.shell = new Jungle.IO.Membrane(_this);
+                _this.membranes.lining = _this.membranes.shell.invert();
+                _this.mesh = new Jungle.IO.RuleMesh({
+                    membranes: _this.membranes,
+                    rules: {
+                        'distribute': []
+                    },
+                    exposed: _this.nucleus
+                });
+                return _this;
             }
+            Cell.prototype.addStrange = function (k, v) {
+                this.nucleus[k] = v;
+            };
+            Cell.prototype.onAddCrux = function (crux, role, token) {
+            };
+            Cell.prototype.onRemoveCrux = function (crux, role, token) {
+            };
+            Cell.prototype.onAddMembrane = function (membrane, token) {
+            };
+            Cell.prototype.onRemoveMembrane = function (membrane, token) {
+            };
             return Cell;
         }(Nova.Composite));
         Nova.Cell = Cell;
+        Nova.JungleDomain.register('CallHook', Nova.CallHook);
     })(Nova = Jungle.Nova || (Jungle.Nova = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
@@ -1341,10 +1412,13 @@ var Jungle;
     (function (Nova) {
         var StateCell = (function (_super) {
             __extends(StateCell, _super);
-            function StateCell() {
-                return _super !== null && _super.apply(this, arguments) || this;
+            function StateCell(spec) {
+                return _super.call(this, spec) || this;
             }
             StateCell.prototype.prime = function () {
+            };
+            StateCell.prototype.define = function (key, value) {
+                this.proxy;
             };
             return StateCell;
         }(Nova.Composite));
@@ -1455,69 +1529,71 @@ var Jungle;
         var CallHook = (function (_super) {
             __extends(CallHook, _super);
             function CallHook(spec) {
-                return _super.call(this, {
-                    basis: 'CallHook',
-                    patch: spec
-                }) || this;
+                var _this = this;
+                spec.basis = 'CallHook';
+                _this = _super.call(this, spec) || this;
+                return _this;
             }
             CallHook.prototype.produceHook = function (host, key) {
                 var _this = this;
-                var _a = this.patch, hook = _a.hook, mode = _a.mode, contact = _a.contact;
+                var _a = this.cache, hook = _a.hook, mode = _a.mode, contact = _a.contact;
                 var cruxHook;
                 var propVal;
                 var line;
                 if (hook instanceof Function) {
-                }
-                else if (Jungle.Util.isPrimative(hook)) {
+                    if (contact == "called") {
+                        propVal = this.cache.default;
+                        cruxHook = hook.bind(host.nucleus);
+                    }
                 }
                 else {
-                    if (mode == "push" && contact == "callin") {
+                    if (mode == "push" && contact == "called") {
                         cruxHook = function (inp, crumb) {
                             crumb.drop("Value Deposit Hook");
                             host.nucleus[key] = inp;
                         };
-                        propVal = this.patch.default;
+                        propVal = this.cache.default;
                     }
-                    else if (mode == "pull" && contact == "callin") {
+                    else if (mode == "pull" && contact == "called") {
                         cruxHook = function (inp, crumb) {
                             crumb.drop("Value Provider Hook");
                             return host.nucleus[key];
                         };
-                        propVal = this.patch.default;
+                        propVal = this.cache.default;
                     }
-                    else if (mode == "push" && contact == "callout" && this.patch.default !== undefined) {
+                    else if (mode == "push" && contact == "caller" && this.cache.default !== undefined) {
                         cruxHook = true;
                         propVal = {
                             set: function (value) {
-                                host.membranes[_this.patch.target].inversion.roles[_this.patch.contact][key].func(value);
+                                host.membranes[_this.cache.target].inversion.roles[_this.cache.contact][key].func(value);
                                 host.nucleus[key] = value;
                             }, get: function () {
                                 return host.nucleus[key];
                             },
-                            value: this.patch.default
+                            value: this.cache.default
                         };
                     }
-                    else if (mode == "push" && contact == "callout" && this.patch.default !== undefined) {
+                    else if (mode == "push" && contact == "caller" && this.cache.default !== undefined) {
                         cruxHook = true;
                         propVal = {
                             value: function (value) {
-                                host.membranes[_this.patch.target].inversion.roles[_this.patch.contact][key].func(value);
+                                host.membranes[_this.cache.target].inversion.roles[_this.cache.contact][key].func(value);
                                 host.nucleus[key] = value;
                             }
                         };
                     }
-                    else if (mode == "push" && contact == "callout") {
+                    else if (mode == "push" && contact == "caller") {
                         cruxHook = true;
                         propVal = {
                             get: function () {
-                                var promised = host.membranes[_this.patch.target].inversion.roles[_this.patch.contact][key].request(key);
-                                if (_this.patch.sync) {
+                                var promised = host.membranes[_this.cache.target].inversion.roles[_this.cache.contact][key].request(key);
+                                if (_this.cache.sync) {
                                     var zalgo = promised.realize();
                                     if (zalgo instanceof Jungle.Util.Junction) {
                                         zalgo.then(function (result) {
-                                            _this.patch.default = result;
+                                            _this.cache.default = result;
                                         });
-                                        return _this.patch.default;
+                                        return _this.cache.default;
                                     }
                                     else {
                                         return zalgo;
@@ -1527,7 +1603,7 @@ var Jungle;
                                     return promised;
                                 }
                             },
-                            value: this.patch.default
+                            value: this.cache.default
                         };
                     }
                 }
@@ -1537,6 +1613,8 @@ var Jungle;
                 };
             };
             CallHook.prototype.induct = function (host, key) {
+                _super.prototype.induct.call(this, host, key);
+                console.log('Induct Hook Yay!');
                 var _a = this.produceHook(host, key), hook = _a.hook, sinker = _a.sinker;
                 var cruxargs = {
                     label: key,
@@ -1544,62 +1622,225 @@ var Jungle;
                     tracking: true
                 };
                 this.crux = new Jungle.IO.CallCrux(cruxargs);
-                host.membranes[this.patch.target].addCrux(this.crux, this.patch.contact);
-                host.nucleus.define(key, sinker);
+                host.membranes[this.cache.target].addCrux(this.crux, this.cache.contact);
+                host.nucleus[key] = sinker;
             };
             CallHook.prototype.prime = function () {
             };
-            CallHook.prototype.graft = function (patch) {
+            CallHook.prototype.patch = function (patch) {
             };
             CallHook.prototype.dispose = function () {
+                this.parent.membranes[this.cache.target].removeCrux(this.crux, this.cache.contact);
             };
             CallHook.prototype.extract = function () {
-                return {
-                    basis: this.cache.basis,
-                    patch: {
-                        target: this.patch.target,
-                        contact: this.patch.contact,
-                        mode: this.patch.mode,
-                        hook: this.patch.hook,
-                        default: this.parent.nucleus[this.crux.label],
-                        sync: this.patch.sync
-                    }
-                };
+                var cp = Jungle.Util.deepCopy(this.cache);
+                if (this.alive) {
+                    cp.default = this.parent.nucleus[this.crux.label];
+                }
+                return cp;
             };
             return CallHook;
         }(Nova.Construct));
         Nova.CallHook = CallHook;
+        Nova.JungleDomain.register('CallHook', CallHook);
     })(Nova = Jungle.Nova || (Jungle.Nova = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
 (function (Jungle) {
-    var Nova;
-    (function (Nova) {
-        function normalise(key, value) {
-            if (Jungle.Util.isPrimative(value)) {
+    var IO;
+    (function (IO) {
+        var Designate;
+        (function (Designate) {
+            function regexifyDesignationTerm(term) {
+                if (term == '*') {
+                    return /.*/;
+                }
+                else if (term == '**') {
+                    return '**';
+                }
+                else {
+                    return new RegExp("^" + term + "$");
+                }
+            }
+            Designate.regexifyDesignationTerm = regexifyDesignationTerm;
+            function parseDesignatorString(desigstr, targetRole) {
+                var colonSplit = desigstr.match(/^((?:(?:\w+|\*{1,2})(?:\.(?:\w+|\*{1,2}))*))?\:(\w+|\*|\$)$/);
+                if (colonSplit === null) {
+                }
+                else {
+                    var total = colonSplit[0], chain = colonSplit[1], crux = colonSplit[2];
+                }
+                var subranedesig = chain ? chain.split(/\./) : [];
+                subranedesig = subranedesig.map(function (value, index) {
+                    return Designate.regexifyDesignationTerm(value);
+                });
                 return {
-                    basis: 'primative',
-                    patch: value
+                    role: targetRole,
+                    mDesignators: subranedesig,
+                    cDesignator: Designate.regexifyDesignationTerm(crux)
                 };
             }
-            else if (Jungle.Util.isVanillaObject(value)) {
-                return {
-                    basis: 'state',
-                    patch: value
+            Designate.parseDesignatorString = parseDesignatorString;
+            function designatorToRegex(desigstr, role) {
+                var colonSplit = desigstr.match(/^((?:(?:\w+|\*{1,2})(?:\.(?:\w+|\*{1,2}))*))?\:(\w+|\*|\$)$/);
+                if (colonSplit === null) {
+                }
+                else {
+                    var total = colonSplit[0], chain = colonSplit[1], crux = colonSplit[2];
+                }
+                var subranedesig = chain ? chain.split(/\./) : [];
+                var regex = '';
+                for (var i = 0; i < subranedesig.length; i++) {
+                    var term = subranedesig[i], first = i === 0, last = i === subranedesig.length - 1;
+                    if (term == '*') {
+                        regex += first ? '^(\\w+)' : '\.\\w+';
+                    }
+                    else if (term == '**') {
+                        regex += first ? '^(\\w+(\.\\w+)*?)?' : '(\.\\w+)*';
+                    }
+                    else {
+                        regex += first ? "^" + term : "." + term;
+                    }
+                }
+                regex += ":" + (crux == '*' ? '(\\w+)' : crux) + "/" + role + "$";
+                return new RegExp(regex);
+            }
+            Designate.designatorToRegex = designatorToRegex;
+            function tokenDesignatedBy(token, designator) {
+                console.log("token: ", token);
+                var _a = token.match(/^((?:(?:\w+)(?:\.(?:\w+))*))?\:(\w+)\/(\w+)$/), match = _a[0], allSubs = _a[1], crux = _a[2], role = _a[3];
+                console.log("match: ", match);
+                var splitSubs = allSubs ? allSubs.split(/\./) : [];
+                for (var i = 0; i < splitSubs.length; i++) {
+                    if (!Designate.matchDesignationTerm(splitSubs[i], designator.mDesignators[i])) {
+                        return false;
+                    }
+                }
+                if (!Designate.matchDesignationTerm(crux, designator.cDesignator)) {
+                    return false;
+                }
+                return role === designator.role;
+            }
+            Designate.tokenDesignatedBy = tokenDesignatedBy;
+            function matchDesignationTerm(target, term) {
+                if (term instanceof Function) {
+                    return term(target);
+                }
+                else if (term instanceof RegExp) {
+                    return target.match(term);
+                }
+                else {
+                    return target.match(Designate.regexifyDesignationTerm(term));
+                }
+            }
+            Designate.matchDesignationTerm = matchDesignationTerm;
+        })(Designate = IO.Designate || (IO.Designate = {}));
+        var BasicDesignable = (function () {
+            function BasicDesignable(groupName, finalName) {
+                this.groupName = groupName;
+                this.finalName = finalName;
+                this.visors = [];
+            }
+            BasicDesignable.prototype.treeDesignate = function (_a) {
+                var mDesignators = _a.mDesignators, cDesignator = _a.cDesignator, role = _a.role;
+                var collected = {}, glob = false, terminal = false;
+                if (mDesignators.length > 0) {
+                    var deref = void 0;
+                    if (mDesignators[0] == '**') {
+                        glob = true;
+                        if (mDesignators.length == 1) {
+                            terminal = true;
+                        }
+                        else {
+                            deref = mDesignators[1];
+                        }
+                    }
+                    else {
+                        deref = mDesignators[0];
+                    }
+                    var collectedSubs = [];
+                    for (var mk in this[this.groupName]) {
+                        if (!terminal &&
+                            ((deref instanceof Function && deref(this[this.groupName][mk], mk)) ||
+                                (deref instanceof RegExp && mk.match(deref)))) {
+                            collected[mk] = this[this.groupName][mk].treeDesignate({
+                                mDesignators: glob ? ([mDesignators[0]].concat(mDesignators.slice(2))) : (mDesignators.slice(1)),
+                                cDesignator: cDesignator,
+                                role: role
+                            });
+                        }
+                        else if (glob) {
+                            collected[mk] = this[this.groupName][mk].treeDesignate({
+                                mDesignators: mDesignators,
+                                cDesignator: cDesignator,
+                                role: role
+                            });
+                        }
+                    }
+                }
+                else {
+                    terminal = true;
+                }
+                if (terminal) {
+                    var bucket = this[this.finalName][role];
+                    for (var cruxlabel in bucket) {
+                        var crux = bucket[cruxlabel];
+                        if ((cDesignator instanceof Function && cDesignator(crux)) ||
+                            (cDesignator instanceof RegExp && crux.label.match(cDesignator))) {
+                            collected[cruxlabel] = crux;
+                        }
+                    }
+                }
+                return collected;
+            };
+            BasicDesignable.prototype.flatDesignate = function (designator) {
+                var recur = function (dtree, collection) {
+                    for (var k in dtree) {
+                        var v = dtree[k];
+                        if (v instanceof IO.Crux) {
+                            collection.push(v);
+                        }
+                        else {
+                            recur(v, collection);
+                        }
+                    }
+                    return collection;
                 };
-            }
-            else if (value instanceof Nova.Construct) {
-                return value.extract();
-            }
-            else if (Nova.Construct.isConstructSpec(value)) {
-                return value;
-            }
-            else {
-                throw new Error("Form property not normalisable");
-            }
-        }
-        Nova.normalise = normalise;
-    })(Nova = Jungle.Nova || (Jungle.Nova = {}));
+                return recur(this.treeDesignate(designator), []);
+            };
+            BasicDesignable.prototype.tokenDesignate = function (designator) {
+                var recur = function (dtree, tokens, chain) {
+                    for (var k in dtree) {
+                        var v = dtree[k];
+                        if (v instanceof IO.Crux) {
+                            tokens[chain + ':' + k + '/' + designator.role] = v;
+                        }
+                        else {
+                            var lead = chain === '' ? chain : chain + '.';
+                            recur(v, tokens, lead + k);
+                        }
+                    }
+                    return tokens;
+                };
+                return recur(this.treeDesignate(designator), {}, '');
+            };
+            BasicDesignable.prototype.designate = function (str, role, tokenize) {
+                if (tokenize === void 0) { tokenize = true; }
+                if (tokenize) {
+                    return this.tokenDesignate(Designate.parseDesignatorString(str, role));
+                }
+                else {
+                    return this.flatDesignate(Designate.parseDesignatorString(str, role));
+                }
+            };
+            BasicDesignable.prototype.createVisor = function (designation, host) {
+                var visor = new IO.Visor(this, host);
+                this.visors.push(visor);
+            };
+            return BasicDesignable;
+        }());
+        IO.BasicDesignable = BasicDesignable;
+    })(IO = Jungle.IO || (Jungle.IO = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
 (function (Jungle) {
@@ -1697,91 +1938,16 @@ var Jungle;
 (function (Jungle) {
     var IO;
     (function (IO) {
-        var Membrane = (function () {
+        var Membrane = (function (_super) {
+            __extends(Membrane, _super);
             function Membrane(host) {
-                this.host = host;
-                this.roles = {};
-                this.subranes = {};
-                this.notify = true;
+                var _this = _super.call(this, "subranes", "roles") || this;
+                _this.host = host;
+                _this.roles = {};
+                _this.subranes = {};
+                _this.notify = true;
+                return _this;
             }
-            Membrane.regexifyDesignationTerm = function (term) {
-                if (term == '*') {
-                    return /.*/;
-                }
-                else if (term == '**') {
-                    return '**';
-                }
-                else {
-                    return new RegExp("^" + term + "$");
-                }
-            };
-            Membrane.parseDesignatorString = function (desigstr, targetRole) {
-                var colonSplit = desigstr.match(/^((?:(?:\w+|\*{1,2})(?:\.(?:\w+|\*{1,2}))*))?\:(\w+|\*|\$)$/);
-                if (colonSplit === null) {
-                }
-                else {
-                    var total = colonSplit[0], chain = colonSplit[1], crux = colonSplit[2];
-                }
-                var subranedesig = chain ? chain.split(/\./) : [];
-                subranedesig = subranedesig.map(function (value, index) {
-                    return Membrane.regexifyDesignationTerm(value);
-                });
-                return {
-                    role: targetRole,
-                    mDesignators: subranedesig,
-                    cDesignator: Membrane.regexifyDesignationTerm(crux)
-                };
-            };
-            Membrane.designatorToRegex = function (desigstr, role) {
-                var colonSplit = desigstr.match(/^((?:(?:\w+|\*{1,2})(?:\.(?:\w+|\*{1,2}))*))?\:(\w+|\*|\$)$/);
-                if (colonSplit === null) {
-                }
-                else {
-                    var total = colonSplit[0], chain = colonSplit[1], crux = colonSplit[2];
-                }
-                var subranedesig = chain ? chain.split(/\./) : [];
-                var regex = '';
-                for (var i = 0; i < subranedesig.length; i++) {
-                    var term = subranedesig[i], first = i === 0, last = i === subranedesig.length - 1;
-                    if (term == '*') {
-                        regex += first ? '^(\\w+)' : '\.\\w+';
-                    }
-                    else if (term == '**') {
-                        regex += first ? '^(\\w+(\.\\w+)*?)?' : '(\.\\w+)*';
-                    }
-                    else {
-                        regex += first ? "^" + term : "." + term;
-                    }
-                }
-                regex += ":" + (crux == '*' ? '(\\w+)' : crux) + "/" + role + "$";
-                return new RegExp(regex);
-            };
-            Membrane.tokenDesignatedBy = function (token, designator) {
-                console.log("token: ", token);
-                var _a = token.match(/^((?:(?:\w+)(?:\.(?:\w+))*))?\:(\w+)\/(\w+)$/), match = _a[0], allSubs = _a[1], crux = _a[2], role = _a[3];
-                console.log("match: ", match);
-                var splitSubs = allSubs ? allSubs.split(/\./) : [];
-                for (var i = 0; i < splitSubs.length; i++) {
-                    if (!Membrane.matchDesignationTerm(splitSubs[i], designator.mDesignators[i])) {
-                        return false;
-                    }
-                }
-                if (!Membrane.matchDesignationTerm(crux, designator.cDesignator)) {
-                    return false;
-                }
-                return role === designator.role;
-            };
-            Membrane.matchDesignationTerm = function (target, term) {
-                if (term instanceof Function) {
-                    return term(target);
-                }
-                else if (term instanceof RegExp) {
-                    return target.match(term);
-                }
-                else {
-                    return target.match(Membrane.regexifyDesignationTerm(term));
-                }
-            };
             Membrane.prototype.notifyCruxAdd = function (crux, role, token) {
                 if (this.notify) {
                     var basic = token == undefined;
@@ -1860,6 +2026,10 @@ var Jungle;
                     }
                 }
             };
+            Membrane.prototype.createVisor = function (designation, host) {
+                var visor = new IO.Visor(this, host);
+                this.visors.push(visor);
+            };
             Membrane.prototype.addSubrane = function (membrane, label) {
                 this.subranes[label] = membrane;
                 membrane.parent = this;
@@ -1895,100 +2065,8 @@ var Jungle;
                     this.notifyCruxRemove(crux, role);
                 }
             };
-            Membrane.prototype.treeDesignate = function (_a) {
-                var mDesignators = _a.mDesignators, cDesignator = _a.cDesignator, role = _a.role;
-                var collected = {}, glob = false, terminal = false;
-                if (mDesignators.length > 0) {
-                    var deref = void 0;
-                    if (mDesignators[0] == '**') {
-                        glob = true;
-                        if (mDesignators.length == 1) {
-                            terminal = true;
-                        }
-                        else {
-                            deref = mDesignators[1];
-                        }
-                    }
-                    else {
-                        deref = mDesignators[0];
-                    }
-                    var collectedSubs = [];
-                    for (var mk in this.subranes) {
-                        if (!terminal &&
-                            ((deref instanceof Function && deref(this.subranes[mk], mk)) ||
-                                (deref instanceof RegExp && mk.match(deref)))) {
-                            collected[mk] = this.subranes[mk].treeDesignate({
-                                mDesignators: glob ? ([mDesignators[0]].concat(mDesignators.slice(2))) : (mDesignators.slice(1)),
-                                cDesignator: cDesignator,
-                                role: role
-                            });
-                        }
-                        else if (glob) {
-                            collected[mk] = this.subranes[mk].treeDesignate({
-                                mDesignators: mDesignators,
-                                cDesignator: cDesignator,
-                                role: role
-                            });
-                        }
-                    }
-                }
-                else {
-                    terminal = true;
-                }
-                if (terminal) {
-                    var bucket = this.roles[role];
-                    for (var cruxlabel in bucket) {
-                        var crux = bucket[cruxlabel];
-                        if ((cDesignator instanceof Function && cDesignator(crux)) ||
-                            (cDesignator instanceof RegExp && crux.label.match(cDesignator))) {
-                            collected[cruxlabel] = crux;
-                        }
-                    }
-                }
-                return collected;
-            };
-            Membrane.prototype.flatDesignate = function (designator) {
-                var recur = function (dtree, collection) {
-                    for (var k in dtree) {
-                        var v = dtree[k];
-                        if (v instanceof IO.Crux) {
-                            collection.push(v);
-                        }
-                        else {
-                            recur(v, collection);
-                        }
-                    }
-                    return collection;
-                };
-                return recur(this.treeDesignate(designator), []);
-            };
-            Membrane.prototype.tokenDesignate = function (designator) {
-                var recur = function (dtree, tokens, chain) {
-                    for (var k in dtree) {
-                        var v = dtree[k];
-                        if (v instanceof IO.Crux) {
-                            tokens[chain + ':' + k + '/' + designator.role] = v;
-                        }
-                        else {
-                            var lead = chain === '' ? chain : chain + '.';
-                            recur(v, tokens, lead + k);
-                        }
-                    }
-                    return tokens;
-                };
-                return recur(this.treeDesignate(designator), {}, '');
-            };
-            Membrane.prototype.designate = function (str, role, tokenize) {
-                if (tokenize === void 0) { tokenize = true; }
-                if (tokenize) {
-                    return this.tokenDesignate(Membrane.parseDesignatorString(str, role));
-                }
-                else {
-                    return this.flatDesignate(Membrane.parseDesignatorString(str, role));
-                }
-            };
             return Membrane;
-        }());
+        }(IO.BasicDesignable));
         IO.Membrane = Membrane;
     })(IO = Jungle.IO || (Jungle.IO = {}));
 })(Jungle || (Jungle = {}));
@@ -2033,8 +2111,8 @@ var Jungle;
                 ;
                 var match = m[0], srcDesig = m[1], srcClose = m[2], viceVersa = m[3], filter = m[4], matching = m[5], persistent = m[6], snkClose = m[7], snkDesig = m[8];
                 return {
-                    designatorA: IO.Membrane.parseDesignatorString(srcDesig, medium.roleA),
-                    designatorB: IO.Membrane.parseDesignatorString(snkDesig, medium.roleB),
+                    designatorA: IO.Designate.parseDesignatorString(srcDesig, medium.roleA),
+                    designatorB: IO.Designate.parseDesignatorString(snkDesig, medium.roleB),
                     closeSource: srcClose === '|',
                     closeSink: snkClose === '|',
                     matching: matching === "=",
@@ -2080,7 +2158,7 @@ var Jungle;
                 if (role === medium.roleA) {
                     for (var _i = 0, linkRules_1 = linkRules; _i < linkRules_1.length; _i++) {
                         var rule = linkRules_1[_i];
-                        if (IO.Membrane.tokenDesignatedBy(token, rule.designatorA)) {
+                        if (IO.Designate.tokenDesignatedBy(token, rule.designatorA)) {
                             var dB = this.primary.tokenDesignate(rule.designatorB);
                             var dA = {};
                             dA[token] = crux;
@@ -2091,7 +2169,7 @@ var Jungle;
                 else if (role === medium.roleB) {
                     for (var _a = 0, linkRules_2 = linkRules; _a < linkRules_2.length; _a++) {
                         var rule = linkRules_2[_a];
-                        if (IO.Membrane.tokenDesignatedBy(token, rule.designatorB)) {
+                        if (IO.Designate.tokenDesignatedBy(token, rule.designatorB)) {
                             var dA = this.primary.tokenDesignate(rule.designatorA);
                             var dB = {};
                             dB[token] = crux;
@@ -2132,6 +2210,22 @@ var Jungle;
             return RuleMesh;
         }());
         IO.RuleMesh = RuleMesh;
+    })(IO = Jungle.IO || (Jungle.IO = {}));
+})(Jungle || (Jungle = {}));
+var Jungle;
+(function (Jungle) {
+    var IO;
+    (function (IO) {
+        var Visor = (function (_super) {
+            __extends(Visor, _super);
+            function Visor(target, designator) {
+                var _this = _super.call(this, 'subranes', 'roles') || this;
+                _this.target = target;
+                return _this;
+            }
+            return Visor;
+        }(IO.BasicDesignable));
+        IO.Visor = Visor;
     })(IO = Jungle.IO || (Jungle.IO = {}));
 })(Jungle || (Jungle = {}));
 var Jungle;
@@ -2262,7 +2356,7 @@ var Test;
             this.spies.extract(this.state.message);
             return this.cache;
         };
-        MockConstruct.prototype.graft = function (patch) {
+        MockConstruct.prototype.patch = function (patch) {
             this.state.message = patch.message;
             this.spies.graft(this.state.message);
         };

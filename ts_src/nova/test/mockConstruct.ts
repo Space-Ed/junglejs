@@ -46,7 +46,7 @@ namespace Test {
         /*
             output a representation of the construct that may be recovered to a replication
         */
-        extract():Jungle.Nova.ConstructSpec {
+        extract():any {
             this.spies.extract(this.state.message)
             return this.cache;
         }
@@ -54,7 +54,7 @@ namespace Test {
         /*
             modification of live structure by application of a patch, leaving the implementation to the subclasses
         */
-        graft(patch){
+        patch(patch){
             this.state.message = patch.message;
             this.spies.graft(this.state.message)
 

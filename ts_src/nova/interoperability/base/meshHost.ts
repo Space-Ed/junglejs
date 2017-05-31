@@ -61,8 +61,8 @@ namespace Jungle {
                 let [match, srcDesig, srcClose, viceVersa, filter, matching, persistent, snkClose, snkDesig] = m;
 
                 return {
-                    designatorA:Membrane.parseDesignatorString(srcDesig, medium.roleA),
-                    designatorB:Membrane.parseDesignatorString(snkDesig, medium.roleB),
+                    designatorA:Designate.parseDesignatorString(srcDesig, medium.roleA),
+                    designatorB:Designate.parseDesignatorString(snkDesig, medium.roleB),
                     closeSource:srcClose==='|',
                     closeSink:snkClose==='|',
                     matching:matching==="=",
@@ -124,7 +124,7 @@ namespace Jungle {
 
                 if(role === medium.roleA){
                     for(let rule of linkRules){
-                        if(Membrane.tokenDesignatedBy(token, rule.designatorA)){
+                        if(Designate.tokenDesignatedBy(token, rule.designatorA)){
                             let dB = this.primary.tokenDesignate(rule.designatorB)
                             let dA = {}; dA[token] = crux;
                             this.designateCheckConnect(rule, dA, dB, medium);
@@ -132,7 +132,7 @@ namespace Jungle {
                     }
                 }else if(role === medium.roleB){
                     for(let rule of linkRules){
-                        if(Membrane.tokenDesignatedBy(token, rule.designatorB)){
+                        if(Designate.tokenDesignatedBy(token, rule.designatorB)){
                             let dA = this.primary.tokenDesignate(rule.designatorA);
                             let dB = {}; dB[token] = crux;
                             this.designateCheckConnect(rule, dA, dB, medium);

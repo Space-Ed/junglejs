@@ -3,7 +3,7 @@ let Jungle = require('../../dist/jungle.js');
 let {Membrane, CallCrux, Crux, PortCrux} = Jungle.IO;
 let TestHost = require('../helpers/testHost.js')
 
-describe('basic membrane', function(){
+fdescribe('basic membrane', function(){
 
     let memb, host;
 
@@ -39,10 +39,10 @@ describe('basic membrane', function(){
         })
 
         it('populate works', function(){
-            // expect(memb.roles.called.a).not.toBeUndefined();
-            // expect(memb.roles.called.b).not.toBeUndefined();
-            // expect(memb.roles.caller.y).not.toBeUndefined();
-            // expect(memb.roles.caller.x).not.toBeUndefined();
+            expect(memb.roles.called.a).not.toBeUndefined();
+            expect(memb.roles.called.b).not.toBeUndefined();
+            expect(memb.roles.caller.y).not.toBeUndefined();
+            expect(memb.roles.caller.x).not.toBeUndefined();
 
         })
 
@@ -175,19 +175,19 @@ describe('basic membrane', function(){
     })
 
     it('shoule converr designator to token regex', function(){
-        let basic = Membrane.designatorToRegex('a:p', 'role');
+        let basic = Designate.designatorToRegex('a:p', 'role');
         expect('a:p/role'.match(basic)).not.toBeNull();
 
-        let onewild = Membrane.designatorToRegex('*:p', 'role');
+        let onewild = Designate.designatorToRegex('*:p', 'role');
         expect('a:p/role'.match(onewild)).not.toBeNull();
 
-        let leadingGlob = Membrane.designatorToRegex('**.a:*', 'blart');
+        let leadingGlob = Designate.designatorToRegex('**.a:*', 'blart');
         expect('globby.glob.blob.a:farts/blart'.match(leadingGlob)).not.toBeNull();
 
-        let multiGlob = Membrane.designatorToRegex('**.a.**:p', 'blart');
+        let multiGlob = Designate.designatorToRegex('**.a.**:p', 'blart');
         expect('globby.a.globby:p/blart'.match(multiGlob)).not.toBeNull();
 
-        let trickyGlob = Membrane.designatorToRegex('**.a.**:p', 'blart');
+        let trickyGlob = Designate.designatorToRegex('**.a.**:p', 'blart');
         //console.log('trickyGlob:', trickyGlob);
         expect('globby.a.a.a:p/blart'.match(trickyGlob)).not.toBeNull();
 

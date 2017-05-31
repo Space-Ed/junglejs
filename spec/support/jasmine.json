@@ -1,7 +1,7 @@
 {
   "spec_dir": "spec",
   "spec_files": [
-    "nova/*[sS]pec.js",
+    "**/*[sS]pec.js",
     "io/*[sS]pec.js"
   ],
   "helpers": [

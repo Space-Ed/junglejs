@@ -19,11 +19,11 @@ namespace Jungle {
             }
 
             register(key, construct){
-                if(key in this.registry){
-                    throw new Error(`Domain cannot contain duplicates "${key}" is already registered`)
-                }else{
-                    this.registry[key] = construct;
-                }
+                this.registry[key] = construct;
+                // if(key in this.registry){
+                //     throw new Error(`Domain cannot contain duplicates "${key}" is already registered`)
+                // }else{
+                // }
             }
 
             locateDomain(dotpath:string):Domain{
@@ -41,28 +41,28 @@ namespace Jungle {
 
                     return ns
 
+                }else if (dotpath === ""){
+                    return this
                 }else{
                     throw new Error(`invalid dotpath syntax: ${dotpath}`)
                 }
             }
 
-            recover(construct:ConstructSpec):Construct<any>{
+            recover(construct):Construct<any>{
+                ///TODO: Basis accessors a.b:Basis
+                let basis = this.registry[construct.basis];
 
-                let basis = this.locateDomain(construct.locator).registry[construct.basis];
-
-                if(basis instanceof Function){
-                    let seed:Construct<any> = new basis(construct.patch, this, construct.locator);
-                    return seed;
-                }else if(basis instanceof Construct){
-                    return basis.extend(construct.patch)
-                }else if(Construct.isConstructSpec(basis)){
-                    //registered as a serial pattern find the original basis.
-                    this.recover(basis).extend(construct.patch)
-                }else{
-                    throw new Error(`Unable to recover construct`)
+                try {
+                    return new basis(construct);
+                }catch (e){
+                    console.error("basis: ",construct.basis," not a constructor in registry")
+                    throw e
                 }
             }
         }
+
+        export const JungleDomain = new Domain();
+
         //
         // export function N(ns:Domain){
         //     return new Proxy({}, {

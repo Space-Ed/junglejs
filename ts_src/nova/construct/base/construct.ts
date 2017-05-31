@@ -2,12 +2,6 @@ namespace Jungle {
 
     export namespace Nova {
 
-        export interface ConstructSpec {
-            basis:string,
-            patch:any,
-            locator?:string
-        }
-
         /*
 
             The construct is a foundational interface that defines all the requirements to being a part of the jungle system.
@@ -19,17 +13,12 @@ namespace Jungle {
                 declarative connectedness: nothing can independently decide to have an effect on something else, it is only with a context that this is possible.
 
 
-            ****CONSTRAINTS****
-            - Must have the abstract methods implemented
+            ****Extending Checklist ****
             - Must serialise with a reconstructable artefact.
 
         */
 
         export abstract class Construct<HOST extends Composite>{
-
-            static isConstructSpec(construct:any){
-                return "basis" in construct && "patch" in construct;
-            }
 
             /*
                 fundamentally composites need to know if the construct is a living one
@@ -37,12 +26,35 @@ namespace Jungle {
             alive:boolean;
 
             parent:HOST;
-            cache:ConstructSpec;
+            cache:any;
             domain:Domain;
+            locator:string;
 
-            constructor(spec:ConstructSpec){
-                this.cache = spec;
+            constructor(spec:any){
+                this.cache = this.ensureObject(spec);
+                this.cache.basis = this.cache.basis || 'cell';
+                console.log("Create Construct, ",this.cache)
+
+                if(spec.domain instanceof Domain){
+                    this.domain = spec.domain;
+                }else{
+                    this.locator = spec.domain||"";
+                }
+
                 this.alive = false;
+            }
+
+            /**
+             * Ensure that argument is an object
+             */
+            private ensureObject(spec:any){
+                if(spec === undefined){
+                    return {}
+                }else if(Util.isVanillaObject(spec)){
+                    return spec
+                }else{
+                    throw new Error("Invalid Specification for base Construct, must be object or undefined")
+                }
             }
 
             /*
@@ -51,7 +63,7 @@ namespace Jungle {
             */
             induct(host:HOST, key:string){
                 this.parent = host;
-                this.domain = host.domain.locateDomain(this.cache.locator||"");
+                this.domain = this.domain||host.domain.locateDomain(this.locator);
             };
 
             /*
@@ -73,12 +85,14 @@ namespace Jungle {
             /*
                 output a representation of the construct that may be recovered to a replication
             */
-            abstract extract():ConstructSpec
+            extract():any{
+                return this.cache;
+            }
 
             /*
                 modification of live structure by application of a patch, leaving the implementation to the subclasses
             */
-            abstract graft(patch);
+            abstract patch(patch:any);
 
 
             /*
@@ -89,7 +103,7 @@ namespace Jungle {
                 //convert to serial form and extend
                 let ext = Util.B()
                     .init(this.extract())
-                    .merge({patch:patch})
+                    .merge(patch)
                     .dump();
 
                 return this.domain.recover(ext)
