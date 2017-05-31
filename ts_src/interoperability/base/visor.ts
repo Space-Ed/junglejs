@@ -1,20 +1,12 @@
+import {BasicDesignable} from '../designation/designable'
 
+export class Visor extends BasicDesignable{
 
-namespace Jungle {
+    roles:any;
+    subranes:any;
 
-    export namespace IO {
-
-        export class Visor extends BasicDesignable{
-
-            subranes:any;
-            roles:any;
-
-            constructor(private target:BasicDesignable, designator){
-                super('subranes', 'roles')
-
-            }
-
-        }
+    constructor(private target:BasicDesignable, designator){
+        super('subranes', 'roles')
 
     }
 

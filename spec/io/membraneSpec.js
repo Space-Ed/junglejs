@@ -1,6 +1,7 @@
 
-let Jungle = require('../../dist/jungle.js');
-let {Membrane, CallCrux, Crux, PortCrux} = Jungle.IO;
+let Jungle = require('../../build/jungle.js');
+let {Membrane, CallCrux, Crux} = require('../../build/interoperability/all.js');
+let Designate = require('../../build/interoperability/designation/designable.js');
 let TestHost = require('../helpers/testHost.js')
 
 fdescribe('basic membrane', function(){
@@ -72,14 +73,15 @@ fdescribe('basic membrane', function(){
         })
 
         it('should invert further cruxes added', function(){
-            memb.addCrux(new PortCrux('lame-o'), 'caller');
+            memb.addCrux(new CallCrux({label:'lame-o'}), 'caller');
 
             //console.log(invert.roles.called)
             let desall = invert.designate(":*", 'called');
+
             expect(desall[':lame-o/called']).not.toBeUndefined();
 
             //a caller in the inversion is a called in the original
-            invert.addCrux(new PortCrux('cool-cat'), 'caller');
+            invert.addCrux(new CallCrux({label:'cool-cat'}), 'caller');
             let desallop = memb.designate(":*", 'called');
             expect(desallop[':cool-cat/called']).not.toBeUndefined();
         })
@@ -116,7 +118,7 @@ fdescribe('basic membrane', function(){
         it('globbing should collect at many depths',function(){
             let sub2 = new Membrane(subhost)
 
-            sub2.addCrux(new PortCrux('a'), 'called');
+            sub2.addCrux(new CallCrux({label:'a'}), 'called');
             submemb.addSubrane(sub2, 'sub')
 
             let desig = memb.designate('sub.sub:a', 'called')

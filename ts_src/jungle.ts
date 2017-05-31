@@ -1,35 +1,24 @@
 
-///compile this file with --outFile for commonjs module environment
+import * as _Util from './util/all'
+import * as _IO  from './interoperability/all'
 
-/// <reference path="../typings/index.d.ts"/>
+export const Util = _Util
+export const IO = _IO;
 
-// / <reference path="util.ts"/>
-// / <reference path="form.ts"/>
-// / <reference path="core.ts"/>
-// / <reference path="io.ts"/>
-// / <reference path="reconstruction.ts"/>
-// / <reference path="terminal.ts"/>
+
+// (function(){
+//     var root = this
 //
-// / <reference path="inventory/io.ts"/>
-// / <reference path="inventory/select.ts"/>
-// / <reference path="inventory/resolver.ts"/>
+//     var define = define || undefined;
 //
-// / <reference path="aliases.ts"/>
-
-
-(function(){
-    var root = this
-
-    var define = define || undefined;
-
-    if (typeof exports !== 'undefined') {
-        if (typeof module !== 'undefined' && module.exports) {
-            exports = module.exports = Jungle;
-        }
-        exports.Jungle = Jungle;
-    } else if (typeof define !== 'undefined' && define.amd) {
-        define('Jungle', (function() { return root.Jungle = Jungle; })() );
-    } else {
-        root.Jungle = Jungle;
-    }
-}).call(this)
+//     if (typeof exports !== 'undefined') {
+//         if (typeof module !== 'undefined' && module.exports) {
+//             exports = module.exports = Jungle;
+//         }
+//         exports.Jungle = Jungle;
+//     } else if (typeof define !== 'undefined' && define.amd) {
+//         define('Jungle', (function() { return root.Jungle = Jungle; })() );
+//     } else {
+//         root.Jungle = Jungle;
+//     }
+// }).call(this)

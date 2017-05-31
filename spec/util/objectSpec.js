@@ -1,8 +1,9 @@
 
 
-const Jungle = require('../../dist/jungle.js');
-const Util = Jungle.Util;
-const B = Util.B;
+Jungle = require('../../build/jungle.js');
+
+Util = Jungle.Util;
+B = Util.B;
 
 describe('deep equality', function(){
 
@@ -53,7 +54,7 @@ describe('deep equality', function(){
 
 })
 
-describe('Tree reduction', function(){
+fdescribe('Tree reduction', function(){
 
     //pending("removal of logs and use")
 

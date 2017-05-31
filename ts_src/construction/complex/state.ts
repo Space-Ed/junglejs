@@ -1,27 +1,20 @@
-/// <reference path="composite.ts"/>
 
-namespace Jungle {
+import {Composite} from './composite'
 
-    export namespace Nova {
+export class StateCell extends Composite{
 
-        export class StateCell extends Composite{
+    proxy:any;
 
-            proxy:any;
+    constructor(spec:any){
+        super(spec)
+    }
 
-            constructor(spec:any){
-                super(spec)
-            }
+    prime(){
+        //check state consistency
 
-            prime(){
-                //check state consistency
-            }
-
-            define(key, value){
-                this.proxy 
-            }
-
-        }
-
+    }
+    define(key, value){
+        this.proxy
     }
 
 }

@@ -1,45 +1,37 @@
 
-namespace Jungle {
-    export namespace IO {
 
-        export interface Called extends IContact {
-            func:(data:any, tracking:Debug.Crumb)=>Util.Junction;
-        }
+import * as I from '../base/interfaces'
+import {mediaConstructors, BaseMedium} from '../base/medium'
+import {Caller, Called} from './crux'
 
-        export interface Caller extends IContact {
-            func?:(data:any, tracking:Debug.Crumb)=>Util.Junction;
-        }
+export class InjectiveMedium extends BaseMedium<Caller, Called> {
+    roleA:string;
+    roleB:string;
 
-        export class InjectiveMedium extends BaseMedium<Caller, Called> {
-            roleA:string;
-            roleB:string;
+    constructor(spec:I.MediumSpec){
+        super(spec);
 
-            constructor(spec:IMediumSpec){
-                super(spec);
+        this.exclusive = true;
+        this.roleA = 'caller'
+        this.roleB = 'called'
+        this.multiA = false,
+        this.multiB = false
+    }
 
-                this.exclusive = true;
-                this.roleA = 'caller'
-                this.roleB = 'called'
-                this.multiA = false,
-                this.multiB = false
-            }
+    inductA(token:string, a:Caller){
+    }
 
-            inductA(token:string, a:Caller){
-            }
+    inductB(token:string, b:Called){
+    }
 
-            inductB(token:string, b:Called){
-            }
+    connect(link: I.LinkSpec<Caller, Called>){
+        this.matrix.to[link.tokenA][link.tokenB].roleA.func = link.roleB.func
+    }
 
-            connect(link: ILinkSpec<Caller, Called>){
-                this.matrix.to[link.tokenA][link.tokenB].roleA.func = link.roleB.func
-            }
-
-            disconnect(link: ILinkSpec<Caller, Called>){
-                this.matrix.to[link.tokenA][link.tokenB].roleA.func = undefined;
-                super.disconnect(link);
-            }
-        }
-
-        mediaConstructors['inject'] = InjectiveMedium
+    disconnect(link: I.LinkSpec<Caller, Called>){
+        this.matrix.to[link.tokenA][link.tokenB].roleA.func = undefined;
+        super.disconnect(link);
     }
 }
+
+mediaConstructors['inject'] = InjectiveMedium

@@ -1,4 +1,4 @@
-let Jungle = require('../../dist/jungle.js');
+let Jungle = require('../../build/jungle.js');
 let {Debug, Util} = Jungle;
 let {Membrane, PortCrux, Crux, RuleMesh, RequestCrux} = Jungle.IO;
 let TestHost = require('../helpers/testHost.js')

@@ -1,6 +1,6 @@
 
-let Jungle = require('../../dist/jungle.js');
-let Debug = Jungle.Debug;
+let Jungle = require('../../build/jungle.js');
+let Debug = require('../../build/util/debug.js')
 let {Membrane, PortCrux, Crux, DistributeMedium} = Jungle.IO;
 let TestHost = require('../helpers/testHost.js')
 Debug.Crumb.defaultOptions.debug = true;

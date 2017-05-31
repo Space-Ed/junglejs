@@ -1,11 +1,11 @@
 
-let Jungle = require('../../dist/jungle.js');
+let Jungle = require('../../build/jungle.js');
 let {Membrane, PortCrux, Crux, RuleMesh} = Jungle.IO;
 
 let TestHost = require('../helpers/testHost.js')
 
 
-let Debug = Jungle.Debug;
+let Debug = Jungle.Util.Debug;
 Debug.Crumb.defaultOptions.debug = true;
 Debug.Crumb.defaultOptions.log = console;
 

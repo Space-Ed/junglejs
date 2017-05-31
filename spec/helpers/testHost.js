@@ -1,5 +1,5 @@
-let Jungle = require('../../dist/jungle.js');
-let {Membrane, CallCrux, Crux, RequestCrux} = Jungle.IO;
+let Jungle = require('../../build/jungle.js');
+let {Membrane, CallCrux} = Jungle.IO;
 
 (function(){
 
