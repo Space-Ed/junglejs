@@ -14,7 +14,7 @@
         "noLib": false,
         "preserveConstEnums": true,
         "suppressImplicitAnyIndexErrors": true,
-        "outFile": "../dist/jungle.js"
+        "outDir": "../build"
     },
     "exclude": [
         "node_modules",
