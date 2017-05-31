@@ -1,3 +1,5 @@
+/// <reference path="../designation/designable.ts"/>
+
 namespace Jungle {
 
     export namespace IO {
