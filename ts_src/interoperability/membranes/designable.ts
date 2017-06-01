@@ -1,6 +1,7 @@
 
-import * as I from '../base/interfaces'
-import {Crux} from '../base/crux'
+
+import {BasicContact} from '../contacts/base'
+import * as I from '../interfaces'
 
 /**
  * convert globs to regex to use as the designator
@@ -16,16 +17,16 @@ export function regexifyDesignationTerm(term:string){
 
 }
 
-export function parseDesignatorString(desigstr:string, targetRole:string):I.CruxDesignator{
+export function parseDesignatorString(desigstr:string):I.ContactDesignator{
 
     //match structural consistency with xxx.xxx... ...xxx:ppp
     let colonSplit = desigstr.match(/^((?:(?:\w+|\*{1,2})(?:\.(?:\w+|\*{1,2}))*))?\:(\w+|\*|\$)$/);
 
     if(colonSplit === null){
 
-        //err bad designator string, must be membrane.submembrane:crux
+        //err bad designator string, must be membrane.submembrane:contact
     }else{
-        var [total, chain, crux] = colonSplit
+        var [total, chain, contact] = colonSplit
     }
 
     let subranedesig:any[] = chain?chain.split(/\./):[];
@@ -35,20 +36,19 @@ export function parseDesignatorString(desigstr:string, targetRole:string):I.Crux
     })
 
     return {
-        role:targetRole,
         mDesignators:subranedesig,
-        cDesignator:regexifyDesignationTerm(crux)
+        cDesignator:regexifyDesignationTerm(contact)
     }
 }
 
-export function designatorToRegex(desigstr, role){
+export function designatorToRegex(desigstr){
     //match structural consistency with xxx.xxx... ...xxx:ppp
     let colonSplit = desigstr.match(/^((?:(?:\w+|\*{1,2})(?:\.(?:\w+|\*{1,2}))*))?\:(\w+|\*|\$)$/);
 
     if(colonSplit === null){
 
     }else{
-        var [total, chain, crux] = colonSplit
+        var [total, chain, contact] = colonSplit
     }
 
     let subranedesig:string[] = chain?chain.split(/\./):[];
@@ -67,15 +67,15 @@ export function designatorToRegex(desigstr, role){
         }
     }
 
-    regex += `:${crux=='*'?'(\\w+)':crux}/${role}$`
+    regex += `:${contact=='*'?'(\\w+)':contact}$`
 
     return new RegExp(regex)
 }
 
-export function tokenDesignatedBy(token, designator:I.CruxDesignator):boolean{
-    console.log("token: ", token);
-    let [match, allSubs, crux, role] =  token.match(/^((?:(?:\w+)(?:\.(?:\w+))*))?\:(\w+)\/(\w+)$/);
-    console.log("match: ", match);
+export function tokenDesignatedBy(token, designator:I.ContactDesignator):boolean{
+    // console.log("token: ", token);
+    let [match, allSubs, contact] =  token.match(/^((?:(?:\w+)(?:\.(?:\w+))*))?\:(\w+)$/);
+    // console.log("match: ", match);
 
     let splitSubs = allSubs?allSubs.split(/\./):[];
 
@@ -85,11 +85,11 @@ export function tokenDesignatedBy(token, designator:I.CruxDesignator):boolean{
         }
     }
 
-    if(!matchDesignationTerm(crux, designator.cDesignator)){
+    if(!matchDesignationTerm(contact, designator.cDesignator)){
          return false;
     }
 
-    return role === designator.role
+    return true;
 }
 
 export function matchDesignationTerm(target, term){
@@ -109,7 +109,7 @@ export class BasicDesignable {
 
     }
 
-    treeDesignate({mDesignators, cDesignator, role}:I.CruxDesignator){
+    treeDesignate({mDesignators, cDesignator}:I.ContactDesignator){
         let collected = {}, glob = false, terminal = false;
 
         //find all designated subranes and recursively collect
@@ -135,14 +135,12 @@ export class BasicDesignable {
                    (deref instanceof RegExp && mk.match(deref)))){
                     collected[mk] = this[this.groupName][mk].treeDesignate({
                         mDesignators:glob?([mDesignators[0]].concat(mDesignators.slice(2))):(mDesignators.slice(1)),//remove the  deref and glob where applicable
-                        cDesignator:cDesignator,
-                        role:role
+                        cDesignator:cDesignator
                     })
                 }else if(glob){
                     collected[mk] = this[this.groupName][mk].treeDesignate({
                         mDesignators:mDesignators,//leave the glob(continue scanning)
-                        cDesignator:cDesignator,
-                        role:role
+                        cDesignator:cDesignator
                     })
                 }
 
@@ -154,13 +152,13 @@ export class BasicDesignable {
         //either we are out of derefs or we are tail globbing
         if (terminal){ // terminal
 
-            let bucket = this[this.finalName][role]
+            let bucket = this[this.finalName]
 
-            for(let cruxlabel in bucket){
-                let crux:Crux = bucket[cruxlabel];
+            for(let contactlabel in bucket){
+                let contact:I.Contact = bucket[contactlabel];
 
-                if(matchDesignationTerm(cruxlabel, cDesignator)){
-                    collected[cruxlabel] = crux;
+                if(matchDesignationTerm(contactlabel, cDesignator)){
+                    collected[contactlabel] = contact;
                 }
             }
 
@@ -169,13 +167,13 @@ export class BasicDesignable {
         return collected;
     }
 
-    flatDesignate(designator:I.CruxDesignator):any{
+    flatDesignate(designator:I.ContactDesignator):any{
 
         let recur = function(dtree, collection){
             for(let k in dtree){
                 let v = dtree[k];
 
-                if(v instanceof Crux){
+                if(v instanceof BasicContact){
                     collection.push(v);
                 }else{
                     recur(v, collection);
@@ -188,13 +186,13 @@ export class BasicDesignable {
 
     }
 
-    tokenDesignate(designator:I.CruxDesignator){
+    tokenDesignate(designator:I.ContactDesignator){
         let recur = function(dtree, tokens, chain){
             for(let k in dtree){
                 let v = dtree[k];
 
-                if(v instanceof Crux){
-                    tokens[chain+':'+k+'/'+designator.role] = v;
+                if(v instanceof BasicContact){
+                    tokens[chain+':'+k] = v;
                 }else{
                     let lead = chain===''?chain:chain+'.'
                     recur(v, tokens, lead+k);
@@ -206,11 +204,11 @@ export class BasicDesignable {
         return recur(this.treeDesignate(designator), {}, '')
     }
 
-    designate(str:string, role:string, tokenize=true){
+    designate(str:string, tokenize=true){
         if(tokenize){
-            return this.tokenDesignate(parseDesignatorString(str, role))
+            return this.tokenDesignate(parseDesignatorString(str))
         }else{
-            return this.flatDesignate(parseDesignatorString(str, role))
+            return this.flatDesignate(parseDesignatorString(str))
         }
     }
 

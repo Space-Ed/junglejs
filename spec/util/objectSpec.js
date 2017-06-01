@@ -54,7 +54,7 @@ describe('deep equality', function(){
 
 })
 
-fdescribe('Tree reduction', function(){
+describe('Tree reduction', function(){
 
     //pending("removal of logs and use")
 

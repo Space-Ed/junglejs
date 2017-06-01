@@ -1,11 +1,13 @@
 
-export * from './base/membrane'
-export * from "./base/crux"
-export * from './base/medium'
-export * from './base/membrane'
-export * from './base/meshHost'
-export * from './base/visor'
-export * from "./call/crux"
-export * from "./call/distributive"
-export * from "./call/injective"
-export * from "./designation/designable"
+export * from './membranes/membrane'
+export * from './membranes/visor'
+export * from "./membranes/designable"
+
+export * from './mesh/meshHost'
+
+export * from './media/medium'
+export * from "./media/distributive"
+export * from "./media/directed"
+
+export * from "./contacts/callin"
+export * from "./contacts/callout"

@@ -1,14 +1,12 @@
-import * as I from './interfaces'
+import * as I from '../interfaces'
 
 export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> implements I.Medium<A,B>{
     exclusive = false;
     multiA = true;
     multiB = true;
 
-    label:string;
-
-    abstract roleA:string;
-    abstract roleB:string;
+    abstract typeA:Function;
+    abstract typeB:Function;
 
     matrix:{
         to:any;
@@ -20,25 +18,24 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
 
     constructor(spec:I.MediumSpec){
         this.matrix = {to:{},from:{},sym:{}}
-        this.label = spec.label;
         this.exposed = spec.exposed || {};
     }
 
     suppose(supposedLink: I.LinkSpec<A,B>):boolean{
 
-        let {tokenA, tokenB, roleA, roleB} = supposedLink;
+        let {tokenA, tokenB, contactA, contactB} = supposedLink;
 
         if(this.check(supposedLink)){
             //check exclusivity and singularity
 
             if(this.matrix.to[tokenA] === undefined){
                 this.matrix.to[tokenA] = {};
-                this.inductA(tokenA, roleA);
+                this.inductA(tokenA, contactA);
             }
 
             if(this.matrix.from[tokenB] === undefined){
                 this.matrix.from[tokenB] = {};
-                this.inductB(tokenB, roleB);
+                this.inductB(tokenB, contactB);
             }
 
             this.matrix.to[tokenA][tokenB] = supposedLink;
@@ -79,7 +76,8 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
 
         if(link.directed){
             return (this.multiA || ( this.matrix.to[link.tokenA]==undefined)||this.matrix.to[link.tokenA][link.tokenB] === undefined)&&
-            (this.multiB || (this.matrix.from[link.tokenB]== undefined)||this.matrix.from[link.tokenB][link.tokenA] === undefined)
+            (this.multiB || (this.matrix.from[link.tokenB]== undefined)||this.matrix.from[link.tokenB][link.tokenA] === undefined)&&
+            link.contactA instanceof this.typeA && link.contactB instanceof this.typeB;
         }else{
             return (this.multiA || this.matrix.sym[link.tokenA][link.tokenB] === undefined)&&
             (this.multiB || this.matrix.sym[link.tokenB][link.tokenA] === undefined)

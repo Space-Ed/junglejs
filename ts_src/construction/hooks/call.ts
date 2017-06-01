@@ -65,7 +65,7 @@ export class CallHook extends Construct<Cell> {
                 propVal = {
                     set:(value)=>{
                         //access the membrane and plug the value
-                        host.membranes[this.cache.target].inversion.roles[this.cache.contact][key].func(value);
+                        host.membranes[this.cache.target].inversion.roles[this.cache.contact][key]contactA.emit(value);
                         host.nucleus[key] = value;
                     },get:()=>{
                         return host.nucleus[key];
@@ -80,7 +80,7 @@ export class CallHook extends Construct<Cell> {
                 propVal = {
                     value:(value)=>{
                         //access the membrane and plug the value
-                        host.membranes[this.cache.target].inversion.roles[this.cache.contact][key].func(value);
+                        host.membranes[this.cache.target].inversion.roles[this.cache.contact][key]contactA.emit(value);
                         host.nucleus[key] = value;
                     }
                 }

@@ -1,13 +1,14 @@
 
 let Jungle = require('../../build/jungle.js');
 let Debug = require('../../build/util/debug.js')
-let {Membrane, PortCrux, Crux, DistributeMedium} = Jungle.IO;
+
+let {Membrane, DistributeMedium} = Jungle.IO;
 let TestHost = require('../helpers/testHost.js')
 Debug.Crumb.defaultOptions.debug = true;
 Debug.Crumb.defaultOptions.log = console;
 
 describe("The Push Medium", function () {
-    let host, memb, mockmesh, portA, portB, roleA, roleB, medium
+    let host, memb, mockmesh, contactA, contactB, medium
 
 
     beforeEach(function(){
@@ -20,10 +21,8 @@ describe("The Push Medium", function () {
 
         host.populate(['a_', '_b'])
 
-        portA = memb.roles.caller.a
-        portB = memb.roles.called.b
-        roleA = portA.roles.caller
-        roleB = portB.roles.called
+        contactA = memb.terminals.a
+        contactB = memb.terminals.b
         medium = new DistributeMedium(mockmesh);
 
     })
@@ -31,30 +30,27 @@ describe("The Push Medium", function () {
     it('should connect A to B on the same membrane',function(){
 
         let link = {
-            roleA:roleA,
-            tokenA:':a/caller',
-            roleB:roleB,
-            tokenB:':b/called'
+            contactA:contactA,
+            tokenA:':a',
+            contactB:contactB,
+            tokenB:':b'
         }
 
         medium.suppose(link)
 
         let outspy =  jasmine.createSpy();
-        portB.roles.caller.func = outspy;
+        contactB.invert().emit = outspy;
 
         let crumb = new Debug.Crumb("Beginning")
             .catch((err)=>{
                 //console.log("Crumb error caught: ", err.message)
             })
 
-        portA.roles.called.func("Hello?", crumb)
+        contactA.invert().put("Hello?", crumb)
 
         let final = outspy.calls.allArgs()[0][1]
             .drop("Finished")
             .dump()
-
-        //console.log(final)
-
 
         expect(outspy.calls.allArgs()[0][0]).toEqual('Hello?')
     })

@@ -21,44 +21,33 @@
         "typings/browser",
         "typings/browser.d.ts"
     ],
-    "compileOnSave": false,
+    "compileOnSave": true,
     "buildOnSave": false,
     "atom": {
         "rewriteTsconfig": true
     },
     "filesGlob": [
         "typings/index.d.ts",
-        "./**/*.ts"
+        "./interoperability/**/*.ts"
     ],
     "files": [
-        "./construction/base/construct.ts",
-        "./construction/base/domain.ts",
-        "./construction/cell.ts",
-        "./construction/complex/composite.ts",
-        "./construction/complex/state.ts",
-        "./construction/hooks/call.ts",
-        "./construction/hooks/hook.ts",
-        "./construction/hooks/visor.ts",
         "./interoperability/all.ts",
-        "./interoperability/base/crux.ts",
-        "./interoperability/base/interfaces.ts",
-        "./interoperability/base/medium.ts",
-        "./interoperability/base/membrane.ts",
-        "./interoperability/base/meshHost.ts",
-        "./interoperability/base/visor.ts",
-        "./interoperability/call/crux.ts",
-        "./interoperability/call/distributive.ts",
-        "./interoperability/call/injective.ts",
-        "./interoperability/designation/designable.ts",
-        "./jungle.ts",
-        "./test/mockConstruct.ts",
-        "./util/all.ts",
-        "./util/blender.ts",
-        "./util/checks.ts",
-        "./util/debug.ts",
-        "./util/junction.ts",
-        "./util/math.ts",
-        "./util/transforms.ts",
-        "./util/typesplit.ts"
+        "./interoperability/contacts/access.ts",
+        "./interoperability/contacts/asymmetric.ts",
+        "./interoperability/contacts/base.ts",
+        "./interoperability/contacts/callin.ts",
+        "./interoperability/contacts/callout.ts",
+        "./interoperability/contacts/offering.ts",
+        "./interoperability/contacts/symmetric.ts",
+        "./interoperability/contacts/syncFrom.ts",
+        "./interoperability/contacts/syncTo.ts",
+        "./interoperability/interfaces.ts",
+        "./interoperability/media/directed.ts",
+        "./interoperability/media/distributive.ts",
+        "./interoperability/media/medium.ts",
+        "./interoperability/membranes/designable.ts",
+        "./interoperability/membranes/membrane.ts",
+        "./interoperability/membranes/visor.ts",
+        "./interoperability/mesh/meshHost.ts"
     ]
 }

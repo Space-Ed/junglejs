@@ -1,4 +1,4 @@
 #! /bin/bash
 
-./script/build
+#./script/build
 jasmine

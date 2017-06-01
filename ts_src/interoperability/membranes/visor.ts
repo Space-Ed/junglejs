@@ -1,4 +1,4 @@
-import {BasicDesignable} from '../designation/designable'
+import {BasicDesignable} from '../membranes/designable'
 
 export class Visor extends BasicDesignable{
 

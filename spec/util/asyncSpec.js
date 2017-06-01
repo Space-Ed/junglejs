@@ -1,6 +1,6 @@
 
 
-var Util = require("../../dist/jungle.js").Util;
+var Util = require("../../build/jungle.js").Util;
 
 describe("junction", function(){
     let j1, o, callout, countout

@@ -1,12 +1,13 @@
 let Jungle = require('../../build/jungle.js');
-let {Debug, Util} = Jungle;
+let {Util} = Jungle;
+let Debug = Util.Debug
 let {Membrane, PortCrux, Crux, RuleMesh, RequestCrux} = Jungle.IO;
 let TestHost = require('../helpers/testHost.js')
 
 
 describe("request medium and cruxes", function () {
 
-    let host, memb, exposed, mesh, cruxA, cruxB, roleA, roleB;
+    let host, memb, exposed, mesh, meshOutlet, meshInlet;
 
     beforeEach(function () {
 
@@ -17,19 +18,18 @@ describe("request medium and cruxes", function () {
         host = new TestHost()
 
         memb = host.primary
+        memb.invert()
 
         host.populate(['a_', '_b'])
 
-        cruxA = memb.roles.caller.a
-        cruxB = memb.roles.called.b
-        roleA = cruxA.roles.caller
-        roleB = cruxB.roles.called
+        meshOutlet = memb.terminals.a;
+        meshInlet = memb.terminals.b;
 
         exposed = {}
 
         mesh = new RuleMesh({
             rules:{
-                'inject':[
+                'direct':[
                     '*:a->*:b',
                 ]
             },
@@ -47,7 +47,7 @@ describe("request medium and cruxes", function () {
         crumb.at('Pretest')
 
         //Request Terminal
-        cruxB.roles.caller.func = (data, crumb)=>{
+        meshInlet.invert().emit = (data, crumb)=>{
             let j = new Util.Junction()
 
             let crumb2 = crumb.drop("final request")
@@ -60,17 +60,25 @@ describe("request medium and cruxes", function () {
             return j
         }
 
-        expect(cruxA.roles.caller.func).toBe(cruxB.roles.called.func)
+        expect(meshOutlet.emit).toBe(meshInlet.put)
 
         //Request Entry
-        cruxA.roles.called.func("Hello?", crumb).then(({data, crumb})=>{
+        meshOutlet.invert().put("Hello?", crumb).then(({data, crumb})=>{
             let nextCrumb = crumb.drop("Final Response")
                 .with(data)
+                .catch(err =>{
+                    console.log(err.message)
+                })
 
             //console.log(nextCrumb.dump())
             expect(data).toEqual("Hello?")
             done()
+        }).catch((err)=>{
+            console.log(err.message);
+            done();
         })
+
+
     })
 
     it("should allow only single output contacts", function(){

@@ -2,7 +2,7 @@ let Jungle = require('../../build/jungle.js');
 let {Membrane, CallCrux, Crux, PortCrux} = Jungle.IO;
 let TestHost = require('../helpers/testHost.js')
 
-fdescribe("Visor", function () {
+describe("Visor", function () {
 
     let host, membrane, visor, visorhost
 

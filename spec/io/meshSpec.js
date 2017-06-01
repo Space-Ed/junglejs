@@ -1,6 +1,6 @@
 
 let Jungle = require('../../build/jungle.js');
-let {Membrane, PortCrux, Crux, RuleMesh} = Jungle.IO;
+let {Membrane, PortContact, Contact, RuleMesh} = Jungle.IO;
 
 let TestHost = require('../helpers/testHost.js')
 
@@ -11,10 +11,9 @@ Debug.Crumb.defaultOptions.log = console;
 
 describe('The Mesh Host', function () {
 
-    let host, memb, exposed, mesh, portA, portB, roleA, roleB;
+    let host, memb, exposed, mesh, contactA, contactB;
 
     beforeEach(function () {
-
 
         host = new TestHost()
 
@@ -22,10 +21,8 @@ describe('The Mesh Host', function () {
 
         host.populate(['a_', '_b'])
 
-        portA = memb.roles.caller.a
-        portB = memb.roles.called.b
-        roleA = portA.roles.caller
-        roleB = portB.roles.called
+        contactA = memb.terminals.a
+        contactB = memb.terminals.b
 
         exposed = {}
 
@@ -45,37 +42,38 @@ describe('The Mesh Host', function () {
     it("should connect a to b of a single membrane", function () {
         let outspy = jasmine.createSpy();
 
-        portB.roles.caller.func = outspy;
-        portA.roles.called.func("Hello?");
+        contactB.invert().emit = outspy;
+        contactA.invert().put("Hello?");
+
         expect(outspy.calls.mostRecent().args[0]).toBe("Hello?")
     });
 
     it('Should successfully disconnect when a crux is removed', function(){
 
-        memb.removeCrux(portB, 'called')
+        memb.removeContact('a')
         //console.log(mesh.media['distribute'].matrix)
-        expect(mesh.media['distribute'].matrix.to['m:a/caller']['m:b/called']).toBeUndefined()
+        expect(mesh.media['distribute'].matrix.to['m:a']['m:b']).toBeUndefined()
 
     })
 
     it('should gracefully connect to an added membrane',function () {
         let h2 = new TestHost();
         h2.populate(['_b']);
-        let m2 = h2.primary;
-        let pB2 = m2.roles.called.b;
+        let secondmemb = h2.primary;
+        let contact2 = secondmemb.terminals.b;
 
-        mesh.primary.addSubrane(m2, "m2");
+        mesh.primary.addSubrane(secondmemb, "secondmemb");
 
-        expect(mesh.media['distribute'].matrix.to['m:a/caller']['m2:b/called']).not.toBeUndefined();
+        expect(mesh.media['distribute'].matrix.to['m:a']['secondmemb:b']).not.toBeUndefined();
 
         let outspy = jasmine.createSpy();
-        pB2.roles.caller.func = outspy;
+        contact2.invert().emit =outspy;
 
         let outspy2 = jasmine.createSpy();
-        portB.roles.caller.func = outspy2;
+        contactB.invert().emit =outspy2;
 
 
-        portA.roles.called.func("Hello?");
+        contactA.invert().put("Hello?");
         expect(outspy).toHaveBeenCalledWith("Hello?")
         expect(outspy2).toHaveBeenCalledWith("Hello?")
     })
@@ -84,20 +82,20 @@ describe('The Mesh Host', function () {
         let h2 = new TestHost();
         h2.populate(['_b']);
         let m2 = h2.primary;
-        let pB2 = m2.roles.called.b;
+        let contact2 = m2.terminals.b;
 
         let h3 = new TestHost();
         h3.populate(['a_']);
         let m3 = h3.primary;
-        let pA3 = m3.roles.caller.a;
+        let pA3 = m3.terminals.a;
 
 
         mesh.primary.addSubrane(m2, "m2");
         mesh.primary.addSubrane(m3, "m3");
         mesh.primary.removeSubrane('m');
 
-        expect(mesh.media['distribute'].matrix.from['m2:b/called']['m:a/caller']).toBeUndefined();
-        expect(mesh.media['distribute'].matrix.to['m3:a/caller']['m:b/called']).toBeUndefined();
+        expect(mesh.media['distribute'].matrix.from['m2:b']['m:a']).toBeUndefined();
+        expect(mesh.media['distribute'].matrix.to['m3:a']['m:b']).toBeUndefined();
 
     })
 
@@ -105,8 +103,8 @@ describe('The Mesh Host', function () {
         let h2 = new TestHost();
         h2.populate(['_a', 'b_']);
         let m2 = h2.primary;
-        let portB2 = m2.roles.caller.b;
-        let portA2 = m2.roles.called.a;
+        let contactB2 = m2.terminals.b;
+        let contactA2 = m2.terminals.a;
 
         mesh.primary.removeSubrane('m')
 
@@ -125,21 +123,21 @@ describe('The Mesh Host', function () {
         })
 
         let outspy = jasmine.createSpy("1");
-        portB.roles.caller.func = outspy;
+        contactB.invert().emit =outspy;
 
         let outspy2 = jasmine.createSpy("2");
-        portA2.roles.caller.func = outspy2;
+        contactA2.invert().emit =outspy2;
 
         //each calls the corresponding and not the other a -> a2, b2 -> b
 
-        portA.roles.called.func("Hello?");
+        contactA.invert().put("Hello?");
         expect(outspy).not.toHaveBeenCalledWith("Hello?")
         expect(outspy2).toHaveBeenCalledWith("Hello?")
 
         outspy.calls.reset();
         outspy2.calls.reset();
 
-        portB2.roles.called.func("Hola?");
+        contactB2.invert().put("Hola?");
         expect(outspy).toHaveBeenCalledWith("Hola?")
         expect(outspy2).not.toHaveBeenCalledWith("Hola?")
 

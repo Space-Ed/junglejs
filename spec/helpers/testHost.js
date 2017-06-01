@@ -1,5 +1,5 @@
 let Jungle = require('../../build/jungle.js');
-let {Membrane, CallCrux} = Jungle.IO;
+let {Membrane, CallIn, CallOut} = Jungle.IO;
 
 (function(){
 
@@ -8,7 +8,9 @@ let {Membrane, CallCrux} = Jungle.IO;
         constructor(name){
             this.name = name
 
-            this.primary = new Membrane(this)
+            this.primary = new Membrane()
+            this.primary.watch(this)
+
             this.policy = Jungle.IO.FreePolicy
 
             this.addspy = jasmine.createSpy()
@@ -18,12 +20,12 @@ let {Membrane, CallCrux} = Jungle.IO;
 
         }
 
-        onAddCrux(crux,role,token){
-            this.addspy(crux, role, token)
+        onAddContact(crux, token){
+            this.addspy(crux, token)
         }
 
-        onRemoveCrux(crux,role,token){
-            this.remspy(crux, role, token)
+        onRemoveContact(crux,token){
+            this.remspy(crux,  token)
         }
 
         onAddMembrane(membrane, token){
@@ -38,8 +40,6 @@ let {Membrane, CallCrux} = Jungle.IO;
             return this
         }
 
-
-
         /**
          * Parse the standard IO name format _sinkname sourcename_ and plant them respectively
          */
@@ -52,10 +52,10 @@ let {Membrane, CallCrux} = Jungle.IO;
                     let inp = pmatch[1], label = pmatch[2], out = pmatch[3];
 
                     if(inp == '_'){
-                        this.primary.addCrux(new CallCrux({label:label, tracking:true}), "called")
+                        this.primary.addContact(label, new CallIn({label:label, tracking:true}))
                     }
                     if(out == '_'){
-                        this.primary.addCrux(new CallCrux({label:label, tracking:true}), "caller")
+                        this.primary.addContact(label, new CallOut({label:label, tracking:true}))
                     }
 
                 }else{

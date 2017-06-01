@@ -1,54 +1,61 @@
 
-import * as I from './interfaces'
-import {BasicDesignable} from '../designation/designable'
+import * as I from '../interfaces'
+import {BasicDesignable} from './designable'
 
 import {Visor} from './visor'
-import {Crux} from './crux'
+import {BasicContact} from '../contacts/base'
 
-export class Membrane extends BasicDesignable{
+export class Membrane extends BasicDesignable {
 
-    ///---------------------------------------BEGIN CLASS
+    terminals:any;
+    subgroups:any;
 
     inverted:Membrane;
-    roles:any;
-    subranes:any;
     parent:Membrane;
     alias:string;
     notify:boolean;
+    watcher:I.MembraneWatcher;
 
-    constructor (public host:I.MembraneHost){
-        super("subranes", "roles")
-        this.roles = {};
-        this.subranes = {};
+    constructor (){
+        super("subgroups", "terminals")
+        this.terminals = {};
+        this.subgroups = {};
         this.notify = true;
     }
 
+    watch(watcher:I.MembraneWatcher){
+        this.watcher = watcher
+    }
 
-    notifyCruxAdd(crux, role, token?){
+    notifyContactAdd(label, contact:BasicContact<any>, token?){
         if(this.notify){
 
             let basic = token==undefined;
-            let t = basic?`:${crux.label}/${role}`:token;
+            let t = basic?`:${label}`:token;
 
-
-            this.host.onAddCrux(crux,role, t)
+            if(this.watcher){
+                this.watcher.onAddContact(contact, t)
+            }
 
             if(this.parent){
                 let qualified = `${this.alias}${basic?t:'.'+token}`
-                this.parent.notifyCruxAdd(crux, role, qualified)
+                this.parent.notifyContactAdd(label, contact, qualified)
             }
         }
     }
 
-    notifyCruxRemove(crux:Crux, role:string, token?){
+    notifyContactRemove(label, contact:BasicContact<any>, token?){
         if(this.notify){
             let basic = token==undefined;
-            let t = basic?`:${crux.label}/${role}`:token;
-            this.host.onRemoveCrux(crux,role, t)
+            let t = basic?`:${label}`:token;
+
+            if(this.watcher){
+                this.watcher.onRemoveContact(contact,t)
+            }
 
             if(this.parent){
                 let qualified = `${this.alias}${basic?t:'.'+token}`
-                this.parent.notifyCruxRemove(crux, role, qualified)
+                this.parent.notifyContactRemove(label, contact, qualified)
             }
         }
     }
@@ -57,7 +64,7 @@ export class Membrane extends BasicDesignable{
         if(this.notify){
             let basic = token==undefined;
             let t = basic?`${membrane.alias}`:token;
-            this.host.onAddMembrane(membrane, t)
+            this.watcher.onAddMembrane(membrane, t)
 
             if(this.parent){
                 let qualified = `${this.alias}${basic?t:'.'+token}`
@@ -70,7 +77,7 @@ export class Membrane extends BasicDesignable{
         if(this.notify){
             let basic = token==undefined;
             let t = basic?`${membrane.alias}`:token;
-            this.host.onRemoveMembrane(membrane, t)
+            this.watcher.onRemoveMembrane(membrane, t)
 
             if(this.parent){
                 let qualified = `${this.alias}${basic?t:'.'+token}`
@@ -79,27 +86,21 @@ export class Membrane extends BasicDesignable{
         }
     }
 
-
-    forEachCrux(func:(crux, role)=>void){
-        for(let rk in this.roles){
-            let ofrole = this.roles[rk]
-            for(let cruxlabel in ofrole){
-                let crux = ofrole[cruxlabel]
-                func(crux, ofrole)
-            }
-        }
-    }
-
     invert(){
         if(this.inverted === undefined){
 
-            this.inverted = new Membrane(this.host)
+            this.inverted = new Membrane()
             this.inverted.inverted = this;
 
-            this.forEachCrux((crux, role)=>{
-                //reattach the crux thereby picking up the inversion
-                crux.attachTo(this, crux.originalRole)
-            })
+            for(let rk in this.terminals){
+                let contact:BasicContact<any> = this.terminals[rk]
+
+                if(contact.invertable){
+                    this.inverted.addContact(rk, contact.invert())
+                }
+
+            }
+
         }
 
         return this.inverted
@@ -107,7 +108,7 @@ export class Membrane extends BasicDesignable{
 
     getMembraneToken(){
         if(this.parent==undefined){
-            return undefined;
+            return "";
         }else{
             let parentToken =this.parent.getMembraneToken()
             if(parentToken){
@@ -125,7 +126,7 @@ export class Membrane extends BasicDesignable{
     // }
 
     addSubrane(membrane:Membrane, label:string){
-        this.subranes[label] = membrane;
+        this.subgroups[label] = membrane;
         membrane.parent = this;
         membrane.alias = label;
 
@@ -133,8 +134,8 @@ export class Membrane extends BasicDesignable{
     }
 
     removeSubrane(label):Membrane{
-        let removing = this.subranes[label];
-        delete this.subranes[label];
+        let removing = this.subgroups[label];
+        delete this.subgroups[label];
 
         this.notifyMembraneRemove(removing)
 
@@ -142,31 +143,39 @@ export class Membrane extends BasicDesignable{
         removing.alias = undefined;
 
         return removing
-    }
-
-    addCrux(crux:Crux, role:string){
-        let home = this.roles[role];
-
-        //first time seeing role
-        if(home === undefined){
-            home = this.roles[role] = {};
         }
 
-        let existing:Crux = home[crux.label];
+    addContact(label:string, contact:BasicContact<any>){
+        let existing:BasicContact<any> = this.terminals[label];
         if(existing !== undefined){
+
         }else{
-            crux.attachTo(this, role)
-            this.notifyCruxAdd(crux, role)
+
+            contact.attach(this, label)
+            this.terminals[label] = contact
+
+            let invertContact
+            if(this.inverted !== undefined && (invertContact = contact.invert())){
+                this.inverted.addContact(label, invertContact)
+            }
+
+            this.notifyContactAdd(label, contact)
         }
     }
 
-    removeCrux(crux:Crux, role:string){
+    removeContact(label:string){
 
-        let existing:Crux = this.roles[role][crux.label];
+        let existing:BasicContact<any> = this.terminals[label];
 
         if(existing !== undefined){
             existing.detach();
-            this.notifyCruxRemove(crux, role)
+            delete this.terminals[label];
+
+            if(this.inverted && existing.invertable){
+                this.inverted.removeContact(label);
+            }
+
+            this.notifyContactRemove(label, existing)
         }
     }
 
