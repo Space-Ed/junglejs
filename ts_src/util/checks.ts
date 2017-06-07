@@ -66,7 +66,7 @@ export function deeplyEquals(node1, node2, allowIdentical=true){
     }
 }
 
-export function deeplyEqualsThrow(node1, node2, derefstack, seen, allowIdentical=true){
+export function deeplyEqualsThrow(node1, node2, derefstack?, seen?, allowIdentical=true){
     var derefstack = derefstack || [];
     var seen = seen || []
 

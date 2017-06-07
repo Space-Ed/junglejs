@@ -1,20 +1,16 @@
 
-import {Construct} from '../construction/base/construct'
-import {Composite} from '../construction/complex/composite'
-
-import jasmine from 'jasmine'
+import {Construct} from '../../construction/construct'
+import {Composite} from '../../construction/composite'
 
 export class MockConstruct extends Construct<Composite> {
 
     state:any
     spies:any
 
-    constructor(spec:{patch:"message"}){
+    constructor(spec:{message:string}){
         super({
             basis:"Mocked",
-            patch:{
-                message:"Hello"
-            }
+            message:spec.message
         })
 
         this.state = this.cache.patch;
