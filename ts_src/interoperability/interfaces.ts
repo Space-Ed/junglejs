@@ -1,9 +1,25 @@
 import {Membrane} from './membranes/membrane'
 import {BasicContact} from './contacts/base'
+import {Designator} from '../util/designator'
+
+export enum CALL_MODE {
+    PUSH, GET, REQUEST, PROXY
+}
 
 export interface CallContactSpec {
     label:string,
-    tracking:boolean
+    tracking:boolean,
+    syncOnly:boolean,
+    mode: CALL_MODE,
+    hook?:Function,
+    default?:any
+}
+
+export interface Hookable {
+    set?:(value)=>void;
+    get?:()=>any;
+    hook:(descriptor:{get?:()=>any, set?:(value:any)=>void}) =>void;
+    unhook:()=>void;
 }
 
 
@@ -12,8 +28,8 @@ export enum LINK_FILTERS {
 }
 
 export interface LinkRule {
-    designatorA:ContactDesignator;
-    designatorB:ContactDesignator;
+    designatorA:Designator;
+    designatorB:Designator;
     closeSource:boolean;
     closeSink:boolean;
     matching:boolean;

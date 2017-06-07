@@ -1,90 +1,150 @@
 
 import * as I from '../interfaces'
-import {BasicDesignable} from './designable'
+import {Designator} from '../../util/designator'
 
 import {Visor} from './visor'
 import {BasicContact} from '../contacts/base'
 
-export class Membrane extends BasicDesignable {
+export enum MembraneEvents {
+    AddContact, AddMembrane, RemoveContact, RemoveMembrane
+}
 
-    terminals:any;
-    subgroups:any;
+interface Watchable<Watcher> {
+    addWatch(watcher:Watcher, alias?:string);
+}
+
+interface SectionWatcher {
+    designator?:Designator;
+    changeOccurred(event:MembraneEvents, subject:BasicContact<any>|Section, token:string):void
+}
+
+export function DemuxWatchMethodsF(target:I.MembraneWatcher){
+    return  (event:MembraneEvents, data, token)=>{
+        switch(event){
+            case(MembraneEvents.AddContact):target.onAddContact(<I.Contact>data, token);break;
+            case(MembraneEvents.RemoveContact):target.onRemoveContact(<I.Contact>data, token);break;
+            case(MembraneEvents.AddMembrane):target.onAddMembrane(<Membrane>data, token);break;
+            case(MembraneEvents.RemoveMembrane):target.onRemoveMembrane(<Membrane>data, token);break;
+        }
+    }
+
+}
+
+class Section implements Watchable<SectionWatcher>, SectionWatcher{
+
+    designator:Designator;
+    watches:SectionWatcher[]
+    sections:Section[]
+    source:Membrane;
+
+    constructor(){
+        this.sections = [];
+        this.watches = [];
+    }
+
+    addSection(desexp:string, alias?:string){
+        let section = new Section();
+
+        if(this instanceof Membrane){
+            section.source = this;
+        }else{
+            section.source = this.source;
+        }
+
+        Object.defineProperty(section, 'subranes',{
+            get(){
+                return this.source.subranes
+            }
+        })
+
+        Object.defineProperty(section, 'contacts',{
+            get(){
+                return this.source.contacts
+            }
+        })
+
+        section.designator = new Designator('subranes', 'contacts', desexp);
+
+        if(alias === undefined){
+            this.sections.push(section)
+        }else{
+            this.sections[alias]= section
+        }
+    }
+
+    addWatch(watcher:SectionWatcher, alias?:string){
+        if(alias === undefined){
+            this.watches.push(watcher)
+        }else{
+            this.watches[alias]= watcher
+        }
+    }
+
+    removeWatch(key){
+        delete this.watches[key]
+    }
+
+    removeAllWatches(){
+        this.watches = [];
+    }
+
+    protected nextToken(token, key){
+
+        if(isNaN(key)){
+            if(token === undefined){ //membrane inception
+                return key
+            }else if (token.match(/^\:\w+$/)){//contact inception
+                return `${key}${token}`
+            } else { //membrane continutation
+                return `${key}.${token}`
+            }
+        }else{ //anonymous watch
+            return token  || ""
+        }
+
+    }
+
+    changeOccurred(event:MembraneEvents, subject:BasicContact<any>|Section, token?:string){
+        for (let skey in this.sections){
+            let section = this.sections[skey];
+            if(section.designator === undefined || section.designator.matches(token)){
+                section.changeOccurred(event, subject, this.nextToken(token, skey))
+                return //escaped
+            }
+        }
+
+        //when not
+        for(let wKey in this.watches){
+            let watch = this.watches[wKey];
+
+            if(watch.designator === undefined || watch.designator.matches(token)){
+                watch.changeOccurred(event, subject, this.nextToken(token, wKey))
+            }
+        }
+    }
+
+}
+
+export class Membrane extends Section{
+
+    contacts:any;
+    subranes:any;
 
     inverted:Membrane;
-    parent:Membrane;
-    alias:string;
     notify:boolean;
-    watcher:I.MembraneWatcher;
 
     constructor (){
-        super("subgroups", "terminals")
-        this.terminals = {};
-        this.subgroups = {};
+        super()
+        this.contacts = {};
+        this.subranes = {};
         this.notify = true;
     }
 
-    watch(watcher:I.MembraneWatcher){
-        this.watcher = watcher
+    designate(dexp:string, flat:boolean){
+        let desig = new Designator('subranes','contacts',dexp);
+        return desig.scan(this, flat)
     }
 
-    notifyContactAdd(label, contact:BasicContact<any>, token?){
-        if(this.notify){
-
-            let basic = token==undefined;
-            let t = basic?`:${label}`:token;
-
-            if(this.watcher){
-                this.watcher.onAddContact(contact, t)
-            }
-
-            if(this.parent){
-                let qualified = `${this.alias}${basic?t:'.'+token}`
-                this.parent.notifyContactAdd(label, contact, qualified)
-            }
-        }
-    }
-
-    notifyContactRemove(label, contact:BasicContact<any>, token?){
-        if(this.notify){
-            let basic = token==undefined;
-            let t = basic?`:${label}`:token;
-
-            if(this.watcher){
-                this.watcher.onRemoveContact(contact,t)
-            }
-
-            if(this.parent){
-                let qualified = `${this.alias}${basic?t:'.'+token}`
-                this.parent.notifyContactRemove(label, contact, qualified)
-            }
-        }
-    }
-
-    notifyMembraneAdd(membrane, token?){
-        if(this.notify){
-            let basic = token==undefined;
-            let t = basic?`${membrane.alias}`:token;
-            this.watcher.onAddMembrane(membrane, t)
-
-            if(this.parent){
-                let qualified = `${this.alias}${basic?t:'.'+token}`
-                this.parent.notifyMembraneAdd(membrane, qualified)
-            }
-        }
-    }
-
-    notifyMembraneRemove(membrane, token?){
-        if(this.notify){
-            let basic = token==undefined;
-            let t = basic?`${membrane.alias}`:token;
-            this.watcher.onRemoveMembrane(membrane, t)
-
-            if(this.parent){
-                let qualified = `${this.alias}${basic?t:'.'+token}`
-                this.parent.notifyMembraneRemove(membrane, qualified)
-            }
-        }
-    }
 
     invert(){
         if(this.inverted === undefined){
@@ -92,8 +152,8 @@ export class Membrane extends BasicDesignable {
             this.inverted = new Membrane()
             this.inverted.inverted = this;
 
-            for(let rk in this.terminals){
-                let contact:BasicContact<any> = this.terminals[rk]
+            for(let rk in this.contacts){
+                let contact:BasicContact<any> = this.contacts[rk]
 
                 if(contact.invertable){
                     this.inverted.addContact(rk, contact.invert())
@@ -106,78 +166,108 @@ export class Membrane extends BasicDesignable {
         return this.inverted
     }
 
-    getMembraneToken(){
-        if(this.parent==undefined){
-            return "";
-        }else{
-            let parentToken =this.parent.getMembraneToken()
-            if(parentToken){
-                return +'.'+this.alias;
-            }else{
-                return this.alias;
-            }
-        }
-    }
-
-    // createVisor(designation:string|string[], host){
-    //
-    //     let visor =  new Visor(this, host);
-    //     this.visors.push(visor)
+    // getMembraneToken(){
+    //     if(this.parent==undefined){
+    //         return "";
+    //     }else{
+    //         let parentToken =this.parent.getMembraneToken()
+    //         if(parentToken){
+    //             return +'.'+this.alias;
+    //         }else{
+    //             return this.alias;
+    //         }
+    //     }
     // }
 
     addSubrane(membrane:Membrane, label:string){
-        this.subgroups[label] = membrane;
-        membrane.parent = this;
-        membrane.alias = label;
+        this.subranes[label] = membrane;
 
-        this.notifyMembraneAdd(membrane);
+        membrane.addWatch(this, label); //watch for changes in the subrane
+        this.notifyMembraneAdd(membrane, label);
+
+        //after the membrane all contacts added must be registered downstream
+        let allNew = membrane.designate("**:*", false);
+        for(let token in allNew){
+            //emulated from upstream
+            this.changeOccurred(MembraneEvents.AddContact, allNew[token], this.nextToken(token,label))
+        }
     }
 
     removeSubrane(label):Membrane{
-        let removing = this.subgroups[label];
-        delete this.subgroups[label];
+        let removing = this.subranes[label];
+        delete this.subranes[label];
 
-        this.notifyMembraneRemove(removing)
+        //before the membrane all contacts being removed must be registered downstream
+        let allNew = removing.designate("**:*", false);
+        for(let token in allNew){
+            //emulated from upstream
+            this.changeOccurred(MembraneEvents.RemoveContact, allNew[token], this.nextToken(token,label))
+        }
 
-        removing.parent = undefined;
-        removing.alias = undefined;
+        this.notifyMembraneRemove(removing, label)
 
         return removing
         }
 
     addContact(label:string, contact:BasicContact<any>){
-        let existing:BasicContact<any> = this.terminals[label];
+        let existing:BasicContact<any> = this.contacts[label];
         if(existing !== undefined){
 
         }else{
 
             contact.attach(this, label)
-            this.terminals[label] = contact
+            this.contacts[label] = contact
 
             let invertContact
             if(this.inverted !== undefined && (invertContact = contact.invert())){
                 this.inverted.addContact(label, invertContact)
             }
 
-            this.notifyContactAdd(label, contact)
+            this.notifyContactAdd(contact, label)
         }
     }
 
-    removeContact(label:string){
+    removeContact(label:string):BasicContact<any>{
 
-        let existing:BasicContact<any> = this.terminals[label];
+        let removing:BasicContact<any> = this.contacts[label];
 
-        if(existing !== undefined){
-            existing.detach();
-            delete this.terminals[label];
+        if(removing !== undefined){
+            removing.detach();
+            delete this.contacts[label];
 
-            if(this.inverted && existing.invertable){
+            if(this.inverted && removing.invertable){
                 this.inverted.removeContact(label);
             }
 
-            this.notifyContactRemove(label, existing)
+            this.notifyContactRemove(removing, label)
+        }
+
+        return removing
+    }
+
+    //Primary Change EntryPoints
+
+    notifyContactAdd(contact:BasicContact<any>, label){
+        if(this.notify){
+            this.changeOccurred(MembraneEvents.AddContact, contact, ":"+label)
         }
     }
 
+    notifyContactRemove(contact:BasicContact<any>, label){
+        if(this.notify){
+            this.changeOccurred(MembraneEvents.RemoveContact, contact, ":"+label)
+        }
+    }
 
+    notifyMembraneAdd(membrane, token?){
+        if(this.notify){
+            this.changeOccurred(MembraneEvents.AddMembrane, membrane, token)
+        }
+    }
+
+    notifyMembraneRemove(membrane, token?){
+        if(this.notify){
+            this.changeOccurred(MembraneEvents.RemoveMembrane, membrane, token)
+        }
+    }
 }

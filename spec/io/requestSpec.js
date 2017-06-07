@@ -22,8 +22,8 @@ describe("request medium and cruxes", function () {
 
         host.populate(['a_', '_b'])
 
-        meshOutlet = memb.terminals.a;
-        meshInlet = memb.terminals.b;
+        meshOutlet = memb.contacts.a;
+        meshInlet = memb.contacts.b;
 
         exposed = {}
 

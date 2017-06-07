@@ -21,8 +21,8 @@ describe('The Mesh Host', function () {
 
         host.populate(['a_', '_b'])
 
-        contactA = memb.terminals.a
-        contactB = memb.terminals.b
+        contactA = memb.contacts.a
+        contactB = memb.contacts.b
 
         exposed = {}
 
@@ -60,7 +60,7 @@ describe('The Mesh Host', function () {
         let h2 = new TestHost();
         h2.populate(['_b']);
         let secondmemb = h2.primary;
-        let contact2 = secondmemb.terminals.b;
+        let contact2 = secondmemb.contacts.b;
 
         mesh.primary.addSubrane(secondmemb, "secondmemb");
 
@@ -82,12 +82,12 @@ describe('The Mesh Host', function () {
         let h2 = new TestHost();
         h2.populate(['_b']);
         let m2 = h2.primary;
-        let contact2 = m2.terminals.b;
+        let contact2 = m2.contacts.b;
 
         let h3 = new TestHost();
         h3.populate(['a_']);
         let m3 = h3.primary;
-        let pA3 = m3.terminals.a;
+        let pA3 = m3.contacts.a;
 
 
         mesh.primary.addSubrane(m2, "m2");
@@ -103,8 +103,8 @@ describe('The Mesh Host', function () {
         let h2 = new TestHost();
         h2.populate(['_a', 'b_']);
         let m2 = h2.primary;
-        let contactB2 = m2.terminals.b;
-        let contactA2 = m2.terminals.a;
+        let contactB2 = m2.contacts.b;
+        let contactA2 = m2.contacts.a;
 
         mesh.primary.removeSubrane('m')
 

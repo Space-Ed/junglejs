@@ -9,7 +9,6 @@ describe('basic membrane', function(){
     let memb, host;
 
     beforeEach(function(){
-
         host =  new TestHost('host1-base')
         memb = host.primary
     })
@@ -24,39 +23,28 @@ describe('basic membrane', function(){
         memb.addContact('calledA', newb);
         memb.addContact('caller1', new2);
 
-        expect(memb.terminals.calledA).toBe(newb);
-        expect(memb.terminals.caller1).toBe(new2);
+        expect(memb.contacts.calledA).toBe(newb);
+        expect(memb.contacts.caller1).toBe(new2);
 
         memb.removeContact("calledA");
         memb.removeContact("caller1");
 
-        expect(memb.terminals.calledA).toBeUndefined();
-        expect(memb.terminals.caller1).toBeUndefined();
+        expect(memb.contacts.calledA).toBeUndefined();
+        expect(memb.contacts.caller1).toBeUndefined();
     })
-
     describe('designation', function(){
         beforeEach(function(){
             host.populate(['_a', '_b', 'y_', 'x_'])
         })
 
         it('populate works', function(){
-            expect(memb.terminals.a).not.toBeUndefined();
-            expect(memb.terminals.b).not.toBeUndefined();
-            expect(memb.terminals.y).not.toBeUndefined();
-            expect(memb.terminals.x).not.toBeUndefined();
+            expect(memb.contacts.a).not.toBeUndefined();
+            expect(memb.contacts.b).not.toBeUndefined();
+            expect(memb.contacts.y).not.toBeUndefined();
+            expect(memb.contacts.x).not.toBeUndefined();
 
-        })
-
-        it('should designate with direct IR',function(){
-            let designated = memb.tokenDesignate({
-                mDesignators:[],
-                cDesignator:/.*/
-            });
-
-            expect(Object.keys(designated).length).toBe(4)
         })
     })
-
     describe('inversion', function(){
         let invert;
         beforeEach(function(){
@@ -64,17 +52,17 @@ describe('basic membrane', function(){
             invert = memb.invert();
         })
 
-        it('should have inverted those cruxes already present', function(){
-            let desall = invert.designate(":*", 'called');
+        it('should have inverted those contactes already present', function(){
+            let desall = invert.designate(":*");
 
             expect(desall[':y']).not.toBeUndefined();
             expect(desall[':x']).not.toBeUndefined();
         })
 
-        it('should invert further cruxes added', function(){
+        it('should invert further contactes added', function(){
             memb.addContact('lame-o',new CallOut({label:'lame-o'}));
 
-            //console.log(invert.terminals)
+            //console.log(invert.contacts)
             let desall = invert.designate(":*");
 
             expect(desall[':lame-o']).not.toBeUndefined();
@@ -86,15 +74,13 @@ describe('basic membrane', function(){
         })
 
         it('should remove from both sides', function(){
-            let desiga = invert.designate(':a','caller', false);
+            let desiga = invert.designate(':a', false);
 
-            invert.removeContact(desiga[0],'caller');
-            expect(invert.designate(':a', "caller", false)[0]).toBeUndefined();
-
+            invert.removeContact(desiga[0]);
+            expect(invert.designate(':a',  false)[0]).toBeUndefined();
         })
 
     })
-
     describe('nested membranes', function(){
         let subhost, submemb
 
@@ -111,7 +97,7 @@ describe('basic membrane', function(){
         it('should allow designation at depth', function(){
 
             let desig = memb.designate('sub:a')
-            expect(desig['sub:a']).toBe(submemb.terminals.a)
+            expect(desig['sub:a']).toBe(submemb.contacts.a)
         })
 
         it('globbing should collect at many depths',function(){
@@ -120,77 +106,107 @@ describe('basic membrane', function(){
             sub2.addContact('a', new CallIn({label:'a'}));
             submemb.addSubrane(sub2, 'sub')
 
-            let desig = memb.designate('sub.sub:a', 'called')
-            expect(desig['sub.sub:a']).toBe(sub2.terminals.a)
+            let desig = memb.designate('sub.sub:a')
+            //
+            expect(desig['sub.sub:a']).toBe(sub2.contacts.a)
 
-            let desigAll = memb.designate('**.sub:a', 'called')
-            expect(desigAll['sub.sub:a']).toBe(sub2.terminals.a)
-            expect(desigAll['sub:a']).toBe(submemb.terminals.a)
-
-        })
-
-        describe('membrane change notifications', function(){
-            let additions;
-
-            function scanForToken(allArgs, token, tokenArgNumber){
-
-                let scanCollection = []
-
-                for(let arglist of allArgs){
-                    if(arglist[tokenArgNumber] === token){
-                        scanCollection.push(arglist);
-                    }
-                }
-
-                return scanCollection;
-            }
-
-            beforeEach(function(){
-                additions = host.addspy.calls.allArgs();
-            })
-            //when ports are added the host of the membrane and all parent membranes is informed
-            it('should notify  when my membrane has a crux added',function(){
-                //all additions reported
-                expect(additions.length).toEqual(6);
-            });
-
-            it('should notify when a sub membrane has a crux added',function(){
-                expect(scanForToken(additions, 'sub:a', 1)[0][0]).toBe(subhost.primary.terminals.a)
-            });
-
-            it('should notify me when a membrane is added',function(){
-                let membadd = host.membaddspy.calls.allArgs()
-                //console.log(membadd)
-                expect(membadd.length).toEqual(1);
-            });
-
-            it('should notify me when a crux is removed from my membrane')
-            it('should notify me when a crux is removed from a sub membrane')
-            it('should notify me when a sub membrane is added')
-
+            let desigAll = memb.designate('**.sub:a')
+            expect(desigAll['sub.sub:a']).toBe(sub2.contacts.a)
+            expect(desigAll['sub:a']).toBe(submemb.contacts.a)
 
         })
 
-    })
-
-    it('shoule converr designator to token regex', function(){
-        let basic = Designate.designatorToRegex('a:p', 'role');
-        expect('a:p'.match(basic)).not.toBeNull();
-
-        let onewild = Designate.designatorToRegex('*:p', 'role');
-        expect('a:p'.match(onewild)).not.toBeNull();
-
-        let leadingGlob = Designate.designatorToRegex('**.a:*', 'blart');
-        expect('globby.glob.blob.a:farts'.match(leadingGlob)).not.toBeNull();
-
-        let multiGlob = Designate.designatorToRegex('**.a.**:p', 'blart');
-        expect('globby.a.globby:p'.match(multiGlob)).not.toBeNull();
-
-        let trickyGlob = Designate.designatorToRegex('**.a.**:p', 'blart');
-        //console.log('trickyGlob:', trickyGlob);
-        expect('globby.a.a.a:p'.match(trickyGlob)).not.toBeNull();
 
     })
+    describe('membrane change notifications', function(){
 
+        beforeEach(function(){
+
+        })
+
+        //when ports are added the host of the membrane and all parent membranes is informed
+        it('should notify host when membrane has a contact added',function(){
+            //all additions reported
+            host.populate(['_door']);
+            expect(host.addspy.calls.allArgs()[0][0]).toBe(memb.contacts.door)
+            expect(host.addspy.calls.allArgs()[0][1]).toBe(':door')
+        });
+
+        it('should notify me when a membrane is added',function(){
+            let sub = new Membrane()
+
+            memb.addSubrane(sub, 'sub')
+
+            let membadd = host.membaddspy.calls.allArgs()
+            expect(host.membaddspy.calls.allArgs()[0][0]).toBe(sub)
+        });
+
+        it('should notify when a sub membrane has a contact added',function(){
+            let sub = new Membrane()
+            memb.addSubrane(sub, 'sub')
+
+            sub.addContact('piwi', new CallIn({
+                label:'piwi'
+            }))
+
+            expect(host.addspy.calls.allArgs()[0][0]).toBe(sub.contacts.piwi)
+            expect(host.addspy.calls.allArgs()[0][1]).toBe('sub:piwi')
+        });
+
+
+        it('should notify me when a contact is removed from my membrane',function(){
+            host.populate(['_door']);
+            let removed = memb.contacts.door
+            memb.removeContact('door');
+
+            expect(memb.contacts.door).toBeUndefined()
+            expect(host.remspy.calls.allArgs()[0][0]).toBe(removed)
+            expect(host.remspy.calls.allArgs()[0][1]).toBe(':door')
+        })
+
+        it('should notify me when a contact is removed from a sub membrane',function(){
+            let sub = new Membrane()
+            memb.addSubrane(sub, 'sub')
+
+            sub.addContact('piwi', new CallIn({
+                label:'piwi'
+            }))
+
+            let removed = sub.removeContact('piwi')
+
+            expect(memb.contacts.door).toBeUndefined()
+            expect(host.remspy.calls.allArgs()[0][0]).toBe(removed)
+            expect(host.remspy.calls.allArgs()[0][1]).toBe('sub:piwi')
+        })
+
+        it('should notify me when a sub membrane is added',function(){
+            let sub = new Membrane()
+            memb.addSubrane(sub, 'sub')
+
+            host.membaddspy.calls.reset();
+            let sub2 = new Membrane()
+            sub.addSubrane(sub2, 'sub2')
+
+            expect(host.membaddspy.calls.allArgs()[0][0]).toBe(sub2)
+            expect(host.membaddspy.calls.allArgs()[0][1]).toBe('sub.sub2')
+        })
+
+        it('should notify contact additions of an added sub membrane', function(){
+            let sub = new Membrane()
+            memb.addSubrane(sub, 'sub')
+
+            host.membaddspy.calls.reset();
+
+            let sub2 = new Membrane()
+            sub2.addContact('fogle', new CallOut({
+                label:'fogle'
+            }))
+
+            sub.addSubrane(sub2, 'sub2')
+
+            expect(host.addspy.calls.allArgs()[0][0]).toBe(sub2.contacts.fogle)
+            expect(host.addspy.calls.allArgs()[0][1]).toBe('sub.sub2:fogle')
+        })
+    })
 
 })

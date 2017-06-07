@@ -21,8 +21,8 @@ describe("The Push Medium", function () {
 
         host.populate(['a_', '_b'])
 
-        contactA = memb.terminals.a
-        contactB = memb.terminals.b
+        contactA = memb.contacts.a
+        contactB = memb.contacts.b
         medium = new DistributeMedium(mockmesh);
 
     })

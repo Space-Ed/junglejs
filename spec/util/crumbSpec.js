@@ -1,6 +1,6 @@
 
 
-const {Util, Debug} = require('../../dist/jungle.js');
+const {Util, Debug} = require('../../build/jungle.js');
 let fs = require('fs')
 
 describe('crumbs', function(){

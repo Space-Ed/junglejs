@@ -1,8 +1,9 @@
 
 import * as I from '../interfaces'
-import {Membrane} from '../membranes/membrane'
+import {Membrane, MembraneEvents,DemuxWatchMethodsF} from '../membranes/membrane'
 import {mediaConstructors} from '../media/medium'
 import * as Designate from '../membranes/designable'
+import {Designator} from '../../util/designator'
 
 /**
  * A multimedia connections manager with updating
@@ -17,12 +18,15 @@ export class RuleMesh implements I.MembraneWatcher {
 
     exposed:any;
 
+    changeOccurred
 
     constructor(initArgs:I.MeshInitialiser){
 
-        this.primary = new Membrane();
+        this.changeOccurred = DemuxWatchMethodsF(this)
 
-        this.primary.watch(this);
+        this.primary = new Membrane();
+        this.primary.addWatch(this);
+
 
         this.rules = {};
         this.media = {};
@@ -64,8 +68,8 @@ export class RuleMesh implements I.MembraneWatcher {
         let [match, srcDesig, srcClose, viceVersa, filter, matching, persistent, snkClose, snkDesig] = m;
 
         return {
-            designatorA:Designate.parseDesignatorString(srcDesig),
-            designatorB:Designate.parseDesignatorString(snkDesig),
+            designatorA:new Designator('subranes','contacts', srcDesig),
+            designatorB:new Designator('subranes','contacts', snkDesig),
             closeSource:srcClose==='|',
             closeSink:snkClose==='|',
             matching:matching==="=",
@@ -79,8 +83,8 @@ export class RuleMesh implements I.MembraneWatcher {
      */
     addRule(rule:I.LinkRule, mediumkey:string){
         this.rules[mediumkey].push(rule);
-        let dA = this.primary.tokenDesignate(rule.designatorA);
-        let dB = this.primary.tokenDesignate(rule.designatorB);
+        let dA = rule.designatorA.tokenDesignate(this.primary);
+        let dB = rule.designatorB.tokenDesignate(this.primary);
         this.square(rule, dA, dB, mediumkey)
     }
 
@@ -137,6 +141,7 @@ export class RuleMesh implements I.MembraneWatcher {
     onAddContact(contact:I.Contact, token:string){
         //introduce to medium
 
+
         for(let mediumkey in this.media){
             let medium:I.Medium<any,any> = this.media[mediumkey];
             let linkRules = <I.LinkRule[]>this.rules[mediumkey];
@@ -144,8 +149,8 @@ export class RuleMesh implements I.MembraneWatcher {
 
             if(contact instanceof medium.typeA){
                 for(let rule of linkRules){
-                    if(Designate.tokenDesignatedBy(token, rule.designatorA)){
-                        let dB = this.primary.tokenDesignate(rule.designatorB)
+                    if(rule.designatorA.matches(token)){
+                        let dB = rule.designatorB.tokenDesignate(this.primary)
                         let dA = {}; dA[token] = contact;
                         this.square(rule, dA, dB, mediumkey);
                     }
@@ -154,8 +159,8 @@ export class RuleMesh implements I.MembraneWatcher {
             }else if(contact instanceof medium.typeB){
 
                 for(let rule of linkRules){
-                    if(Designate.tokenDesignatedBy(token, rule.designatorB)){
-                        let dA = this.primary.tokenDesignate(rule.designatorA);
+                    if(rule.designatorB.matches(token)){
+                        let dA = rule.designatorA.tokenDesignate(this.primary)
                         let dB = {}; dB[token] = contact;
                         this.square(rule, dA, dB, mediumkey);
                     }
@@ -182,20 +187,11 @@ export class RuleMesh implements I.MembraneWatcher {
     }
 
     onAddMembrane(membrane:Membrane, token){
-        //scan all contacts on the removed membrane and remove them in this context
-        let contactscan = membrane.designate("**:*", true)
-
-        for(let token in contactscan){
-            this.onAddContact(contactscan[token], membrane.getMembraneToken()+token)
-        }
+        //all contacts on the removed membrane will be removed
     }
 
     onRemoveMembrane(membrane:Membrane, token){
-        let contactscan = membrane.designate("**:*", true)
-
-        for(let token in contactscan){
-            this.onRemoveContact(contactscan[token], membrane.getMembraneToken()+token)
-        }
+        //
     }
 
 }

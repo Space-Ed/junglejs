@@ -9,5 +9,5 @@ export * from './media/medium'
 export * from "./media/distributive"
 export * from "./media/directed"
 
-export * from "./contacts/callin"
-export * from "./contacts/callout"
+export * from "./contacts/call/callin"
+export * from "./contacts/call/callout"

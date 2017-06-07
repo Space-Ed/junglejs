@@ -2,8 +2,8 @@
 
 import * as I from '../interfaces'
 import {mediaConstructors, BaseMedium} from './medium'
-import {CallOut} from '../contacts/callout'
-import {CallIn} from '../contacts/callin'
+import {CallOut} from '../contacts/call/callout'
+import {CallIn} from '../contacts/call/callin'
 
 export class DirectMedium extends BaseMedium<CallOut, CallIn> {
 

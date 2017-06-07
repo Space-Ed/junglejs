@@ -1,5 +1,5 @@
 let Jungle = require('../../build/jungle.js');
-let {Membrane, CallIn, CallOut} = Jungle.IO;
+let {Membrane, CallIn, CallOut, DemuxWatchMethodsF} = Jungle.IO;
 
 (function(){
 
@@ -8,8 +8,10 @@ let {Membrane, CallIn, CallOut} = Jungle.IO;
         constructor(name){
             this.name = name
 
+
+            this.changeOccurred = DemuxWatchMethodsF(this)
             this.primary = new Membrane()
-            this.primary.watch(this)
+            this.primary.addWatch(this)
 
             this.policy = Jungle.IO.FreePolicy
 
