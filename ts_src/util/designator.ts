@@ -1,8 +1,17 @@
-declare type DTerm = RegExp|Function|"**";
+import {deepMeldF, deepInvertF} from './ogebra/hierarchical'
+import {meld, invert} from './ogebra/operations'
+import * as f from './ogebra/primary-functions'
+
+declare type DTerm = RegExp|Function|"**"|string;
 
 export interface DesignatorIR {
     groups:DTerm[]
     end:DTerm
+}
+
+interface RecurState {
+    thumb:number,
+    glob:boolean
 }
 
 export const DesignatorRegExp = /^((?:(?:\w+|\*{1,2})(?:\.(?:\w+|\*{1,2}))*))?\:(\w+|\*|\$)$/;
@@ -115,11 +124,13 @@ export class Designator {
     designatorIR:DesignatorIR;
     regex:RegExp;
     expression:string;
+    screens:Designator[];
 
     constructor(private groupName:string, private finalName:string, designatorExp:string){
         this.designatorIR = parseDesignatorString(designatorExp);
         this.regex = designatorToRegex(designatorExp);
         this.expression = designatorExp;
+        this.screens = [];
     }
 
     mergePaths(patha, pathb){
@@ -152,8 +163,30 @@ export class Designator {
         return merged
     }
 
-    treeDesignate(target, recurState?:{thumb:number, glob:boolean}){
-        let rState = recurState || {thumb:0, glob:false}
+    treeDesignate(target, negative=false){
+
+        let result = this._treeDesignate(target, {thumb:0, glob:false})
+
+        //prune the tree with the screen
+
+        for(let screen of this.screens){
+            let dmask = screen._treeDesignate(result, {thumb:0, glob:false})
+
+            let term = (obj1: Object, obj2: Object, k: string) => {return k === 'end'}
+            let endmask = meld((a,b)=> {return a})
+            let endinvert = invert(f.negate.existential)
+
+            let inv = deepInvertF(term, endinvert)(dmask)
+
+            result = deepMeldF(term, endmask)(result, inv)
+        }
+
+        return result
+
+    }
+
+    _treeDesignate(target, recurState:RecurState){
+        let rState = recurState
         let collected = {
             groups:{},
             end:{}
@@ -190,12 +223,12 @@ export class Designator {
                 //designate subgroups
                 if(matchDesignationTerm(mk, current)){
                     let proceedwithoutGlob = {thumb:rState.thumb+1, glob:false};
-                    let eager= this.treeDesignate(subgroup, proceedwithoutGlob)
+                    let eager= this._treeDesignate(subgroup, proceedwithoutGlob)
 
                     //possibility of using term again
                     if(rState.glob){
                         let keepWithGlob = {thumb:rState.thumb, glob:true}
-                        let patient = this.treeDesignate(subgroup, keepWithGlob)
+                        let patient = this._treeDesignate(subgroup, keepWithGlob)
                         collected.groups[mk] = this.mergePaths(eager, patient)
                     }else{
                         collected.groups[mk] = eager;
@@ -204,7 +237,7 @@ export class Designator {
                 }else if(rState.glob){
                     //glob matched dont increment and keep globbing
                     let rUpdate = {thumb:rState.thumb, glob:true};
-                    collected.groups[mk] = this.treeDesignate(subgroup, rUpdate);
+                    collected.groups[mk] = this._treeDesignate(subgroup, rUpdate);
                 }
             }
         }else{
@@ -262,8 +295,14 @@ export class Designator {
 
         return recur(this.treeDesignate(target), {}, '')
     }
+    /**
+     * Mask the designations taking place with the input designator.
+     */
+    screen(desexp:string){
+        this.screens.push(new Designator('groups','end', desexp))
+    }
 
-    scan(target:any, flat=false){
+    scan(target:any, flat=false, negative=false){
         if(flat){
             return this.flatDesignate(target);
         }else{

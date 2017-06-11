@@ -30,7 +30,7 @@ export function DemuxWatchMethodsF(target:I.MembraneWatcher){
 
 }
 
-class Section implements Watchable<SectionWatcher>, SectionWatcher{
+export class Section implements Watchable<SectionWatcher>, SectionWatcher{
 
     designator:Designator;
     watches:SectionWatcher[]
@@ -42,7 +42,7 @@ class Section implements Watchable<SectionWatcher>, SectionWatcher{
         this.watches = [];
     }
 
-    addSection(desexp:string, alias?:string){
+    addSection(desexp:string, alias?:string):Section{
         let section = new Section();
 
         if(this instanceof Membrane){
@@ -70,7 +70,20 @@ class Section implements Watchable<SectionWatcher>, SectionWatcher{
         }else{
             this.sections[alias]= section
         }
+
+        return section
     }
+
+    designate(dexp:string, flat=false){
+        let desig = new Designator('subranes','contacts', dexp);
+
+        for(let ik in this.sections){
+            desig.screen(this.sections[ik].designator.expression)
+        }
+
+        return desig.scan(this, flat)
+    }
+
 
     addWatch(watcher:SectionWatcher, alias?:string){
         if(alias === undefined){
@@ -108,6 +121,8 @@ class Section implements Watchable<SectionWatcher>, SectionWatcher{
         for (let skey in this.sections){
             let section = this.sections[skey];
             if(section.designator === undefined || section.designator.matches(token)){
+
+                console.log(`section.designator: ${section.designator.regex.source}  matches (token):${token}`)
                 section.changeOccurred(event, subject, this.nextToken(token, skey))
                 return //escaped
             }
@@ -140,10 +155,6 @@ export class Membrane extends Section{
         this.notify = true;
     }
 
-    designate(dexp:string, flat:boolean){
-        let desig = new Designator('subranes','contacts',dexp);
-        return desig.scan(this, flat)
-    }
 
 
     invert(){

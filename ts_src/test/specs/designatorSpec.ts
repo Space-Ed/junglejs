@@ -7,7 +7,7 @@ import {B} from '../../util/blender'
 import jasmine = require('jasmine')
 
 
-describe('',function(){
+fdescribe('',function(){
 
     const structure = {
         departments:{
@@ -161,7 +161,7 @@ describe('',function(){
         toy.groups.a.terms.A  = terb
 
         let desig = new Designator('groups', 'terms','**.a:*')
-        
+
     })
 
     it('should designate at many depths', function(){
@@ -193,6 +193,26 @@ describe('',function(){
         //console.log('trickyGlob:', trickyGlob);
         expect('globby.a.a.a:p'.match(trickyGlob)).not.toBeNull();
 
+    })
+
+    fit('can screen other designators ',function(){
+
+        let all = new Designator('departments', 'employees', "**:*")
+
+        all.screen('china.**:*')
+
+        console.log(all.scan(structure))
+
+        deeplyEqualsThrow(all.scan(structure),{
+            ':CEO': 'Big Boss',
+            ':CFO': 'Profiteer',
+            ':CTO': 'Technocrat',
+            'production:dao': 'World Computer',
+            'production.production:dao':'Meta Computer',
+            'usa:AreaManager': 'DomesticArm',
+            'usa.sales:rex': 'R dog',
+            'usa.engineering:geoff': 'invents everything'
+        })
     })
 
 })
