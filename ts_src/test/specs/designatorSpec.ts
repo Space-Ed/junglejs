@@ -7,7 +7,7 @@ import {B} from '../../util/blender'
 import jasmine = require('jasmine')
 
 
-fdescribe('',function(){
+describe('',function(){
 
     const structure = {
         departments:{
@@ -195,7 +195,7 @@ fdescribe('',function(){
 
     })
 
-    fit('can screen other designators ',function(){
+    it('can screen other designators ',function(){
 
         let all = new Designator('departments', 'employees', "**:*")
 

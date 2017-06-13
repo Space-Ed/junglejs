@@ -15,7 +15,7 @@ function spyOnSection(section: Section, label:string):jasmine.Spy{
     return spy
 }
 
-fdescribe("sectionalization", function(){
+describe("sectionalization", function(){
 
     it('should be able to section a membrane', function(){
 
@@ -51,7 +51,7 @@ fdescribe("sectionalization", function(){
 
     })
 
-    fit('should cut into two parts', function(){
+    it('should cut into two parts', function(){
 
         let memb = new Membrane();
         let sect = memb.addSection("a:*");

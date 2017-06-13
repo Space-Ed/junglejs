@@ -281,7 +281,7 @@ ${this.data !== undefined?`\n|    with data: ${this.data}`:''}\
             this.catchCallback(this)
         }else{
             this.message = error;
-            throw new JungleError(this.dump());
+            throw this.dump();
         }
     }
 

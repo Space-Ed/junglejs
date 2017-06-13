@@ -8,7 +8,7 @@ function mustTerminate(obj1, obj2, q){
     obj1 instanceof Object
 }
 
-export function deepMeldF(terminator:T.Terminator, reduce:T.Reducer):(obj1, obj2)=>any{
+export function deepMeldF(terminator:T.Terminator=f.terminate.isPrimative, reduce:T.Reducer=f.reduce.latest):(obj1, obj2)=>any{
 
     function recur(obj1, obj2, q?){
 

@@ -3,7 +3,7 @@ import * as op from '../../../util/ogebra/operations'
 import * as f from '../../../util/ogebra/primary-functions'
 import {deeplyEqualsThrow} from "../../../util/checks";
 
-fdescribe('operations', function(){
+describe('operations', function(){
 
     describe('meld', function(){
 

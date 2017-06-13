@@ -5,7 +5,7 @@ import * as hrc from '../../../util/ogebra/hierarchical'
 import {deeplyEqualsThrow} from "../../../util/checks";
 
 
-fdescribe('deep melding ',function(){
+describe('deep melding ',function(){
 
     let melder = hrc.deepMeldF(f.terminate.isPrimative, f.reduce.latest)
 
@@ -43,7 +43,7 @@ fdescribe('deep melding ',function(){
 })
 
 
-fdescribe('deep mask', function(){
+describe('deep mask', function(){
 
     let masker = hrc.deepMaskF(f.terminate.isPrimative, f.reduce.latest)
 
@@ -75,7 +75,7 @@ fdescribe('deep mask', function(){
 })
 
 
-fdescribe('deep invert', function(){
+describe('deep invert', function(){
 
     it('should perform deep subtraction', function(){
 
