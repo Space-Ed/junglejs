@@ -14,6 +14,7 @@ export abstract class BasicContact<Partner extends BasicContact<any>> {
     public plugged = false; //no further links allowed
     public gloved = false;  //no further rules allowed
     public claimed = false; //no further media allowed
+    public inverted = false;
 
     protected host:I.ContactHost;
     protected partner:Partner;
@@ -34,10 +35,14 @@ export abstract class BasicContact<Partner extends BasicContact<any>> {
     invert():Partner{
         if (this.partner === undefined && this.invertable === true){
             this.partner = this.createPartner()
-            this.partner.host = this.host.invert();
+            this.inverted = true;
+
             this.partner.partner = this;
+            this.partner.inverted = true;
+
         }
         return this.partner;
+
     }
 
     //---------------Copy to Implement-------------

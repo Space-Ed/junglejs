@@ -11,14 +11,13 @@ Debug.Crumb.defaultOptions.log = console;
 
 describe('The Mesh Host', function () {
 
-    let host, memb, exposed, mesh, contactA, contactB;
+    let host, memb, exposed, mesh, contactA, contactB, meshbrane;
 
     beforeEach(function () {
+        meshbrane = new Membrane()
 
         host = new TestHost()
-
         memb = host.primary
-
         host.populate(['a_', '_b'])
 
         contactA = memb.contacts.a
@@ -33,10 +32,11 @@ describe('The Mesh Host', function () {
                 ]
             },
             exposed:exposed,
-            membranes:{
-                m:memb
-            }
+            membrane:meshbrane
         })
+
+        meshbrane.addSubrane(memb, 'm')
+
     })
 
     it("should connect a to b of a single membrane", function () {
@@ -62,7 +62,7 @@ describe('The Mesh Host', function () {
         let secondmemb = h2.primary;
         let contact2 = secondmemb.contacts.b;
 
-        mesh.primary.addSubrane(secondmemb, "secondmemb");
+        meshbrane.addSubrane(secondmemb, "secondmemb");
 
         expect(mesh.media['distribute'].matrix.to['m:a']['secondmemb:b']).not.toBeUndefined();
 
@@ -89,10 +89,9 @@ describe('The Mesh Host', function () {
         let m3 = h3.primary;
         let pA3 = m3.contacts.a;
 
-
-        mesh.primary.addSubrane(m2, "m2");
-        mesh.primary.addSubrane(m3, "m3");
-        mesh.primary.removeSubrane('m');
+        meshbrane.addSubrane(m2, "m2");
+        meshbrane.addSubrane(m3, "m3");
+        meshbrane.removeSubrane('m');
 
         expect(mesh.media['distribute'].matrix.from['m2:b']['m:a']).toBeUndefined();
         expect(mesh.media['distribute'].matrix.to['m3:a']['m:b']).toBeUndefined();
@@ -106,13 +105,14 @@ describe('The Mesh Host', function () {
         let contactB2 = m2.contacts.b;
         let contactA2 = m2.contacts.a;
 
-        mesh.primary.removeSubrane('m')
+        meshbrane.removeSubrane('m')
+
+        meshbrane = new Membrane()
+        meshbrane.addSubrane(memb, 'm1')
+        meshbrane.addSubrane(m2, 'm2')
 
         mesh = new RuleMesh({
-            membranes:{
-                m1:memb,
-                m2:m2
-            },
+            membrane:meshbrane,
             exposed:exposed,
             rules:{
                 'distribute':[

@@ -177,20 +177,7 @@ export class Membrane extends Section{
         return this.inverted
     }
 
-    // getMembraneToken(){
-    //     if(this.parent==undefined){
-    //         return "";
-    //     }else{
-    //         let parentToken =this.parent.getMembraneToken()
-    //         if(parentToken){
-    //             return +'.'+this.alias;
-    //         }else{
-    //             return this.alias;
-    //         }
-    //     }
-    // }
-
-    addSubrane(membrane:Membrane, label:string){
+    addSubrane(membrane:Section, label:string){
         this.subranes[label] = membrane;
 
         membrane.addWatch(this, label); //watch for changes in the subrane
@@ -229,9 +216,16 @@ export class Membrane extends Section{
             contact.attach(this, label)
             this.contacts[label] = contact
 
-            let invertContact
-            if(this.inverted !== undefined && (invertContact = contact.invert())){
-                this.inverted.addContact(label, invertContact)
+            if(this.inverted !== undefined){
+
+                //invert the first and only the first
+                if(contact.invertable && !contact.inverted){
+                    let partner = contact.invert()
+                    this.inverted.addContact(label, partner)
+
+                    if(this.inverted.contacts[label] !== partner){
+                    }
+                }
             }
 
             this.notifyContactAdd(contact, label)

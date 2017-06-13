@@ -37,7 +37,7 @@ export interface LinkRule {
 }
 
 export interface MeshInitialiser {
-    membranes:any,
+    membrane:Membrane,
     rules:any,
     exposed:any
 }

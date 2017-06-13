@@ -8,7 +8,7 @@ import {Junction} from '../../../util/junction'
 
 export class CallIn extends BasicContact<CallOut> {
 
-    hook:I.Hookable
+    hook:any
 
     //capability flags must be decided
     public symmetric = false;
@@ -36,7 +36,7 @@ export class CallIn extends BasicContact<CallOut> {
         }else{
             //hitting a contact without connection, a call to void
             if(tracking){
-                tracking.raise("Called contact with no out call")
+                tracking.raise("CallIn contact has no corresponding CallOut with emit defined")
             }
         }
     }
@@ -54,7 +54,7 @@ export class CallIn extends BasicContact<CallOut> {
 
         if(this.spec.mode == I.CALL_MODE.PUSH){
             //value set reaction - inject setter, remembered default
-            into[key] = {
+            Object.defineProperty(into, key, {
                 set:(value)=>{
                     let crumb;
                     if(this.spec.tracking){
@@ -65,11 +65,13 @@ export class CallIn extends BasicContact<CallOut> {
                     this.spec.default = value;
                 },get:()=>{
                     return this.spec.default;
-                }
-            }
+                },
+                enumerable:true
+
+            })
         }else if(this.spec.mode == I.CALL_MODE.GET){
             //extenral access - inject getter
-            into[key] = {
+            Object.defineProperty(into, key, {
                 get:()=>{
                     let crumb;
                     if(this.spec.tracking){
@@ -94,20 +96,22 @@ export class CallIn extends BasicContact<CallOut> {
                         return promised
                     }
 
-                }
-            }
+                },
+                enumerable:true
+            })
         }else if(this.spec.mode == I.CALL_MODE.REQUEST){
             //external request - inject callable
-            into[key] = {
+            Object.defineProperty(into, key, {
                 get:()=>{
                     return this.put.bind(this)
-                }
-            }
+                },
+                enumerable:true
+            })
         }
 
     }
 
     retract(context, key){
-        this.hook.unhook()
+        delete context.key
     }
 }

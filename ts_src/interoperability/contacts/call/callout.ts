@@ -29,19 +29,44 @@ export class CallOut extends BasicContact<CallIn> {
 
     inject(into, key){
         if(this.spec.mode == I.CALL_MODE.PUSH){
-            this.emit = (inp:any, crumb:Debug.Crumb)=>{
-                crumb.drop("Value Deposit Hook")
-                into[key] = inp;
+            if(this.spec.hook){
+                this.emit = (inp:any, crumb:Debug.Crumb)=>{
+                    if(crumb && this.spec.tracking){
+                        let end = crumb.drop("Hook Call Terminal")
+                            .with(inp)
+                            .at(key)
+                        }
+                    this.spec.hook.call(into, inp, crumb)
+                }
+            }else{
+                this.emit = (inp:any, crumb:Debug.Crumb)=>{
+
+                    if(crumb && this.spec.tracking){
+                        let end = crumb.drop("Value Deposit Hook")
+                        .with(inp)
+                        .at(key)
+                    }
+
+                    into[key] = inp;
+                }
             }
         }else if(this.spec.mode == I.CALL_MODE.GET){
             this.emit = (inp:any, crumb:Debug.Crumb)=>{
-                crumb.drop("Synchronous Value Retrieval(Get) Hook")
+                if(crumb && this.spec.tracking){
+                    crumb.drop("Synchronous Value Retrieval(Get) Hook")
+                    .with(inp)
+                    .at(key)
+                }
                 return into[key]
             }
         }else if(this.spec.mode == I.CALL_MODE.REQUEST){
             into.set(this.spec.hook);
             this.emit = (inp:any, crumb:Debug.Crumb)=>{
-                crumb.drop("Function Hook")
+                if(crumb && this.spec.tracking){
+                    crumb.drop("Function Hook")
+                    .with(inp)
+                    .at(key)
+                }
                 return into[key](inp, crumb)
             }
         }

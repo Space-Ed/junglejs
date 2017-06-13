@@ -24,18 +24,14 @@ export class RuleMesh implements I.MembraneWatcher {
 
         this.changeOccurred = DemuxWatchMethodsF(this)
 
-        this.primary = new Membrane();
+        this.primary = initArgs.membrane;
         this.primary.addWatch(this);
 
+        this.exposed = initArgs.exposed;
 
         this.rules = {};
         this.media = {};
         this.locations = {};
-
-        this.exposed = initArgs.exposed;
-        for(let membraneKey in initArgs.membranes){
-            this.primary.addSubrane(initArgs.membranes[membraneKey], membraneKey)
-        }
 
         for (let mediakey in initArgs.rules){
             //Check there is an over creation of

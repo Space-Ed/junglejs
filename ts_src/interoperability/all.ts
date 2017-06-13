@@ -11,3 +11,4 @@ export * from "./media/directed"
 
 export * from "./contacts/call/callin"
 export * from "./contacts/call/callout"
+export * from './contacts/base'
