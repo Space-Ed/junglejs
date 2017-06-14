@@ -1,10 +1,10 @@
-import {Construct} from '../base/construct'
-import {isPrimative, isVanillaObject, B} from '../../util/all'
+ import {Construct} from './construct'
+import {isPrimative, isVanillaObject, B} from '../util/all'
+import {Domain} from './domain'
 
-export class Composite extends Construct<any> {
+export class Composite extends Construct{
 
-    keywords = {basis:null, domain:null}
-
+    keywords = {basis:null, domain:null, form:null}
     subconstructs:any;
 
     constructor(spec:any){
@@ -12,11 +12,12 @@ export class Composite extends Construct<any> {
         this.subconstructs = {};
     }
 
-    prime(){
+    prime(domain:Domain){
+        super.prime(domain)
         this.alive = true;
 
         //incrementally apply the patch, ignoring keywords.
-        console.log("Composite prime: ", this.cache)
+        //console.log("Composite prime: ", this.cache)
         for(let k in this.cache){
             if(!(k in this.keywords)){
                 let v = this.cache[k];
@@ -26,25 +27,28 @@ export class Composite extends Construct<any> {
     }
 
     /**
-     * Add a subconstruct, when alive introducing to
+     * Add any kind of item to the composite, will split into 4 cases
+     * Ultimately adding to the subcomposite and/or context objects
      */
     add(k, v){
         //saved
         if(this.alive){
-
-            let spec = this.ensureRecoverable(v)
-
-            if(spec){
-                //recover using the domain given
-                let construct = this.domain.recover(spec);
-
-                //Let the construct manage it's integration.
-                construct.induct(this, k);
-
-                //recursively
-                construct.prime();
-
-                this.subconstructs[k] = construct;
+            if(isPrimative(v)){
+                this.addPrimative(k, v)
+            }else if(v instanceof Construct){
+                //primary construct case
+                let spec = v.extract();
+                let recovered = this.domain.recover(spec);
+                this.addConstruct(k, recovered);
+            }else if(isVanillaObject(v)){
+                if('basis' in v){
+                    //serial recovery case
+                    let recovered = this.domain.recover(v);
+                    this.addConstruct(k, recovered);
+                }else{
+                    //Object Literal Default
+                    this.addObject(k, v)
+                }
             }else{
                 this.addStrange(k, v)
             }
@@ -55,27 +59,38 @@ export class Composite extends Construct<any> {
         }
     }
 
+    addConstruct(k, construct:Construct){
+        //recursively prime and add
+        construct.prime(this.domain);
+        this.subconstructs[k] = construct;
+        construct.attach(this.anchor, k)
+    }
+
+    /**
+     * Add an item to the construct that is an object of a Class that is not conformant or
+     Coercible to a standard jungle Construct object.
+     */
     addStrange(k, v){
 
     }
 
-    ensureRecoverable(value){
-        if(isPrimative(value)){
-            return false// {anon:value, basis:'primative'}
-        }else if(value instanceof Construct){
-            console.log("construct value extracted")
-            return value.extract()
-        }else if(isVanillaObject(value)){
-            value.basis = 'composite'
-            return value
-        }else{
-            return false;
-        }
+    /**
+     * Add an item to the composite that is not an object
+     */
+    addPrimative(k, v){
+
     }
 
+    /**
+    *the generic Object interpretation
+    */
+    addObject(k:string, obj:Object){
+        let construct = new Composite(obj)
+        this.addConstruct(k, construct)
+    }
 
     remove(k){
-        let removing = <Construct<Composite>>this.subconstructs[k];
+        let removing = <Construct>this.subconstructs[k];
 
         if(removing !== undefined){
             let final = removing.dispose();
@@ -113,8 +128,8 @@ export class Composite extends Construct<any> {
             }
 
             return B()
-                .init(this.cache)
-                .blend(extracted)
+                .init(this.cache)    // original copy
+                .blend(extracted)    // changes within extracted
                 .dump()
         }else{
             return this.cache
@@ -129,7 +144,7 @@ export class Composite extends Construct<any> {
     /*
         as an unprimed construct{pattern} this may occur to create an extended version.
     */
-    extend(patch):Construct<any> {
+    extend(patch):Construct{
 
         let ext = B()
             .init(this.extract())

@@ -1,17 +1,20 @@
 
 import {Construct} from './construct'
+import {deepMeldF} from '../util/ogebra/hierarchical'
 
 /*
     a place where constructs are stored in either static or serial form and recovered from a serial form using a basis
 */
 export class Domain {
 
-    registry:{}
-    subdomain:{}
+    registry:any
+    subdomain:any
+    melder:(a:any, b:any)=>any
 
     constructor(){
         this.registry = {};
         this.subdomain = {};
+        this.melder = deepMeldF();
     }
 
     branch(key){
@@ -19,8 +22,20 @@ export class Domain {
         return this.subdomain[key];
     }
 
-    register(key, construct){
-        this.registry[key] = construct;
+    register(key, basis:Function|string, patch={}){
+        let basisConstructor
+
+        if(typeof(basis) === 'string'){
+            basisConstructor = this.registry[basis].basis
+        }else{
+            basisConstructor = basis
+        }
+
+        this.registry[key] = {
+            basis:basisConstructor,
+            patch:patch
+        };
+
         // if(key in this.registry){
         //     throw new Error(`Domain cannot contain duplicates "${key}" is already registered`)
         // }else{
@@ -49,12 +64,15 @@ export class Domain {
         }
     }
 
-    recover(construct):Construct<any>{
+    recover(construct):Construct{
         ///TODO: Basis accessors a.b:Basis
-        let basis = this.registry[construct.basis];
+
+        let {basis, patch} = this.registry[construct.basis];
+
 
         try {
-            return new basis(construct);
+            let spec = this.melder(patch, construct)
+            return new basis(spec);
         }catch (e){
             console.error("basis: ",construct.basis," not a constructor in registry")
             throw e

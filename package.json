@@ -29,12 +29,13 @@
   },
   "homepage": "https://github.com/Space-Ed/junglejs#readme",
   "devDependencies": {
+    "@types/jasmine": "^2.5.51",
     "browserify": "^13.1.0",
     "jasmine": "^2.5.2",
     "jasmine-node": "^1.14.5",
+    "signals": "^1.0.0",
     "tsify": "^1.0.1",
     "typescript": "^1.8.10",
-    "signals": "^1.0.0",
     "uuid": "^2.0.3"
   },
   "dependencies": {}

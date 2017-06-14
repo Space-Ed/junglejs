@@ -1,6 +1,6 @@
-import {Composite} from '../complex/composite'
-import {Domain} from '../base/domain'
-import * as Util from '../../util/all'
+import {Composite} from './composite'
+import {Domain} from './domain'
+import * as Util from '../util/all'
 
 /*
 
@@ -14,32 +14,27 @@ import * as Util from '../../util/all'
 
 
     ****Extending Checklist ****
-    - Must serialise with a reconstructable artefact.
+    - extract must serialise with a reconstructable artefact.
 
 */
 
-export abstract class Construct<HOST extends Composite>{
+export abstract class Construct{
 
     /*
         fundamentally composites need to know if the construct is a living one
     */
     alive:boolean;
 
-    parent:HOST;
     cache:any;
     domain:Domain;
-    locator:string;
+    anchor:any;
+    alias:string;
+
 
     constructor(spec:any){
         this.cache = this.ensureObject(spec);
         this.cache.basis = this.cache.basis || 'cell';
-        console.log("Create Construct, ",this.cache)
-
-        if(spec.domain instanceof Domain){
-            this.domain = spec.domain;
-        }else{
-            this.locator = spec.domain||"";
-        }
+        //console.log("Create Construct, ",this.cache)
 
         this.alive = false;
     }
@@ -57,26 +52,37 @@ export abstract class Construct<HOST extends Composite>{
         }
     }
 
+
+    attach(anchor:any, alias:string){
+        this.anchor = anchor;
+        this.alias = alias;
+    }
+
+    detach(anchor:any, alias:string){
+        this.anchor = anchor;
+        this.alias = alias;
+    }
+
+
     /*
-        perform changes to the host context. Occurs at parent construction time,
-        once the membranes are established but before we have reached the root.
+        Called to bring the the construct to life, it is given it's domain, that represents the set of components available to it
     */
-    induct(host:HOST, key:string){
-        this.parent = host;
-        this.domain = this.domain||host.domain.locateDomain(this.locator);
+    prime(domain?:Domain){
+        if(typeof this.cache.domain === 'string'){
+            if(domain){
+                this.domain = domain.locateDomain(this.cache.domain);
+            }else{
+                //the domain is not provided but is requested by name
+            }
+        }else if(this.cache.domain instanceof Domain){
+            this.domain = this.cache.domain
+        }else{
+            //the domain is of a bad type
+        }
     };
 
     /*
-        Called to perform operations readying for action
-            - called post induct.
-            - recursive for composite.
-            - sets alive
-            - depends on parent
-    */
-    abstract prime();
-
-    /*
-        Called at the end of life of the construct,
+        Called at the end of life of the construct.
         should return it's final form, and also return to being a pattern
         it should retract any changes it enacted on the parent.
     */
@@ -98,7 +104,7 @@ export abstract class Construct<HOST extends Composite>{
     /*
         as an unprimed construct{pattern} this may occur to create an extended version.
     */
-    extend(patch):Construct<HOST> {
+    extend(patch):Construct {
 
         //convert to serial form and extend
         let ext = Util.B()
