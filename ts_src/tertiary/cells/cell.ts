@@ -10,14 +10,12 @@ import {CellAccessory} from './accessory'
 */
 export class Cell extends CS.Composite {
 
-    mesh:IO.RuleMesh;
     shell:IO.Membrane;
-
     private lining:IO.Membrane;
+    
+    mesh:IO.RuleMesh;
 
     nucleus:any;
-    policy:ShellPolicy;
-
     anchor:I.CellAnchor;
     key:string;
 
@@ -29,25 +27,39 @@ export class Cell extends CS.Composite {
 
         this.nucleus = {};
 
-        this.policy = FreePolicy
         this.shell = new IO.Membrane();
         this.lining = this.shell.invert();
+    }
 
+    /*
+        setup the parts of the cell that are contingent on specialisation
+    */
+    applyForm(form:any){
+
+        //the internal interlinking mechanism, contingent upon which rules are added as neccessary to the cell
         this.mesh = new IO.RuleMesh({
             membrane:this.lining,
-            rules:spec.form.mesh,
+            rules:form.mesh,
             exposed:this.nucleus
         })
 
+        //the anchor is provided to constructs at attach time, it is contingent on accessibility restraint
         this.anchor = {
             nucleus:this.nucleus,
             mesh:this.lining
         }
 
-        for(let sectionkey in spec.form.sections){
-            this.parseSectionRule(spec.form.sections[sectionkey])
+        //the creation of sections for exclusive grouping of internal contacts to be exposed on shell or injected to context
+        for(let sectionkey in form.sections){
+            this.parseSectionRule(form.sections[sectionkey])
         }
+    }
 
+    /*
+        undo the setup so that a new form can be applied
+    */
+    clearForm(){
+        //everything recreated is sufficient
     }
 
     parseSectionRule(rule:string){

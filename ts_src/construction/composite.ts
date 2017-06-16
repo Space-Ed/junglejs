@@ -14,6 +14,9 @@ export class Composite extends Construct{
 
     prime(domain:Domain){
         super.prime(domain)
+
+        this.applyForm(this.cache.form)
+
         this.alive = true;
 
         //incrementally apply the patch, ignoring keywords.
@@ -24,6 +27,21 @@ export class Composite extends Construct{
                 this.add(k, v);
             }
         }
+    }
+
+
+    /*
+        essential configuration to occur before constructions
+    */
+    applyForm(form:any){
+
+    }
+
+    /*
+        undo the setup so that a new form can be applied
+    */
+    clearForm(){
+
     }
 
     /**
@@ -111,6 +129,8 @@ export class Composite extends Construct{
             let construct = this.subconstructs[key]
             construct.dispose()
         }
+
+        this.clearForm()
 
         this.alive = false;
     }
