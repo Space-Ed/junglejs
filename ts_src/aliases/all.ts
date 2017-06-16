@@ -1,5 +1,7 @@
 import {deepMeldF} from '../util/ogebra/hierarchical'
+import * as Debug from '../util/debug'
 
+import * as IOI from '../interoperability/interfaces'
 
 export function PushDeposit(defaultValue){
     return {
@@ -28,6 +30,11 @@ export function TunnelIn(){
 
 }
 
-export function CallInSync(){
-
+export function CallInSync(func:(data:any, crumb:Debug.Crumb)=>any){
+    return {
+        basis:'CallHook',
+        direction:"in",
+        hook:func,
+        mode:'pull'
+    }
 }

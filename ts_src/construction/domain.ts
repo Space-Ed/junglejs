@@ -23,17 +23,23 @@ export class Domain {
     }
 
     register(key, basis:Function|string, patch={}){
-        let basisConstructor
+        let nature, baseSpec
 
         if(typeof(basis) === 'string'){
-            basisConstructor = this.registry[basis].basis
+            if(!(basis in this.registry)){
+                throw "Unable to register by basis label, basis label not in registry"
+            }
+
+            nature = this.registry[basis].nature
+            baseSpec = this.registry[basis].patch
         }else{
-            basisConstructor = basis
+            nature = basis
+            baseSpec = {}
         }
 
         this.registry[key] = {
-            basis:basisConstructor,
-            patch:patch
+            nature:nature,
+            patch:this.melder(baseSpec, patch)
         };
 
         // if(key in this.registry){
@@ -67,12 +73,15 @@ export class Domain {
     recover(construct):Construct{
         ///TODO: Basis accessors a.b:Basis
 
-        let {basis, patch} = this.registry[construct.basis];
+        if(!(construct.basis in this.registry)){
+            throw new Error(`Unable to reconstruct the basis '${construct.basis}' is not registered to the Domain`)
+        }
 
+        let {nature, patch} = this.registry[construct.basis];
 
         try {
             let spec = this.melder(patch, construct)
-            return new basis(spec);
+            return new nature(spec);
         }catch (e){
             console.error("basis: ",construct.basis," not a constructor in registry")
             throw e

@@ -11,8 +11,8 @@ import {CellAccessory} from './accessory'
 export class Cell extends CS.Composite {
 
     shell:IO.Membrane;
-    private lining:IO.Membrane;
-    
+    protected lining:IO.Membrane;
+
     mesh:IO.RuleMesh;
 
     nucleus:any;
@@ -34,12 +34,13 @@ export class Cell extends CS.Composite {
     /*
         setup the parts of the cell that are contingent on specialisation
     */
-    applyForm(form:any){
+    applyForm(form:any={}){
 
+        let rules = form.mesh || {}
         //the internal interlinking mechanism, contingent upon which rules are added as neccessary to the cell
         this.mesh = new IO.RuleMesh({
             membrane:this.lining,
-            rules:form.mesh,
+            rules:rules,
             exposed:this.nucleus
         })
 
@@ -50,8 +51,12 @@ export class Cell extends CS.Composite {
         }
 
         //the creation of sections for exclusive grouping of internal contacts to be exposed on shell or injected to context
-        for(let sectionkey in form.sections){
-            this.parseSectionRule(form.sections[sectionkey])
+
+        if(form.sections !== undefined){
+            for(let sectionkey in form.sections){
+                this.parseSectionRule(form.sections[sectionkey])
+            }
+
         }
     }
 
@@ -63,7 +68,7 @@ export class Cell extends CS.Composite {
     }
 
     parseSectionRule(rule:string){
-        let match = rule.match(/^([\w\:\.]*)\s*to\s*(nucleus|shell)\s*as\s*(\w*)$/)
+        let match = rule.match(/^([\w\:\.\*]*)\s*to\s*(nucleus|shell)\s*(?:as\s*(\w*))?$/)
         if(match){
             console.log(match)
             let desexp = match[1]
@@ -71,18 +76,23 @@ export class Cell extends CS.Composite {
             let alias = match[3]
 
             let sect = this.lining.addSection(desexp)
+
             if(target === 'shell'){
                 this.shell.addSubrane(sect, alias)
             }else if(target === 'nucleus'){
-                this.nucleus[alias] = {};
+                if(alias !== undefined){
+                    this.nucleus[alias] = {};
+                }
 
                 //should be nucleus
                 sect.addWatch({
                     changeOccurred:(event:IO.MembraneEvents, subject:IO.BasicContact<any>|IO.Section, token:string)=>{
                         if(event == IO.MembraneEvents.AddContact){
-                            (<IO.BasicContact<any>>subject).inject(this.nucleus[alias],token)
+                            let injectsite = alias === undefined ? this.nucleus : this.nucleus[alias];
 
-                            console.log("detect injection on token", token);
+                            (<IO.BasicContact<any>>subject).inject(injectsite, token)
+
+                            //console.log(`detect injection on token ${token} with alias ${alias}`);
 
                         }
                     }

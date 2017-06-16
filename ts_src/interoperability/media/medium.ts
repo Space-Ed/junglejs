@@ -89,8 +89,6 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
     abstract connect(link: I.LinkSpec<A,B>);
 
     disconnect(link: I.LinkSpec<A,B>){
-        console.log('disconnect')
-
         if(link.directed){
             delete this.matrix.to[link.tokenA][link.tokenB];
             delete this.matrix.from[link.tokenB][link.tokenA];

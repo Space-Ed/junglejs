@@ -60,14 +60,14 @@ export class CallOut extends BasicContact<CallIn> {
                 return into[key]
             }
         }else if(this.spec.mode == I.CALL_MODE.REQUEST){
-            into.set(this.spec.hook);
+            //REVIEW: should hook functions be accessible internally
             this.emit = (inp:any, crumb:Debug.Crumb)=>{
                 if(crumb && this.spec.tracking){
                     crumb.drop("Function Hook")
                     .with(inp)
                     .at(key)
                 }
-                return into[key](inp, crumb)
+                return this.spec.hook.call(into, inp, crumb)
             }
         }
     }

@@ -1,5 +1,5 @@
  import {Construct} from './construct'
-import {isPrimative, isVanillaObject, B} from '../util/all'
+import {isPrimative, isVanillaObject, isVanillaArray, B} from '../util/all'
 import {Domain} from './domain'
 
 export class Composite extends Construct{
@@ -54,7 +54,7 @@ export class Composite extends Construct{
             if(isPrimative(v)){
                 this.addPrimative(k, v)
             }else if(v instanceof Construct){
-                //primary construct case
+                //construct replication case
                 let spec = v.extract();
                 let recovered = this.domain.recover(spec);
                 this.addConstruct(k, recovered);
@@ -64,9 +64,17 @@ export class Composite extends Construct{
                     let recovered = this.domain.recover(v);
                     this.addConstruct(k, recovered);
                 }else{
-                    //Object Literal Default
-                    this.addObject(k, v)
+                    v.basis = 'object';
+                    let recovered = this.domain.recover(v);
+                    this.addConstruct(k, recovered);
                 }
+            }else if(isVanillaArray(v)){
+                let patch = {
+                    basis:'array',
+                    anon:v
+                }
+                let recovered = this.domain.recover(patch);
+                this.addConstruct(k, recovered);
             }else{
                 this.addStrange(k, v)
             }
@@ -99,14 +107,6 @@ export class Composite extends Construct{
 
     }
 
-    /**
-    *the generic Object interpretation
-    */
-    addObject(k:string, obj:Object){
-        let construct = new Composite(obj)
-        this.addConstruct(k, construct)
-    }
-
     remove(k){
         let removing = <Construct>this.subconstructs[k];
 
@@ -126,7 +126,10 @@ export class Composite extends Construct{
     dispose():any{
 
         for (let key in this.subconstructs) {
-            let construct = this.subconstructs[key]
+            let construct:Construct = this.subconstructs[key]
+
+            construct.detach(this.anchor, key)
+
             construct.dispose()
         }
 

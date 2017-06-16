@@ -122,7 +122,7 @@ export class Section implements Watchable<SectionWatcher>, SectionWatcher{
             let section = this.sections[skey];
             if(section.designator === undefined || section.designator.matches(token)){
 
-                console.log(`section.designator: ${section.designator.regex.source}  matches (token):${token}`)
+                //console.log(`section.designator: ${section.designator.regex.source}  matches (token):${token}`)
                 section.changeOccurred(event, subject, this.nextToken(token, skey))
                 return //escaped
             }

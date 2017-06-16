@@ -5,6 +5,9 @@ import {Contact} from '../interoperability/interfaces'
 import {Membrane} from '../interoperability/membranes/membrane'
 
 
+export interface AccessPolicy {
+    
+}
 
 export interface CellAnchor {
     nucleus:any,

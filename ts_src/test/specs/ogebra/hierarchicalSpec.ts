@@ -26,8 +26,6 @@ describe('deep melding ',function(){
             c:1
         }
 
-        console.log(melder(s1,s2))
-
         deeplyEqualsThrow(melder(s1,s2), {
             a:0,
             b:{
@@ -63,8 +61,6 @@ describe('deep mask', function(){
             },
             c:1
         }
-
-        console.log(masker(s1,s2))
 
         deeplyEqualsThrow(masker(s1,s2), {
             b:{
@@ -109,9 +105,6 @@ describe('deep invert', function(){
 
         let inv1 = inverter(cnums1)
         let diff = hrc.deepMeldF(f.terminate.isPrimative, (x,y)=>{return x+y})(inv1, cnums2)
-
-        console.log(inv1)
-        console.log(diff)
 
         deeplyEqualsThrow(diff, {
             vals:{
