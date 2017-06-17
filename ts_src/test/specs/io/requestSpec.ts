@@ -1,8 +1,9 @@
-let Jungle = require('../../build/jungle.js');
+import* as Jungle from '../../../jungle'
+import TestHost from '../../helpers/testHost'
+
 let {Util} = Jungle;
 let Debug = Util.Debug
-let {Membrane, PortCrux, Crux, RuleMesh, RequestCrux} = Jungle.IO;
-let TestHost = require('../helpers/testHost.js')
+let {Membrane, RuleMesh} = Jungle.IO;
 
 
 describe("request medium and cruxes", function () {
@@ -27,6 +28,9 @@ describe("request medium and cruxes", function () {
 
         exposed = {}
 
+        let meshbrane = new Membrane()
+        meshbrane.addSubrane(memb, 'm')
+
         mesh = new RuleMesh({
             rules:{
                 'direct':[
@@ -34,10 +38,9 @@ describe("request medium and cruxes", function () {
                 ]
             },
             exposed:exposed,
-            membranes:{
-                m:memb
-            }
+            membrane:meshbrane
         })
+        
     })
 
     it("should pass asynchronous requests", function(done){

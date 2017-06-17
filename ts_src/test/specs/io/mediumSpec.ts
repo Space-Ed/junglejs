@@ -1,9 +1,8 @@
-
-let Jungle = require('../../build/jungle.js');
-let Debug = require('../../build/util/debug.js')
+import * as Jungle from '../../../jungle';
+import * as Debug from '../../../util/debug'
+import TestHost from '../../helpers/testHost'
 
 let {Membrane, DistributeMedium} = Jungle.IO;
-let TestHost = require('../helpers/testHost.js')
 Debug.Crumb.defaultOptions.debug = true;
 Debug.Crumb.defaultOptions.log = console;
 
@@ -38,7 +37,8 @@ describe("The Push Medium", function () {
 
         medium.suppose(link)
 
-        let outspy =  jasmine.createSpy();
+        let outspy = jasmine.createSpy("output catch");
+
         contactB.invert().emit = outspy;
 
         let crumb = new Debug.Crumb("Beginning")

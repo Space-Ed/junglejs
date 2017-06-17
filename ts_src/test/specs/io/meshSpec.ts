@@ -1,9 +1,9 @@
 
-let Jungle = require('../../build/jungle.js');
-let {Membrane, PortContact, Contact, RuleMesh} = Jungle.IO;
+import * as Jungle from '../../../jungle'
 
-let TestHost = require('../helpers/testHost.js')
+let {Membrane, RuleMesh} = Jungle.IO;
 
+import TestHost from '../../helpers/testHost'
 
 let Debug = Jungle.Util.Debug;
 Debug.Crumb.defaultOptions.debug = true;
@@ -40,7 +40,7 @@ describe('The Mesh Host', function () {
     })
 
     it("should connect a to b of a single membrane", function () {
-        let outspy = jasmine.createSpy();
+        let outspy = jasmine.createSpy('outspy');
 
         contactB.invert().emit = outspy;
         contactA.invert().put("Hello?");
@@ -66,10 +66,10 @@ describe('The Mesh Host', function () {
 
         expect(mesh.media['distribute'].matrix.to['m:a']['secondmemb:b']).not.toBeUndefined();
 
-        let outspy = jasmine.createSpy();
+        let outspy = jasmine.createSpy("outspy");
         contact2.invert().emit =outspy;
 
-        let outspy2 = jasmine.createSpy();
+        let outspy2 = jasmine.createSpy("outspy2");
         contactB.invert().emit =outspy2;
 
 

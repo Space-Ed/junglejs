@@ -8,9 +8,9 @@ export enum CALL_MODE {
 
 export interface CallContactSpec {
     label:string,
-    tracking:boolean,
-    syncOnly:boolean,
-    mode: CALL_MODE,
+    tracking?:boolean,
+    syncOnly?:boolean,
+    mode?: CALL_MODE,
     hook?:Function,
     default?:any
 }

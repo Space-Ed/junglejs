@@ -5,7 +5,7 @@ import {CallHook} from '../../../tertiary/hooks/call'
 import * as Debug from '../../../util/debug'
 import * as A from '../../../aliases/all'
 
-fdescribe("A Cell", function () {
+describe("A Cell", function () {
 
     Debug.Crumb.defaultOptions.log = console;
     Debug.Crumb.defaultOptions.debug = true;

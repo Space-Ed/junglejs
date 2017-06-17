@@ -1,15 +1,14 @@
+import * as Jungle from '../../../jungle'
 
-let Jungle = require('../../build/jungle.js');
 let {Membrane, CallOut, CallIn} = Jungle.IO;
-let Designate = require('../../build/interoperability/membranes/designable.js');
-let TestHost = require('../helpers/testHost.js')
+import TestHost from '../../helpers/testHost'
 
 describe('basic membrane', function(){
 
     let memb, host;
 
     beforeEach(function(){
-        host =  new TestHost('host1-base')
+        host =  new TestHost()
         memb = host.primary
     })
 
@@ -85,7 +84,7 @@ describe('basic membrane', function(){
         let subhost, submemb
 
         beforeEach(function(){
-            subhost = new TestHost('SubHost')
+            subhost = new TestHost()
 
             submemb = subhost.primary;
             memb.addSubrane(submemb, 'sub')

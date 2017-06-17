@@ -5,7 +5,7 @@ import {Cell} from "../../../tertiary/cells/cell";
 import * as A from '../../../aliases/all'
 import {AccessHook} from "../../../tertiary/hooks/access";
 
-fdescribe('defaults of objects', function(){
+describe('defaults of objects', function(){
 
     describe('in isolation', function(){
 
@@ -54,7 +54,7 @@ fdescribe('defaults of objects', function(){
 
     describe('as parent', function(){
 
-        fit('should be able to have other cells within', function(){
+        it('should be able to have other cells within', function(){
 
             let defLep = new DefaultCell({
                 form:{},
@@ -81,9 +81,7 @@ fdescribe('defaults of objects', function(){
             //console.log(defLep.nucleus)
             expect(defLep.subconstructs.subcell.shell.contacts.access).not.toBeUndefined()
 
-
             let accessed = defLep.nucleus['subcell:access'];
-            console.log(Object.getOwnPropertyNames(defLep.nucleus))
             expect(accessed.laughs).toBe('hahaha')
 
 

@@ -1,10 +1,9 @@
-const State = require('../../build/construction/state.ts').State
 
 describe("State Construct", function(){
 
 
     it('exposed should behave like a normal object',function(){
-        let s = new State();
+        let s = {exposed:{}};
         let e = s.exposed;
 
         e.a = 1;
