@@ -22,7 +22,7 @@ describe("sectionalization", function(){
         let memb = new Membrane();
         let sect = memb.addSection("**:*");
 
-        memb.addContact("contact", PushInTrack())
+        memb.addContact( PushInTrack(), "contact")
 
         let desig = sect.designate(":hi", false)
 
@@ -35,7 +35,7 @@ describe("sectionalization", function(){
         let sect = memb.addSection("**:*");
         let addspy = spyOnSection(sect, "sect")
 
-        memb.addContact("contact", PushOutTrack())
+        memb.addContact( PushOutTrack(), "contact")
         expect(addspy).toHaveBeenCalledWith(MembraneEvents.AddContact, memb.contacts.contact, ":contact")
 
     })
@@ -45,7 +45,7 @@ describe("sectionalization", function(){
         let sect = memb.addSection("**:*");
         let addspy = spyOnSection(memb,"memb")
 
-        memb.addContact("contact", PushOutTrack())
+        memb.addContact( PushOutTrack(), "contact")
         expect(addspy).not.toHaveBeenCalled()
         expect(memb.designate(':contact')[':contact']).toBeUndefined()
 
@@ -65,8 +65,8 @@ describe("sectionalization", function(){
         let sectspy = spyOnSection(sect, "sect")
         let membspy = spyOnSection(memb, "memb")
 
-        subA.addContact("aContact", PushOutTrack())
-        subB.addContact("bContact", PushOutTrack())
+        subA.addContact( PushOutTrack(), "aContact")
+        subB.addContact( PushOutTrack(), "bContact")
 
         expect(sectspy).toHaveBeenCalledTimes(1)
         expect(membspy).toHaveBeenCalledTimes(1)

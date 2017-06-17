@@ -167,7 +167,7 @@ export class Membrane extends Section{
                 let contact:BasicContact<any> = this.contacts[rk]
 
                 if(contact.invertable){
-                    this.inverted.addContact(rk, contact.invert())
+                    this.inverted.addContact( contact.invert(), rk)
                 }
 
             }
@@ -207,7 +207,7 @@ export class Membrane extends Section{
         return removing
         }
 
-    addContact(label:string, contact:BasicContact<any>){
+    addContact( contact:BasicContact<any>, label:string){
         let existing:BasicContact<any> = this.contacts[label];
         if(existing !== undefined){
 
@@ -221,7 +221,7 @@ export class Membrane extends Section{
                 //invert the first and only the first
                 if(contact.invertable && !contact.inverted){
                     let partner = contact.invert()
-                    this.inverted.addContact(label, partner)
+                    this.inverted.addContact( partner, label)
 
                     if(this.inverted.contacts[label] !== partner){
                     }

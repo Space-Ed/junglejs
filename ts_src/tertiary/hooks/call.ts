@@ -40,7 +40,7 @@ export class CallHook extends CellAccessory {
         this.contact = this.cache.direction == "in" ? new IO.CallOut(contactargs) : new IO.CallIn(contactargs);
 
         this.contact.inject(anchor.nucleus, k);
-        anchor.mesh.addContact(k, this.contact)
+        anchor.mesh.addContact( this.contact, k)
     }
 
     detach(){

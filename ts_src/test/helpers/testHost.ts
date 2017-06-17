@@ -65,7 +65,7 @@ export default class TestHost {
                 }))
                 }
                 if(out == '_'){
-                    this.primary.addContact(label, new CallOut({label:label, tracking:true}))
+                    this.primary.addContact( tracking:true}), label, new CallOut({label:label)
                 }
 
             }else{

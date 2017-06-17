@@ -28,8 +28,8 @@ export class DefaultCell extends Cell {
         this.offering.inject(this, 'nucleus')
 
         //adding hidden contact to reveal accessor on the opposite side
-        this.lining.addContact('access', this.offering)
-        this.shell.addContact('access', this.accessor)
+        this.lining.addContact( this.offering, 'access')
+        this.shell.addContact( this.accessor, 'access')
     }
 
     clearForm(){

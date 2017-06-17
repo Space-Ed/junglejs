@@ -28,7 +28,7 @@ export class AccessHook extends CellAccessory {
 
         this.contact = new IO.OfferContact();
 
-        anchor.mesh.addContact(k, this.contact)
+        anchor.mesh.addContact( this.contact, k)
 
         if(this.cache.expose && anchor.nucleus){
             this.contact.inject(anchor.nucleus, undefined)
