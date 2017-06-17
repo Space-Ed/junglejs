@@ -24,7 +24,7 @@ export class Composite extends Construct{
         for(let k in this.cache){
             if(!(k in this.keywords)){
                 let v = this.cache[k];
-                this.add(k, v);
+                this.add(v , k);
             }
         }
     }
@@ -48,7 +48,7 @@ export class Composite extends Construct{
      * Add any kind of item to the composite, will split into 4 cases
      * Ultimately adding to the subcomposite and/or context objects
      */
-    add(k, v){
+    add(v , k){
         //saved
         if(this.alive){
             if(isPrimative(v)){
