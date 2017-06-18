@@ -11,7 +11,6 @@ import {Designator} from '../../util/designator'
 export class RuleMesh implements I.MembraneWatcher {
 
     primary:Membrane;
-    policy:I.ShellPolicy;
     rules:any;
     media:any;
     locations:any;

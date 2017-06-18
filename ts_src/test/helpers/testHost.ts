@@ -59,13 +59,13 @@ export default class TestHost {
                 let inp = pmatch[1], label = pmatch[2], out = pmatch[3];
 
                 if(inp == '_'){
-                    this.primary.addContact(label, new CallIn({
+                    this.primary.addContact(new CallIn({
                         label:label,
                         tracking:true
-                }))
+                    }), label)
                 }
                 if(out == '_'){
-                    this.primary.addContact( tracking:true}), label, new CallOut({label:label)
+                    this.primary.addContact(new CallOut({label:label, tracking:true}), label)
                 }
 
             }else{

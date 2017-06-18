@@ -19,8 +19,8 @@ describe('basic membrane', function(){
         let newb = new CallIn({label: 'calledA'});
         let new2 = new CallOut({label: 'caller1'})
 
-        memb.addContact('calledA', newb);
-        memb.addContact('caller1', new2);
+        memb.addContact( newb, 'calledA');
+        memb.addContact( new2, 'caller1');
 
         expect(memb.contacts.calledA).toBe(newb);
         expect(memb.contacts.caller1).toBe(new2);
@@ -59,7 +59,7 @@ describe('basic membrane', function(){
         })
 
         it('should invert further contactes added', function(){
-            memb.addContact('lame-o',new CallOut({label:'lame-o'}));
+            memb.addContact(new CallOut({label:'lame-o'}), 'lame-o');
 
             //console.log(invert.contacts)
             let desall = invert.designate(":*");
@@ -67,7 +67,7 @@ describe('basic membrane', function(){
             expect(desall[':lame-o']).not.toBeUndefined();
 
             //a caller in the inversion is a called in the original
-            invert.addContact('cool-cat',new CallOut({label:'cool-cat'}));
+            invert.addContact(new CallOut({label:'cool-cat'}), 'cool-cat');
             let desallop = memb.designate(":*");
             expect(desallop[':cool-cat']).not.toBeUndefined();
         })
@@ -100,9 +100,9 @@ describe('basic membrane', function(){
         })
 
         it('globbing should collect at many depths',function(){
-            let sub2 = new Membrane(subhost)
+            let sub2 = new Membrane()
 
-            sub2.addContact('a', new CallIn({label:'a'}));
+            sub2.addContact(new CallIn({label:'a',tracking:false}) , 'a');
             submemb.addSubrane(sub2, 'sub')
 
             let desig = memb.designate('sub.sub:a')
@@ -144,9 +144,9 @@ describe('basic membrane', function(){
             let sub = new Membrane()
             memb.addSubrane(sub, 'sub')
 
-            sub.addContact('piwi', new CallIn({
+            sub.addContact(new CallIn({
                 label:'piwi'
-            }))
+            }), 'piwi')
 
             expect(host.addspy.calls.allArgs()[0][0]).toBe(sub.contacts.piwi)
             expect(host.addspy.calls.allArgs()[0][1]).toBe('sub:piwi')
@@ -167,9 +167,9 @@ describe('basic membrane', function(){
             let sub = new Membrane()
             memb.addSubrane(sub, 'sub')
 
-            sub.addContact('piwi', new CallIn({
+            sub.addContact(new CallIn({
                 label:'piwi'
-            }))
+            }),'piwi')
 
             let removed = sub.removeContact('piwi')
 
@@ -197,9 +197,9 @@ describe('basic membrane', function(){
             host.membaddspy.calls.reset();
 
             let sub2 = new Membrane()
-            sub2.addContact('fogle', new CallOut({
+            sub2.addContact(new CallOut({
                 label:'fogle'
-            }))
+            }),'fogle')
 
             sub.addSubrane(sub2, 'sub2')
 

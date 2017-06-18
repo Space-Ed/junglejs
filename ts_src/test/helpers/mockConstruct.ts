@@ -2,7 +2,7 @@
 import {Construct} from '../../construction/construct'
 import {Composite} from '../../construction/composite'
 
-export class MockConstruct extends Construct<Composite> {
+export class MockConstruct extends Construct {
 
     state:any
     spies:any

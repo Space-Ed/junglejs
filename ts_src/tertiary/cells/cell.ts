@@ -70,7 +70,7 @@ export class Cell extends CS.Composite {
     parseSectionRule(rule:string){
         let match = rule.match(/^([\w\:\.\*]*)\s*to\s*(nucleus|shell)\s*(?:as\s*(\w*))?$/)
         if(match){
-            console.log(match)
+            //console.log(match)
             let desexp = match[1]
             let target = match[2]
             let alias = match[3]

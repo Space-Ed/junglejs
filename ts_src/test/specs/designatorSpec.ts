@@ -201,7 +201,7 @@ describe('',function(){
 
         all.screen('china.**:*')
 
-        console.log(all.scan(structure))
+        //console.log(all.scan(structure))
 
         deeplyEqualsThrow(all.scan(structure),{
             ':CEO': 'Big Boss',

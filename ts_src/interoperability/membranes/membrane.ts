@@ -207,7 +207,7 @@ export class Membrane extends Section{
         return removing
         }
 
-    addContact( contact:BasicContact<any>, label:string){
+    addContact(contact:BasicContact<any>, label:string){
         let existing:BasicContact<any> = this.contacts[label];
         if(existing !== undefined){
 
