@@ -48,9 +48,39 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
         }
     }
 
+    /*
+        determine if the medium has the token in any position
+    */
+    hasToken(token:string):boolean{
+        return token in this.matrix.to || token in this.matrix.from || token in this.matrix.sym
+    }
+
+    /*
+        determine that a certain link is present in a media, requiring both tokens to be represented
+    */
+    hasLink(link:I.LinkSpec<A,B>):boolean{
+        console.log("link", link, this.matrix)
+        if(link.directed){
+            if(link.tokenA in this.matrix.to && this.matrix.to[link.tokenA][link.tokenB] !== undefined){
+                return this.matrix.to[link.tokenA][link.tokenB] === this.matrix.from[link.tokenB][link.tokenA];
+            }else{
+                return false
+            }
+        }else{
+            if(link.tokenA in this.matrix.sym ){
+                return this.matrix.sym[link.tokenA][link.tokenB] === this.matrix.from[link.tokenB][link.tokenA]
+            }else{
+                return false
+            }
+        }
+    }
+
+    /**
+     * determine whether this media hold an exclusive claim over either of the contacts in question for the link
+     */
     hasClaim(link:I.LinkSpec<A,B>):boolean{
-        return this.exclusive && (link.directed && (link.tokenA in this.matrix.to)
-        || (!link.directed && link.tokenA in this.matrix.sym))
+        return this.exclusive && (link.directed && (link.tokenA in this.matrix.to || link.tokenB in this.matrix.from))
+        || (!link.directed && link.tokenA in this.matrix.sym )
     }
 
     breakA(token:string, a:A){
@@ -89,6 +119,8 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
     abstract connect(link: I.LinkSpec<A,B>);
 
     disconnect(link: I.LinkSpec<A,B>){
+        console.log("disconnect", link)
+
         if(link.directed){
             delete this.matrix.to[link.tokenA][link.tokenB];
             delete this.matrix.from[link.tokenB][link.tokenA];

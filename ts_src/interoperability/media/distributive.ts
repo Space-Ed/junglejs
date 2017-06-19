@@ -5,14 +5,11 @@ import {CallOut} from '../contacts/call/callout'
 import {CallIn} from '../contacts/call/callin'
 
 export class DistributeMedium extends BaseMedium<CallOut, CallIn> {
-
-    typeA;
-    typeB;
+    typeA = CallOut
+    typeB  = CallIn
 
     constructor(spec:I.MediumSpec){
         super(spec);
-        this.typeA = CallOut
-        this.typeB  = CallIn
     }
 
     distribute(sourceToken:string, data:any, crumb){

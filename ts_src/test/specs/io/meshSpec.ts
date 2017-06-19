@@ -1,7 +1,7 @@
 
 import * as Jungle from '../../../jungle'
 
-let {Membrane, RuleMesh} = Jungle.IO;
+let {Membrane, RuleMesh, CallIn, CallOut} = Jungle.IO;
 
 import TestHost from '../../helpers/testHost'
 
@@ -140,6 +140,47 @@ describe('The Mesh Host', function () {
         contactB2.invert().put("Hola?");
         expect(outspy).toHaveBeenCalledWith("Hola?")
         expect(outspy2).not.toHaveBeenCalledWith("Hola?")
+
+    })
+
+    it('should allow addition and removal of rules ', function(){
+        let surface = new Membrane()
+        let outer = surface.invert()
+        let fabric = new RuleMesh({
+            rules:{
+                'distribute':[]
+            },
+            membrane:surface,
+            exposed:{},
+        })
+
+        surface.addContact(new CallOut({label:'pointA'}), 'pointA')
+        surface.addContact(new CallIn({label:'pointB'}), 'pointB');
+
+        let outspy = jasmine.createSpy('outspy');
+        fabric.addRule(':pointA->:pointB','distribute', 'rule1');
+
+        (outer.contacts.pointB).emit = outspy;
+
+        outer.contacts.pointA.put("hello")
+        expect(outspy).toHaveBeenCalledWith('hello')
+
+        //improper usage
+        expect(function(){
+            fabric.removeRule('inject', 'rule1')
+        }).toThrowError()
+
+        expect(function(){
+            fabric.removeRule('distribute', 'rule2')
+        }).toThrowError()
+
+        outspy.calls.reset()
+
+        fabric.removeRule('distribute', 'rule1')
+
+        expect(surface.contacts.pointA.emit).toBeUndefined()
+        outer.contacts.pointA.put("hello")
+        expect(outspy).not.toHaveBeenCalled()
 
     })
 })

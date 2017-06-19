@@ -1,7 +1,7 @@
 
 import Jasmine = require('jasmine')
-import {MembraneEvents, Section, Membrane} from '../../interoperability/membranes/membrane'
-import {PushOutTrack, PushInTrack, CALL_MODE, CallContactSpec} from '../../interoperability/contacts/call/common'
+import {MembraneEvents, Section, Membrane} from '../../../interoperability/membranes/membrane'
+import {PushOutTrack, PushInTrack, CALL_MODE, CallContactSpec} from '../../../interoperability/contacts/call/common'
 
 function spyOnSection(section: Section, label:string):jasmine.Spy{
     let spy = jasmine.createSpy(label)

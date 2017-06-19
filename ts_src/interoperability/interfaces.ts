@@ -58,8 +58,11 @@ export interface Medium<A extends Contact, B extends Contact>{
 
     breakA(token:string, a:A);
     breakB(token:string, b:B);
+    hasToken(token:string):boolean;
     hasClaim(link:LinkSpec<A,B>):boolean;
+    hasLink(link:LinkSpec<A,B>):boolean;
     suppose(supposedLink: LinkSpec<A,B>):boolean;
+    disconnect(link: LinkSpec<A,B>);
 }
 
 export interface LinkSpec<A,B> {
@@ -67,8 +70,7 @@ export interface LinkSpec<A,B> {
     tokenB:string,
     contactA:A,
     contactB:B,
-    directed:boolean,
-    destructive:boolean
+    directed:boolean
 }
 
 export interface ShellPolicy {

@@ -1,7 +1,7 @@
 
 import * as I from '../interfaces'
 import {Membrane, MembraneEvents,DemuxWatchMethodsF} from '../membranes/membrane'
-import {mediaConstructors} from '../media/medium'
+import {mediaConstructors, BaseMedium} from '../media/medium'
 import * as Designate from '../membranes/designable'
 import {Designator} from '../../util/designator'
 
@@ -76,11 +76,68 @@ export class RuleMesh implements I.MembraneWatcher {
     /**
      * Rule must be applied to existing contacts, .
      */
-    addRule(rule:I.LinkRule, mediumkey:string){
-        this.rules[mediumkey].push(rule);
+    addRule(rule:I.LinkRule|string, mediumkey:string, ruleID?:string){
+        if(typeof rule === 'string'){
+            this.addRule(this.parseLink(rule), mediumkey, ruleID)
+        }else{
+            if(ruleID !== undefined){
+                this.rules[mediumkey][ruleID] = rule
+            }
+            this.rules[mediumkey].push(rule);
+            let dA = rule.designatorA.tokenDesignate(this.primary);
+            let dB = rule.designatorB.tokenDesignate(this.primary);
+            this.square(rule, dA, dB, mediumkey)
+        }
+    }
+
+    removeRule(mediumID:string, ruleID:string){
+        let rule:I.LinkRule = this.rules[mediumID][ruleID]
+
+        if(rule === undefined){
+            throw new Error(`The rule: ${rule} being removed does not exist in medium ${mediumID}`)
+        }
+
         let dA = rule.designatorA.tokenDesignate(this.primary);
         let dB = rule.designatorB.tokenDesignate(this.primary);
-        this.square(rule, dA, dB, mediumkey)
+        this.unsquare(rule, dA, dB, mediumID)
+
+    }
+
+    unsquare(rule:I.LinkRule, desigA:Object, desigB:Object, mediumkey:string){
+        for(let tokenA in desigA){
+            let contactA = desigA[tokenA];
+
+            for (let tokenB in desigB){
+                let doSuppose = true;
+                let contactB = desigB[tokenB];
+                let medium:I.Medium<any,any> = this.media[mediumkey]
+
+                let link:I.LinkSpec<any, any> = {
+                    tokenA:tokenA,
+                    tokenB:tokenB,
+                    contactA:contactA,
+                    contactB:contactB,
+                    directed:true
+                }
+
+                if(medium.hasLink(link)){
+                    medium.disconnect(link)
+
+                    console.log('has link', medium.hasLink(link))
+
+                    //if this token is no longer represented in the medium
+                    if(!medium.hasToken(tokenA)){
+                        delete this.locations[tokenA][mediumkey]
+                    }
+
+                    if(!medium.hasToken(tokenA)){
+                        delete this.locations[tokenB][mediumkey]
+
+                    }
+                }
+            }
+
+        }
     }
 
     square(rule:I.LinkRule, desigA:Object, desigB:Object, mediumkey:string){
@@ -99,14 +156,13 @@ export class RuleMesh implements I.MembraneWatcher {
                     tokenB:tokenB,
                     contactA:contactA,
                     contactB:contactB,
-                    directed:true,
-                    destructive:false
+                    directed:true
                 }
 
                 //if all other media do not hold an exclusive claim to the relevant contact
                 for(let mk in this.media){
                     let claimer = this.media[mk]
-                    if(mk !== mediumkey && claimer.hasClaim()){
+                    if(mk !== mediumkey && claimer.hasClaim(link)){
                         throw new Error('Unable to suppose link when another medium has claimed the token')
                     }
                 }
