@@ -59,7 +59,6 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
         determine that a certain link is present in a media, requiring both tokens to be represented
     */
     hasLink(link:I.LinkSpec<A,B>):boolean{
-        console.log("link", link, this.matrix)
         if(link.directed){
             if(link.tokenA in this.matrix.to && this.matrix.to[link.tokenA][link.tokenB] !== undefined){
                 return this.matrix.to[link.tokenA][link.tokenB] === this.matrix.from[link.tokenB][link.tokenA];
@@ -119,8 +118,6 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
     abstract connect(link: I.LinkSpec<A,B>);
 
     disconnect(link: I.LinkSpec<A,B>){
-        console.log("disconnect", link)
-
         if(link.directed){
             delete this.matrix.to[link.tokenA][link.tokenB];
             delete this.matrix.from[link.tokenB][link.tokenA];

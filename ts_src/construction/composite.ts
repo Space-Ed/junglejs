@@ -12,7 +12,7 @@ export class Composite extends Construct{
         this.subconstructs = {};
     }
 
-    prime(domain:Domain){
+    prime(domain?:Domain){
         super.prime(domain)
 
         this.applyForm(this.cache.form)
@@ -111,6 +111,7 @@ export class Composite extends Construct{
         let removing = <Construct>this.subconstructs[k];
 
         if(removing !== undefined){
+            removing.detach(this.anchor, k)
             let final = removing.dispose();
             delete this.subconstructs[k];
             return final

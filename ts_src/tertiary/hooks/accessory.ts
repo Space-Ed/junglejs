@@ -1,7 +1,7 @@
 
 import {Domain} from '../../construction/domain'
 import {Construct} from '../../construction/construct'
-import {Cell} from './cell'
+import {Cell} from '../cells/cell'
 
 import * as I from '../interfaces'
 
@@ -49,10 +49,4 @@ export class CellAccessory extends Construct {
 
     }
 
-    /*
-        as an unprimed construct{pattern} this may occur to create an extended version.
-    */
-    extend(patch):Construct {
-        return super.extend(patch)
-    }
 }

@@ -1,5 +1,6 @@
+
 import {Composite} from './composite'
-import {Domain} from './domain'
+import {Domain, JungleDomain} from './domain'
 import * as Util from '../util/all'
 
 /*
@@ -33,7 +34,7 @@ export abstract class Construct{
 
     constructor(spec:any){
         this.cache = this.ensureObject(spec);
-        this.cache.basis = this.cache.basis || 'cell';
+        this.cache.basis = this.cache.basis || 'object';
         //console.log("Create Construct, ",this.cache)
 
         this.alive = false;
@@ -59,8 +60,8 @@ export abstract class Construct{
     }
 
     detach(anchor:any, alias:string){
-        this.anchor = anchor;
-        this.alias = alias;
+        this.anchor = undefined;
+        this.alias = undefined;
     }
 
 
@@ -76,6 +77,8 @@ export abstract class Construct{
             }
         }else if(this.cache.domain instanceof Domain){
             this.domain = this.cache.domain
+        }else if(domain === undefined){
+            this.domain = JungleDomain
         }else{
             //the domain is of a bad type
         }

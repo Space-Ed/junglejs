@@ -3,7 +3,7 @@ import * as CS  from '../../construction/all'
 
 import{ShellPolicy, FreePolicy, Contact} from '../../interoperability/interfaces'
 import * as I from '../interfaces'
-import {CellAccessory} from './accessory'
+import {CellAccessory} from '../hooks/accessory'
 
 /*
 
@@ -47,7 +47,8 @@ export class Cell extends CS.Composite {
         //the anchor is provided to constructs at attach time, it is contingent on accessibility restraint
         this.anchor = {
             nucleus:this.nucleus,
-            mesh:this.lining
+            lining:this.lining,
+            mesh:this.mesh
         }
 
         //the creation of sections for exclusive grouping of internal contacts to be exposed on shell or injected to context
@@ -104,11 +105,11 @@ export class Cell extends CS.Composite {
     }
 
     attach(anchor:I.CellAnchor, alias){
-        anchor.mesh.addSubrane(this.shell, alias)
+        anchor.lining.addSubrane(this.shell, alias)
     }
 
     detach(anchor:I.CellAnchor, alias){
-        anchor.mesh.removeSubrane(alias)
+        anchor.lining.removeSubrane(alias)
     }
 
     addConstruct(k, construct:CS.Construct){
@@ -126,10 +127,6 @@ export class Cell extends CS.Composite {
     addObject(k, v){
         let construct = new Cell(v)
         this.addConstruct(k, construct)
-    }
-
-    prime(domain:CS.Domain){
-        super.prime(domain);
     }
 
 }

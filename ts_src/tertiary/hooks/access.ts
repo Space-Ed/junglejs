@@ -4,7 +4,7 @@ import * as Debug from '../../util/debug'
 import {deepCopy, Junction} from '../../util/all'
 
 import {Cell} from '../cells/cell'
-import {CellAccessory} from '../cells/accessory'
+import {CellAccessory} from './accessory'
 import {CALL_MODE, CallContactSpec, Hookable} from '../../interoperability/interfaces'
 
 import * as I from '../interfaces'
@@ -28,7 +28,7 @@ export class AccessHook extends CellAccessory {
 
         this.contact = new IO.OfferContact();
 
-        anchor.mesh.addContact( this.contact, k)
+        anchor.lining.addContact( this.contact, k)
 
         if(this.cache.expose && anchor.nucleus){
             this.contact.inject(anchor.nucleus, undefined)
@@ -37,12 +37,7 @@ export class AccessHook extends CellAccessory {
 
     detach(){
         this.contact.retract(this.anchor, this.alias)
-        this.anchor.mesh.removeContact(this.alias)
-    }
-
-    patch(patch){
-        this.dispose()
-
+        this.anchor.lining.removeContact(this.alias)
     }
 
 }

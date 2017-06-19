@@ -45,7 +45,7 @@ export class DefaultCell extends Cell {
             this.accessor.inject(anchor.nucleus, key);
         }
 
-        anchor.mesh.addSubrane(this.shell, key)
+        anchor.lining.addSubrane(this.shell, key)
     }
 
     detach(anchor:I.CellAnchor, key){
