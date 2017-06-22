@@ -35,6 +35,7 @@ export class Section implements Watchable<SectionWatcher>, SectionWatcher{
     designator:Designator;
     watches:SectionWatcher[]
     sections:Section[]
+
     source:Membrane;
 
     constructor(){
@@ -42,7 +43,7 @@ export class Section implements Watchable<SectionWatcher>, SectionWatcher{
         this.watches = [];
     }
 
-    addSection(desexp:string, alias?:string):Section{
+    addSection(desexp:string, alias?:string|number):Section{
         let section = new Section();
 
         if(this instanceof Membrane){
@@ -66,7 +67,7 @@ export class Section implements Watchable<SectionWatcher>, SectionWatcher{
         section.designator = new Designator('subranes', 'contacts', desexp);
 
         if(alias === undefined){
-            this.sections.push(section)
+            this.sections[Symbol("anon")] = section
         }else{
             this.sections[alias]= section
         }
@@ -77,7 +78,7 @@ export class Section implements Watchable<SectionWatcher>, SectionWatcher{
     designate(dexp:string, flat=false){
         let desig = new Designator('subranes','contacts', dexp);
 
-        for(let ik in this.sections){
+        for(let ik of (<any[]>Object.getOwnPropertySymbols(this.sections)).concat(Object.keys(this.sections))){
             desig.screen(this.sections[ik].designator.expression)
         }
 
@@ -85,9 +86,9 @@ export class Section implements Watchable<SectionWatcher>, SectionWatcher{
     }
 
 
-    addWatch(watcher:SectionWatcher, alias?:string){
+    addWatch(watcher:SectionWatcher, alias?:string|number){
         if(alias === undefined){
-            this.watches.push(watcher)
+            this.watches[Symbol("anon")] = watcher
         }else{
             this.watches[alias]= watcher
         }
@@ -103,7 +104,7 @@ export class Section implements Watchable<SectionWatcher>, SectionWatcher{
 
     protected nextToken(token, key){
 
-        if(isNaN(key)){
+        if(!(typeof key === 'symbol')){
             if(token === undefined){ //membrane inception
                 return key
             }else if (token.match(/^\:\w+$/)){//contact inception
@@ -111,25 +112,27 @@ export class Section implements Watchable<SectionWatcher>, SectionWatcher{
             } else { //membrane continutation
                 return `${key}.${token}`
             }
-        }else{ //anonymous watch
+        }else{
+            //anonymous watch
             return token  || ""
         }
 
     }
 
     changeOccurred(event:MembraneEvents, subject:BasicContact<any>|Section, token?:string){
-        for (let skey in this.sections){
+
+        for (let skey of (<any[]>Object.getOwnPropertySymbols(this.sections)).concat(Object.keys(this.sections))){
             let section = this.sections[skey];
             if(section.designator === undefined || section.designator.matches(token)){
 
-                //console.log(`section.designator: ${section.designator.regex.source}  matches (token):${token}`)
+               //console.log(`section.designator: ${section.designator.regex.source}  matches (token):${token}`)
                 section.changeOccurred(event, subject, this.nextToken(token, skey))
                 return //escaped
             }
         }
 
         //when not
-        for(let wKey in this.watches){
+        for(let wKey of (<any[]>Object.getOwnPropertySymbols(this.watches)).concat(Object.keys(this.watches))){
             let watch = this.watches[wKey];
 
             if(watch.designator === undefined || watch.designator.matches(token)){
@@ -266,13 +269,13 @@ export class Membrane extends Section{
 
     notifyMembraneAdd(membrane, token?){
         if(this.notify){
-            this.changeOccurred(MembraneEvents.AddMembrane, membrane, token)
+            this.changeOccurred(MembraneEvents.AddMembrane, membrane, ""+token)
         }
     }
 
     notifyMembraneRemove(membrane, token?){
         if(this.notify){
-            this.changeOccurred(MembraneEvents.RemoveMembrane, membrane, token)
+            this.changeOccurred(MembraneEvents.RemoveMembrane, membrane, ""+token)
         }
     }
 }

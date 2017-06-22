@@ -56,7 +56,7 @@ export class Junction {
             handle = new Junction();
             let future = this.future;
 
-            //console.log('residue planted: ', this.residue)
+           //console.log('residue planted: ', this.residue)
             propagate = this.thenCallback(this.awaits,  handle); //this.residue,
 
             if(handle.isClean()){
@@ -64,17 +64,17 @@ export class Junction {
                 future.unleash(propagate);
             }else {
                 //lose the return from the callback, could be immediate, could be later;
-                //console.log('proceeding from a tampered handle ')
+               //console.log('proceeding from a tampered handle ')
                 //
                 // let handleFrontier = handle.frontier()
                 // if(handleFrontier.isTampered()){
                 //     handle.then(function(result, residue){
-                //         console.log('tampered handle result:', result, "residue",  residue)
+               //console.log('tampered handle result:', result, "residue",  residue)
                 //         future.unleash(result);
                 //     });
                 // }else{
                 //     handle.then(function(result, residue){
-                //         console.log('Idle handle result:', result, "residue", residue)
+               //console.log('Idle handle result:', result, "residue", residue)
                 //         future.unleash(residue);
                 //     });
                 // }
@@ -109,7 +109,7 @@ export class Junction {
         release(propagated);
 
         //proceed when
-        //console.log('check from unleash')
+       //console.log('check from unleash')
         // if(this.isReady()){
         //     this.proceedThen();
         // }
@@ -195,7 +195,7 @@ export class Junction {
                 })(this.awaits, false, function(a,b,k){return a||b});
         }
 
-        //console.log(`allDone: cleared ${this.cleared}, awaitingAny ${awaitingAny}, $awaitSilent ${awaitingAnySilent}, awaits:`, this.awaits, " silent; ", this.silentAwaits)
+       //console.log(`allDone: cleared ${this.cleared}, awaitingAny ${awaitingAny}, $awaitSilent ${awaitingAnySilent}, awaits:`, this.awaits, " silent; ", this.silentAwaits)
 
         return this.cleared || (!awaitingAny && !awaitingAnySilent);
 
@@ -217,7 +217,7 @@ export class Junction {
             accessor = this.index;
             this.awaits[accessor] = WAITING;
             this.index++;
-            //console.log(`index ${this.index}`)
+           //console.log(`index ${this.index}`)
         }else if(returnkey === false){ //SINGLE
             if(this.resultNature === JResultNatures.Uninferred){
                 this.resultNature = JResultNatures.Single;
@@ -253,11 +253,11 @@ export class Junction {
                 }else if((accessor !== undefined) && silent){
                     this.silentAwaits[accessor] = false;
                 }else if(accessor === undefined){
-                    //console.log('Set single await to ', res, ' is cleared ? ', this.cleared)
+                   //console.log('Set single await to ', res, ' is cleared ? ', this.cleared)
                     this.awaits = res;
                 }
 
-                //console.log('check from merge')
+               //console.log('check from merge')
                 if(this.isReady()){
                     this.proceedThen(); //proceed from awaited
                 }

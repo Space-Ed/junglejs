@@ -81,6 +81,7 @@ export class RuleMesh implements I.MembraneWatcher {
             this.addRule(this.parseLink(rule), mediumkey, ruleID)
         }else{
             if(ruleID !== undefined){
+               //console.log("rules", this.rules, 'for id ', ruleID)
                 this.rules[mediumkey][ruleID] = rule
             }
             this.rules[mediumkey].push(rule);
@@ -122,8 +123,6 @@ export class RuleMesh implements I.MembraneWatcher {
 
                 if(medium.hasLink(link)){
                     medium.disconnect(link)
-
-                    console.log('has link', medium.hasLink(link))
 
                     //if this token is no longer represented in the medium
                     if(!medium.hasToken(tokenA)){

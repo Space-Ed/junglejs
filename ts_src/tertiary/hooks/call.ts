@@ -22,8 +22,7 @@ export class CallHook extends CellAccessory {
     }
 
     attach(anchor: I.CellAnchor, k:string){
-        super.attach(anchor, k)
-
+        super.attach(anchor, k)//console.log('create contact with ',  this.cache)
         let contactargs = {
             label: this.alias,
             tracking:true, //REVIEW: global debug, local debug, denial of tracking, ?
@@ -34,8 +33,10 @@ export class CallHook extends CellAccessory {
                 'push':CALL_MODE.PUSH,
                 'pull':this.cache.sync?CALL_MODE.GET:CALL_MODE.REQUEST
             }[this.cache.mode]
-
         };
+
+        //console.log('contact args', contactargs)
+
 
         this.contact = this.cache.direction == "in" ? new IO.CallOut(contactargs) : new IO.CallIn(contactargs);
 

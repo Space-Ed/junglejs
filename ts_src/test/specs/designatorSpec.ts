@@ -190,7 +190,7 @@ describe('',function(){
         expect('globby.a.globby:p'.match(multiGlob)).not.toBeNull();
 
         let trickyGlob = new Designator('g','t','**.a.**:p').regex;
-        //console.log('trickyGlob:', trickyGlob);
+       //console.log('trickyGlob:', trickyGlob);
         expect('globby.a.a.a:p'.match(trickyGlob)).not.toBeNull();
 
     })
@@ -201,7 +201,7 @@ describe('',function(){
 
         all.screen('china.**:*')
 
-        //console.log(all.scan(structure))
+       //console.log(all.scan(structure))
 
         deeplyEqualsThrow(all.scan(structure),{
             ':CEO': 'Big Boss',

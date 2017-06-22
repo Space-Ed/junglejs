@@ -17,13 +17,13 @@ export class AccessContact extends BasicContact<OfferContact> implements ProxyHa
 
         this.handler = {
             set(target, property:PropertyKey, value, reciever){
-                //console.log(`set ${property} to ${value}`)
+               //console.log(`set ${property} to ${value}`)
                 target[property] = value
                 return true
             },
             get(target, property:PropertyKey, reciever){
                 let gotten = target[property]
-                //console.log(`get of ${property} giving ${gotten}`)
+               //console.log(`get of ${property} giving ${gotten}`)
                 return gotten
             }
         }

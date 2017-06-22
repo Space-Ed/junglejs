@@ -16,10 +16,11 @@ export interface CellAnchor {
 }
 
 export interface CallHookSpec {
+    basis:"CallHook",
     direction:"in"|"out",
     mode:"push"|"pull",
-    hook:any,
-    default:any,
+    hook?:any,
+    default?:any,
     sync:boolean
 }
 

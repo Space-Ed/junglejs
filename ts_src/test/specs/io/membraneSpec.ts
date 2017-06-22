@@ -61,7 +61,7 @@ describe('basic membrane', function(){
         it('should invert further contactes added', function(){
             memb.addContact(new CallOut({label:'lame-o'}), 'lame-o');
 
-            //console.log(invert.contacts)
+           //console.log(invert.contacts)
             let desall = invert.designate(":*");
 
             expect(desall[':lame-o']).not.toBeUndefined();
@@ -205,6 +205,37 @@ describe('basic membrane', function(){
 
             expect(host.addspy.calls.allArgs()[0][0]).toBe(sub2.contacts.fogle)
             expect(host.addspy.calls.allArgs()[0][1]).toBe('sub.sub2:fogle')
+        })
+    })
+
+    describe('with anonymity', function(){
+
+        it('should allow anonymous watch with numeric indicies',function(){
+
+            let memb = new Membrane()
+
+            function check(ev, ct, token){//console.log('change occurred with token ', token)
+            }
+
+            let changeSpy = jasmine.createSpy('change on anon').and.callFake(check)
+            let indexSpy = jasmine.createSpy('change on index').and.callFake(check)
+
+            memb.addWatch({
+                changeOccurred:changeSpy
+            })
+
+
+            memb.addWatch({
+                changeOccurred:indexSpy
+            }, 0)
+
+            let contact = new CallIn({label:'why'})
+            memb.addContact(contact, 'twice')
+
+            expect(changeSpy.calls.allArgs()[0][2]).toBe(':twice', "because anonymous wipes the front")
+
+            expect(indexSpy.calls.allArgs()[0][2]).toBe('0:twice', "because numeric designation is allowed")
+
         })
     })
 

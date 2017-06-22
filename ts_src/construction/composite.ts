@@ -4,12 +4,12 @@ import {Domain} from './domain'
 
 export class Composite extends Construct{
 
-    keywords = {basis:null, domain:null, form:null}
+    keywords = {basis:null, domain:null, form:null, anon:null}
     subconstructs:any;
 
     constructor(spec:any){
         super(spec); //cache
-        this.subconstructs = {};
+        this.subconstructs = [];
     }
 
     prime(domain?:Domain){
@@ -20,11 +20,17 @@ export class Composite extends Construct{
         this.alive = true;
 
         //incrementally apply the patch, ignoring keywords.
-        //console.log("Composite prime: ", this.cache)
+       //console.log("Composite prime: ", this.cache)
         for(let k in this.cache){
             if(!(k in this.keywords)){
                 let v = this.cache[k];
                 this.add(v , k);
+            }
+        }
+
+        if(this.cache.anon !== undefined){
+            for(let i = 0; i<this.cache.anon.length; i++){
+                this.add(this.cache.anon[i])
             }
         }
     }
@@ -48,7 +54,10 @@ export class Composite extends Construct{
      * Add any kind of item to the composite, will split into 4 cases
      * Ultimately adding to the subcomposite and/or context objects
      */
-    add(v , k){
+    add(v:any , key?:string){
+
+        let k = key === undefined? this.subconstructs.length++:key
+
         //saved
         if(this.alive){
             if(isPrimative(v)){

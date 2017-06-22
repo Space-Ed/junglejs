@@ -3,35 +3,46 @@ import * as Debug from '../util/debug'
 import * as IOI from '../interoperability/interfaces'
 import * as T from '../tertiary/interfaces'
 
-export function PushDeposit(defaultValue){
+//the 4 synchronous call-value conversions
+
+export function PushDeposit(defaultValue):T.CallHookSpec{
     return {
         basis:'CallHook',
         direction:"in",
-        defualt:defaultValue,
-        mode:'push'
+        default:defaultValue,
+        mode:'push',
+        sync:true
     }
 }
 
-export function Cell(patch){
-    return deepMeldF()({
-        basis:'Cell'
-    },patch)
-}
-
-export function Connect(rule:string, medium:string){
+export function PullDeposit(defaultValue){
     return {
-        basis:'Connector',
-        rule:rule,
-        medium:medium
+        basis:'CallHook',
+        direction:"in",
+        default:defaultValue,
+        mode:'pull',
+        sync:true
     }
 }
 
-export function Synth(){
-
+export function Reactive(defaultValue){
+    return {
+        basis:'CallHook',
+        direction:"out",
+        default:defaultValue,
+        mode:'push',
+        sync:true
+    }
 }
 
-export function Weave(){
-
+export function Retrieval(defaultValue){
+    return {
+        basis:'CallHook',
+        direction:"out",
+        default:defaultValue,
+        mode:'pull',
+        sync:true
+    }
 }
 
 export function TunnelIn(mode:'push'|'pull' = 'push'){
@@ -59,4 +70,27 @@ export function CallInSync(func:(data:any, crumb:Debug.Crumb)=>any){
         hook:func,
         mode:'pull'
     }
+}
+
+
+export function Cell(patch){
+    return deepMeldF()({
+        basis:'Cell'
+    },patch)
+}
+
+export function Connect(rule:string, medium:string){
+    return {
+        basis:'Connector',
+        rule:rule,
+        medium:medium
+    }
+}
+
+export function Synth(){
+
+}
+
+export function Weave(){
+
 }

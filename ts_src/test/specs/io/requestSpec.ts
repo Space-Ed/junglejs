@@ -69,15 +69,13 @@ describe("request medium and cruxes", function () {
         meshOutlet.invert().put("Hello?", crumb).then(({data, crumb})=>{
             let nextCrumb = crumb.drop("Final Response")
                 .with(data)
-                .catch(err =>{
-                    console.log(err.message)
+                .catch(err =>{//console.log(err.message)
                 })
 
-            //console.log(nextCrumb.dump())
+           //console.log(nextCrumb.dump())
             expect(data).toEqual("Hello?")
             done()
-        }).catch((err)=>{
-            console.log(err.message);
+        }).catch((err)=>{//console.log(err.message);
             done();
         })
 

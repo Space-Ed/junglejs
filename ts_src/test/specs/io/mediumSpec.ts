@@ -43,7 +43,7 @@ describe("The Push Medium", function () {
 
         let crumb = new Debug.Crumb("Beginning")
             .catch((err)=>{
-                //console.log("Crumb error caught: ", err.message)
+               //console.log("Crumb error caught: ", err.message)
             })
 
         contactA.invert().put("Hello?", crumb)

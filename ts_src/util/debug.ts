@@ -45,7 +45,7 @@ export function dumpToDepthF(maxdepth, indentSym="  "){
     }
 
     return (x) => {
-        //console.log("dump to depth", x)
+       //console.log("dump to depth", x)
         return recur(maxdepth, "", x)
     }
 }

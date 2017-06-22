@@ -108,10 +108,10 @@ export class Blender {
         if(this.term){
             reduced = this.reducer(this.crown, mapped);
             this.crown = reduced;
-            //console.log('updated reduced:', reduced);
+           //console.log('updated reduced:', reduced);
         }else{
             reduced = this.merge(mapped);
-            //console.log('updated recursed:', reduced);
+           //console.log('updated recursed:', reduced);
         }
 
         return reduced;
@@ -122,7 +122,7 @@ export class Blender {
     */
     merge(income){
 
-        //console.log("merge:  income = ", income , "this.crown = " ,this.crown);
+       //console.log("merge:  income = ", income , "this.crown = " ,this.crown);
 
         let result, superkeys
         if(this.crown === undefined && income !== undefined){ //only crown is undefined, initialise
@@ -140,20 +140,20 @@ export class Blender {
                     }
                 });
             }
-            //console.log('total keys', superkeys, "  income: ", income);
+           //console.log('total keys', superkeys, "  income: ", income);
 
             for(let key of superkeys){
                 if (key in income ){
                     if(key in this.crown){ //Blend
-                        //console.log("blend denizen", this.crown[key], " income: ", income)
+                       //console.log("blend denizen", this.crown[key], " income: ", income)
                         result[key] = this.crown[key]._blend(income[key]);
                     }else{  // Introduction
-                        //console.log("introduction crown: ", this.crown[key], " income: ", income)
+                       //console.log("introduction crown: ", this.crown[key], " income: ", income)
                         this.crown[key] = B(undefined, {mapper:this.mapper, reducer:this.reducer}).init(income[key]);
                         result[key] = this.crown[key].dump();
                     }
                 }else if(key in this.crown){ //Retroduction
-                    //console.log("retroduction crown: ", this.crown[key], " income: ", income[key])
+                   //console.log("retroduction crown: ", this.crown[key], " income: ", income[key])
                     result[key] = this.crown[key].dump();
                 }else {
                     //impossible

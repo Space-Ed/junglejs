@@ -78,7 +78,7 @@ describe('defaults of objects', function(){
             expect(defLep.nucleus.subdef.ok).toBe('great')
 
             //explicit access of subcell
-            //console.log(defLep.nucleus)
+           //console.log(defLep.nucleus)
             expect(defLep.subconstructs.subcell.shell.contacts.access).not.toBeUndefined()
 
             let accessed = defLep.nucleus['subcell:access'];

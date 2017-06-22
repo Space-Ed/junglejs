@@ -51,7 +51,7 @@ describe('The Mesh Host', function () {
     it('Should successfully disconnect when a crux is removed', function(){
 
         memb.removeContact('a')
-        //console.log(mesh.media['distribute'].matrix)
+       //console.log(mesh.media['distribute'].matrix)
         expect(mesh.media['distribute'].matrix.to['m:a']['m:b']).toBeUndefined()
 
     })

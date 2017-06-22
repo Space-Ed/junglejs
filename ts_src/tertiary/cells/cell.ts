@@ -71,7 +71,7 @@ export class Cell extends CS.Composite {
     parseSectionRule(rule:string){
         let match = rule.match(/^([\w\:\.\*]*)\s*to\s*(nucleus|shell)\s*(?:as\s*(\w*))?$/)
         if(match){
-            //console.log(match)
+           //console.log(match)
             let desexp = match[1]
             let target = match[2]
             let alias = match[3]
@@ -93,7 +93,7 @@ export class Cell extends CS.Composite {
 
                             (<IO.BasicContact<any>>subject).inject(injectsite, token)
 
-                            //console.log(`detect injection on token ${token} with alias ${alias}`);
+                           //console.log(`detect injection on token ${token} with alias ${alias}`);
 
                         }
                     }

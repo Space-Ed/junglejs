@@ -7,9 +7,15 @@ import {JungleDomain} from '../../construction/domain'
 export interface CallResponseTestSpec {
     inputContact:string;
     outputContact:string;
-    respondant:(data:any, crumb:Crumb)=>Junction;
+    respondant?:(data:any, crumb:Crumb)=>Junction;
     inputValues:any[];
     outputValues:any[];
+    returnValues?:any[];
+}
+
+export interface CallReturnTestSpec {
+    inputContact:string;
+    inputValues:any[];
     returnValues:any[];
 }
 
@@ -19,6 +25,18 @@ export default class TestApp extends Cell{
         super(spec)
         Crumb.defaultOptions.log = console
         Crumb.defaultOptions.debug = true
+    }
+
+    applyForm(form={}){
+
+        super.applyForm(form);
+
+        this.parseSectionRule("*.**:* to shell as _")
+    }
+
+    call(contact:string, data:any){
+        let input = this.shell.designate(contact)[contact];
+        input.put(data)
     }
 
     /**
@@ -31,8 +49,12 @@ export default class TestApp extends Cell{
         let input = this.shell.designate(spec.inputContact)[spec.inputContact]
         let output = this.shell.designate(spec.outputContact)[spec.outputContact]
 
+        let respondant = spec.respondant || ((data, crumb)=>{
+            return data
+        })
+
         //capture output
-        let outspy = jasmine.createSpy('outspy', spec.respondant).and.callThrough()
+        let outspy = jasmine.createSpy('outspy', respondant).and.callThrough()
         output.emit = outspy;
 
         for(let i = 0; i < spec.inputValues.length; i++){
@@ -44,8 +66,24 @@ export default class TestApp extends Cell{
             }else{
                 expect(outspy).toHaveBeenCalledWith(spec.outputValues[i])
             }
-            expect(ret).toEqual(spec.returnValues[i])
+
+            if(spec.returnValues !== undefined){
+                expect(ret).toEqual(spec.returnValues[i])
+            }
         }
     }
 
+    callReturnTest(spec:CallReturnTestSpec){
+
+        let input = this.shell.designate(spec.inputContact)[spec.inputContact]
+
+        for(let i = 0; i < spec.inputValues.length; i++){
+            let ival = spec.inputValues[i]
+            let ret = input.put(ival)
+
+            if(spec.returnValues !== undefined){
+                expect(ret).toEqual(spec.returnValues[i])
+            }
+        }
+    }
 }

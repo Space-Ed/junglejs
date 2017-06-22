@@ -29,8 +29,7 @@ describe("A Cell", function () {
             mouth:new CallHook({
                 direction:"in",
                 mode:"push",
-                hook(food){
-                    console.log(`eating ${food},`,this)
+                hook(food){//console.log(`eating ${food},`,this)
                     this.hungry = false;
                     this.oesophagus['stomach:contents'] = food
                 }

@@ -31,6 +31,7 @@ export class AccessHook extends CellAccessory {
         anchor.lining.addContact( this.contact, k)
 
         if(this.cache.expose && anchor.nucleus){
+            //give the whole nucleus
             this.contact.inject(anchor.nucleus, undefined)
         }
     }

@@ -17,8 +17,14 @@ export class DefaultCell extends Cell {
         //normal basic cell when a form exists
         super.applyForm(form);
 
-        //such that all accessors of children exposed in that way will be
+        //accessors of immediate children
         this.parseSectionRule('*:access to nucleus')
+
+        //all base level contacts are injected
+        //this.parseSectionRule(':* to nucleus')
+
+        //all other contacts are forwarded
+        this.parseSectionRule('*.**:* to shell')
 
         // this contact will be exposed and also injected
         this.offering = new OfferContact(form.accessPolicy);
@@ -51,6 +57,7 @@ export class DefaultCell extends Cell {
     detach(anchor:I.CellAnchor, key){
         this.accessor.retract(anchor.nucleus, key)
 
+        anchor.lining.removeSubrane(key)
     }
 }
 

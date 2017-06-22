@@ -39,6 +39,7 @@
     "karma-jasmine": "^1.1.0",
     "karma-sourcemap-loader": "^0.3.7",
     "karma-webpack": "^2.0.3",
+    "source-map-support": "^0.4.15",
     "ts-loader": "^2.1.0",
     "tsify": "^1.0.1",
     "typescript": "^1.8.10",

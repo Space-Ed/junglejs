@@ -14,6 +14,7 @@
         "noLib": false,
         "preserveConstEnums": true,
         "suppressImplicitAnyIndexErrors": true,
+        "sourceMap": true,
         "outDir": "../build"
     },
     "exclude": [
@@ -59,6 +60,7 @@
         "./jungle.ts",
         "./rootDomain.ts",
         "./tertiary/all.ts",
+        "./tertiary/cells/array.ts",
         "./tertiary/cells/cell.ts",
         "./tertiary/cells/default.ts",
         "./tertiary/hooks/access.ts",
@@ -69,6 +71,7 @@
         "./test/helpers/mockConstruct.ts",
         "./test/helpers/testApp.ts",
         "./test/helpers/testHost.ts",
+        "./test/specs/construct/anonymousSpec.ts",
         "./test/specs/construct/cellSpec.ts",
         "./test/specs/construct/connectorSpec.ts",
         "./test/specs/construct/defaultObjectSpec.ts",

@@ -83,9 +83,9 @@ export function designatorToRegex(desigstr){
 }
 
 export function tokenDesignatedBy(token, designator:DesignatorIR):boolean{
-    // console.log("token: ", token);
+   //console.log("token: ", token);
     let [match, allSubs, terminal] =  token.match(/^((?:(?:\w+)(?:\.(?:\w+))*))?\:(\w+)$/);
-    // console.log("match: ", match);
+   //console.log("match: ", match);
 
     let splitSubs = allSubs?allSubs.split(/\./):[];
 

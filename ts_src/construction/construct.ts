@@ -35,7 +35,7 @@ export abstract class Construct{
     constructor(spec:any){
         this.cache = this.ensureObject(spec);
         this.cache.basis = this.cache.basis || 'object';
-        //console.log("Create Construct, ",this.cache)
+       //console.log("Create Construct, ",this.cache)
 
         this.alive = false;
     }
@@ -46,6 +46,11 @@ export abstract class Construct{
     private ensureObject(spec:any){
         if(spec === undefined){
             return {}
+        }else if (Util.isVanillaArray(spec)){
+            return {
+                basis:'array',
+                anon:spec
+            }
         }else if(Util.isVanillaObject(spec)){
             return spec
         }else{
