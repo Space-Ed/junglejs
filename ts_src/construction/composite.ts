@@ -7,6 +7,9 @@ export class Composite extends Construct{
     keywords = {basis:null, domain:null, form:null, anon:null}
     subconstructs:any;
 
+    beginTractor:()=>void;
+    endTractor:()=>void;
+
     constructor(spec:any){
         super(spec); //cache
         this.subconstructs = [];
@@ -14,10 +17,6 @@ export class Composite extends Construct{
 
     prime(domain?:Domain){
         super.prime(domain)
-
-        this.applyForm(this.cache.form)
-
-        this.alive = true;
 
         //incrementally apply the patch, ignoring keywords.
        //console.log("Composite prime: ", this.cache)
@@ -33,6 +32,8 @@ export class Composite extends Construct{
                 this.add(this.cache.anon[i])
             }
         }
+
+        if(this.beginTractor){ this.beginTractor.call(this.nucleus) }
     }
 
 
@@ -40,6 +41,11 @@ export class Composite extends Construct{
         essential configuration to occur before constructions
     */
     applyForm(form:any){
+        super.applyForm(form)
+
+        this.beginTractor = form.begin;
+        this.endTractor = form.end;
+
 
     }
 
@@ -47,7 +53,9 @@ export class Composite extends Construct{
         undo the setup so that a new form can be applied
     */
     clearForm(){
-
+        this.beginTractor = undefined;
+        this.endTractor = undefined;
+        super.clearForm()
     }
 
     /**
@@ -134,6 +142,7 @@ export class Composite extends Construct{
         it should retract any changes it enacted on the parent.
     */
     dispose():any{
+        if(this.endTractor){ this.endTractor.call(this.nucleus) }
 
         for (let key in this.subconstructs) {
             let construct:Construct = this.subconstructs[key]
@@ -145,7 +154,7 @@ export class Composite extends Construct{
 
         this.clearForm()
 
-        this.alive = false;
+        super.dispose();
     }
 
     /*
@@ -171,6 +180,8 @@ export class Composite extends Construct{
     }
 
     patch(patch){
+        //meld the patch, applying
+
 
     }
 

@@ -3,6 +3,8 @@ import {Composite} from './composite'
 import {Domain, JungleDomain} from './domain'
 import * as Util from '../util/all'
 
+import {deepMeldF} from '../util/ogebra/hierarchical';
+
 /*
 
     The construct is a foundational interface that defines all the requirements to being a part of the jungle system.
@@ -31,12 +33,15 @@ export abstract class Construct{
     anchor:any;
     alias:string;
 
+    nucleus:any;
+
+    primeTractor:()=>void;
+    disposeTractor:()=>void;
 
     constructor(spec:any){
         this.cache = this.ensureObject(spec);
         this.cache.basis = this.cache.basis || 'object';
        //console.log("Create Construct, ",this.cache)
-
         this.alive = false;
     }
 
@@ -58,6 +63,15 @@ export abstract class Construct{
         }
     }
 
+    applyForm(form:any = {}){
+        this.primeTractor = form.prime
+        this.disposeTractor = form.dispose
+    }
+
+    clearForm(form:any = {}){
+        this.primeTractor = undefined
+        this.disposeTractor = undefined
+    }
 
     attach(anchor:any, alias:string){
         this.anchor = anchor;
@@ -68,7 +82,6 @@ export abstract class Construct{
         this.anchor = undefined;
         this.alias = undefined;
     }
-
 
     /*
         Called to bring the the construct to life, it is given it's domain, that represents the set of components available to it
@@ -87,6 +100,13 @@ export abstract class Construct{
         }else{
             //the domain is of a bad type
         }
+
+        this.alive = true;
+
+        this.applyForm(this.cache.form)
+
+        if(this.primeTractor){ this.primeTractor.call(this.nucleus) }
+
     };
 
     /*
@@ -94,7 +114,10 @@ export abstract class Construct{
         should return it's final form, and also return to being a pattern
         it should retract any changes it enacted on the parent.
     */
-    abstract dispose():any
+    dispose(){
+        if(this.disposeTractor){ this.disposeTractor.call(this.nucleus) }
+        this.alive = false;
+    }
 
     /*
         output a representation of the construct that may be recovered to a replication
@@ -104,9 +127,19 @@ export abstract class Construct{
     }
 
     /*
-        modification of live structure by application of a patch, leaving the implementation to the subclasses
+        modification of structure by application of a patch,
+
+        when alive and being reformed it will
     */
-    abstract patch(patch:any);
+    patch(patch:any){
+        if(this.alive && !patch.form != undefined){
+            this.dispose();
+            this.patch(patch)
+            this.prime(this.domain);
+        }else{
+            this.cache = deepMeldF()(this.cache, patch)
+        }
+    }
 
 
     /*

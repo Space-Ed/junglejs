@@ -12,7 +12,7 @@ export class DefaultCell extends Cell {
         super(object)
     }
 
-    applyForm(form={}){
+    applyForm(form:any={}){
 
         //normal basic cell when a form exists
         super.applyForm(form);

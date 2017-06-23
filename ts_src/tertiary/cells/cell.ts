@@ -11,7 +11,7 @@ import {CellAccessory} from '../hooks/accessory'
 export class Cell extends CS.Composite {
 
     shell:IO.Membrane;
-    protected lining:IO.Membrane;
+    lining:IO.Membrane;
 
     mesh:IO.RuleMesh;
 
@@ -35,6 +35,8 @@ export class Cell extends CS.Composite {
         setup the parts of the cell that are contingent on specialisation
     */
     applyForm(form:any={}){
+
+        super.applyForm(form)
 
         let rules = form.mesh || {}
         //the internal interlinking mechanism, contingent upon which rules are added as neccessary to the cell

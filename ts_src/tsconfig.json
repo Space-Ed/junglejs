@@ -85,6 +85,7 @@
         "./test/specs/io/sectionSpec.ts",
         "./test/specs/ogebra/hierarchicalSpec.ts",
         "./test/specs/ogebra/operationSpec.ts",
+        "./test/specs/tertiary/lifeCycleSpec.ts",
         "./util/all.ts",
         "./util/blender.ts",
         "./util/checks.ts",
