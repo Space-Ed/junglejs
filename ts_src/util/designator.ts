@@ -127,10 +127,27 @@ export class Designator {
     screens:Designator[];
 
     constructor(private groupName:string, private finalName:string, designatorExp:string){
-        this.designatorIR = parseDesignatorString(designatorExp);
-        this.regex = designatorToRegex(designatorExp);
-        this.expression = designatorExp;
+
+        let desExp = designatorExp;
+        if(designatorExp.match(/^[a-z0-9A-Z_\$]*$/)){
+            desExp = ":"+designatorExp
+        }
+
+        this.designatorIR = parseDesignatorString(desExp);
+        this.regex = designatorToRegex(desExp);
+        this.expression = desExp;
         this.screens = [];
+    }
+
+    getLocale():string{
+        //match structural consistency with xxx.xxx... ...xxx:ppp
+        let colonSplit = this.expression.match(DesignatorRegExp);
+        return colonSplit[1]||""
+    }
+
+    getTerminal():string{
+        let colonSplit = this.expression.match(DesignatorRegExp);
+        return colonSplit[2]
     }
 
     mergePaths(patha, pathb){

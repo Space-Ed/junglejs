@@ -215,4 +215,11 @@ describe('',function(){
         })
     })
 
+    it('defaults a single word to be a terminal designator', function(){
+        let one = new Designator('departments', 'employees', "CEO")
+
+        expect(one.scan(structure)[':CEO']).toBe('Big Boss')
+
+    })
+
 })

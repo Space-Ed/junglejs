@@ -1,52 +1,60 @@
 
 import {Construct} from './construct'
 import {deepMeldF} from '../util/ogebra/hierarchical'
-
+import {Designator} from "../util/designator";
 /*
     a place where constructs are stored in either static or serial form and recovered from a serial form using a basis
 */
 export class Domain {
 
+    parent:Domain;
     registry:any
     subdomain:any
     melder:(a:any, b:any)=>any
 
-    constructor(){
+    constructor(init:any = {}, private isolated:boolean = false){
         this.registry = {};
         this.subdomain = {};
+
+        //
         this.melder = deepMeldF();
-    }
 
-    branch(key){
-        this.subdomain[key] = new Domain()
-        return this.subdomain[key];
-    }
+        for(let key in init){
+            let val = init[key]
 
-    register(key, basis:Function|string, patch={}){
-        let nature, baseSpec
-
-        if(typeof(basis) === 'string'){
-            if(!(basis in this.registry)){
-                throw "Unable to register by basis label, basis label not in registry"
+            if(val instanceof Domain){
+                this.addSubdomain(key, val)
+            }else if(val instanceof Function){
+                this.addNature(key, val)
+            }else if('nature' in val){
+                this.addNature(key, val.nature, val.patch)
+            }else{
+                //consider allowing latent dependency resolution
+                throw new Error("invalid domain constructor value")
             }
+        }
+    }
 
-            nature = this.registry[basis].nature
-            baseSpec = this.registry[basis].patch
-        }else{
-            nature = basis
-            baseSpec = {}
+    addSubdomain(key:string, val:Domain){
+
+        if(!val.isolated){
+            val.parent = this;
         }
 
-        this.registry[key] = {
-            nature:nature,
-            patch:this.melder(baseSpec, patch)
-        };
-
-        // if(key in this.registry){
-        //     throw new Error(`Domain cannot contain duplicates "${key}" is already registered`)
-        // }else{
-        // }
+        if(key in this.subdomain){
+            throw new Error(`Subdomain ${key} already exists cannot redefine`);
+        }else{
+            this.subdomain[key] = val;
+        }
     }
+
+    branch(key:string){
+        let branched = new Domain({}, false)
+        this.addSubdomain(key, branched)
+        return branched;
+    }
+
+
 
     locateDomain(dotpath:string):Domain{
         if(dotpath.match(/^(?:[\w\$]+\.)*(?:[\w\$]+)$/)){
@@ -57,7 +65,7 @@ export class Domain {
                 if(spacederef in this.subdomain){
                     ns = this.subdomain[spacederef]
                 }else{
-                    throw new Error(`Unable to locate Domain of basis`)
+                    throw new Error(`Unable to locate Domain from ${dotpath}`)
                 }
             }
 
@@ -70,14 +78,29 @@ export class Domain {
         }
     }
 
-    recover(construct):Construct{
-        ///TODO: Basis accessors a.b:Basis
+    locateBasis(basis:string):{nature:any, patch:any} {
+        let scan = new Designator('subdomain','registry', basis);
 
-        if(!(construct.basis in this.registry)){
-            throw new Error(`Unable to reconstruct the basis '${construct.basis}' is not registered to the Domain`)
+        let result = scan.scan(this)
+        let nresult= Object.keys(result).length
+
+        //when the scan fails, fall back to the parent, or throw if at root or isolated
+        if(nresult === 0 ){
+            if(this.parent === undefined){
+                throw new Error(`Unable to locate the basis '${basis}' is not registered to the Domain`)
+            }else{
+                this.parent.locateBasis(basis)
+            }
+        }else if(nresult ===1){
+            return result[Object.keys(result)[0]]
+        }else{
+            throw new Error(`Must designate exactly one basis object`)
         }
 
-        let {nature, patch} = this.registry[construct.basis];
+    }
+
+    recover(construct):Construct{
+        let {nature, patch} = this.locateBasis(construct.basis);
 
         try {
             let spec = this.melder(patch, construct)
@@ -87,6 +110,63 @@ export class Domain {
             throw e
         }
     }
+
+    register(key:string, basis:Function|string, patch={}){
+        if(typeof(basis) === 'string'){
+            this.extend(basis, key, patch)
+        }else{
+            this.addNature(key, basis, patch)
+        }
+    }
+
+    addNature(key:string, nature:Function, patch={}){
+        if(key in this.registry){
+            throw new Error(`Domain cannot contain duplicates "${key}" is already registered`)
+        }else{
+            this.registry[key] = {
+                nature:nature,
+                patch:patch
+            };
+        }
+    }
+
+    extend(seat:string, target:string, newSpec:any = {}){
+
+        let {targetDomain, targetName} = this.targetPlacement(target)
+
+        let {nature, patch} = this.locateBasis(seat);
+
+        let upspec = this.melder(patch, newSpec);
+
+        targetDomain.addNature(targetName, nature, upspec);
+    }
+
+    targetPlacement(targetExp:string):{targetName:string, targetDomain:Domain} {
+        let desig = new Designator('subdomain', 'registry', targetExp)
+
+        //TODO: pedantic case to give best error for bad basis designator
+        let targetName = desig.getTerminal()
+        let targetDomain = this.locateDomain(desig.getLocale())
+
+
+        return {targetName:targetName, targetDomain:targetDomain}
+    }
+
+    use(otherDomain:Domain){
+        //designate everything in the other domain and add it as nature to this one
+
+        let allOther = new Designator('subdomain', 'registry', "**:*").scan(otherDomain)
+
+        for(let token in allOther){
+            let {nature, patch} = allOther[token]
+
+            let {targetDomain, targetName} = this.targetPlacement(token)
+
+            targetDomain.addNature(targetName, nature, patch)
+        }
+
+    }
+
 }
 
 export const JungleDomain = new Domain();
