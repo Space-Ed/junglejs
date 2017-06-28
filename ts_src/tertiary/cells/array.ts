@@ -1,4 +1,3 @@
-import {JungleDomain} from "../../construction/domain";
 import {DefaultCell} from "./default";
 
 export class ArrayCell extends DefaultCell{
@@ -7,9 +6,7 @@ export class ArrayCell extends DefaultCell{
 
     constructor(spec){
         super(spec)
-        this.nucleus = []        
+        this.nucleus = []
     }
 
 }
-
-JungleDomain.register('array', ArrayCell)

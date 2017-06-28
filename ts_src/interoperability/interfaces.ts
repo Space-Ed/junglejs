@@ -39,6 +39,7 @@ export interface LinkRule {
 export interface MeshInitialiser {
     membrane:Membrane,
     rules:any,
+    media:any,
     exposed:any
 }
 

@@ -1,7 +1,6 @@
 import {Cell} from './cell'
 import* as I from '../interfaces'
 import {AccessContact, OfferContact} from '../../interoperability/contacts/access/common'
-import {JungleDomain} from "../../construction/domain";
 
 export class DefaultCell extends Cell {
 
@@ -60,5 +59,3 @@ export class DefaultCell extends Cell {
         anchor.lining.removeSubrane(key)
     }
 }
-
-JungleDomain.register('object', DefaultCell)

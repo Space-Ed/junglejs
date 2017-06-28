@@ -21,8 +21,8 @@ export class Cell extends CS.Composite {
 
     constructor(spec:any){
         //overridable
-        spec.domain = spec.domain || CS.JungleDomain
-        spec.basis = 'Cell'
+        spec.domain = spec.domain
+        spec.basis = 'cell'
         super(spec)
 
         this.nucleus = {};
@@ -35,14 +35,24 @@ export class Cell extends CS.Composite {
         setup the parts of the cell that are contingent on specialisation
     */
     applyForm(form:any={}){
-
         super.applyForm(form)
+
+        //draw the appropriate media from the basis given
+        let media = {};
+        for (let mediumBasis of form.media||[]){
+            media[mediumBasis] = this.domain.recover({
+                basis:'media:'+mediumBasis,
+                label:mediumBasis,
+                exposed:this.nucleus
+            })
+        }
 
         let rules = form.mesh || {}
         //the internal interlinking mechanism, contingent upon which rules are added as neccessary to the cell
         this.mesh = new IO.RuleMesh({
             membrane:this.lining,
             rules:rules,
+            media:media,
             exposed:this.nucleus
         })
 
@@ -132,10 +142,3 @@ export class Cell extends CS.Composite {
     }
 
 }
-
-CS.JungleDomain.register('Cell', Cell, {
-    form:{
-        sections:[],
-        mesh:{}
-    }
-})

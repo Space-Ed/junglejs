@@ -1,6 +1,6 @@
 
 import {Composite} from './composite'
-import {Domain, JungleDomain} from './domain'
+import {Domain} from './domain'
 import * as Util from '../util/all'
 
 import {deepMeldF} from '../util/ogebra/hierarchical';
@@ -22,6 +22,8 @@ import {deepMeldF} from '../util/ogebra/hierarchical';
 */
 
 export abstract class Construct{
+
+    static DefaultDomain:Domain;
 
     /*
         fundamentally composites need to know if the construct is a living one
@@ -86,19 +88,23 @@ export abstract class Construct{
     /*
         Called to bring the the construct to life, it is given it's domain, that represents the set of components available to it
     */
-    prime(domain?:Domain){
-        if(typeof this.cache.domain === 'string'){
-            if(domain){
-                this.domain = domain.locateDomain(this.cache.domain);
-            }else{
-                //the domain is not provided but is requested by name
+    prime(providedDomain?:Domain){
+
+        if(providedDomain instanceof Domain){
+            this.domain = providedDomain
+        }else if(providedDomain === undefined){
+            this.domain = Construct.DefaultDomain
+        }else {
+            throw new Error(`The provided domain must be Domain type, or undefined`)
+        }
+
+        //local domain self localization and detachment respectively
+        if(this.cache.domain !== undefined){
+            if(typeof this.cache.domain === 'string'){
+                this.domain = this.cache.domain.locateDomain(this.cache.domain);
+            }else if (this.cache.domain instanceof Domain){
+                this.domain = this.cache.domain;
             }
-        }else if(this.cache.domain instanceof Domain){
-            this.domain = this.cache.domain
-        }else if(domain === undefined){
-            this.domain = JungleDomain
-        }else{
-            //the domain is of a bad type
         }
 
         this.alive = true;

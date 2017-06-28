@@ -30,7 +30,7 @@ export class CallOut extends BasicContact<CallIn> {
     inject(into, key){
         let _spec = this.spec;
         if(_spec.mode == I.CALL_MODE.PUSH){
-            if(_spec.hook){
+            if(_spec.hook instanceof Function){
                 this.emit = (inp:any, crumb:Debug.Crumb)=>{
                     if(crumb && _spec.tracking){
                         let end = crumb.drop("Hook Call Terminal")
@@ -55,15 +55,17 @@ export class CallOut extends BasicContact<CallIn> {
         }else if(_spec.mode == I.CALL_MODE.GET){
             into[key] = _spec.default;
 
-
-
             this.emit = (inp:any, crumb:Debug.Crumb)=>{
+                let gotten = into[key]
+
                 if(crumb && _spec.tracking){
                     crumb.drop("Synchronous Value Retrieval(Get) Hook")
                     .with(inp)
                     .at(key)
+                    .as(gotten)
                 }
-                return into[key]
+
+                return gotten
             }
         }else if(_spec.mode == I.CALL_MODE.REQUEST){
             //REVIEW: should hook functions be accessible internally

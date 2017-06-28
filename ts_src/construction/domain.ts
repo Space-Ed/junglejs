@@ -1,5 +1,4 @@
 
-import {Construct} from './construct'
 import {deepMeldF} from '../util/ogebra/hierarchical'
 import {Designator} from "../util/designator";
 /*
@@ -87,6 +86,8 @@ export class Domain {
         //when the scan fails, fall back to the parent, or throw if at root or isolated
         if(nresult === 0 ){
             if(this.parent === undefined){
+
+                console.log("Domain:", this)
                 throw new Error(`Unable to locate the basis '${basis}' is not registered to the Domain`)
             }else{
                 this.parent.locateBasis(basis)
@@ -99,7 +100,7 @@ export class Domain {
 
     }
 
-    recover(construct):Construct{
+    recover(construct):any{
         let {nature, patch} = this.locateBasis(construct.basis);
 
         try {
@@ -168,14 +169,3 @@ export class Domain {
     }
 
 }
-
-export const JungleDomain = new Domain();
-
-//
-// export function N(ns:Domain){
-//     return new Proxy({}, {
-//         get(key){
-//
-//         }
-//     })
-// }

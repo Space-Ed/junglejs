@@ -1,7 +1,6 @@
 import {CellAccessory} from "./accessory";
 import * as I from '../interfaces'
 import {LinkRule} from '../../interoperability/interfaces'
-import {JungleDomain} from '../../construction/domain'
 
 export class Connector extends CellAccessory {
 
@@ -12,6 +11,19 @@ export class Connector extends CellAccessory {
     }
 
     attach(anchor: I.CellAnchor, label:string){
+
+        console.log("create link", this.cache.rule)
+
+        if(!(this.cache.medium in anchor.mesh.media)){
+
+            anchor.mesh.addMedium(this.cache.medium, this.domain.recover({
+                basis:'media:'+this.cache.medium,
+                label:this.cache.medium,
+                exposed:this.nucleus
+            }))
+
+        }
+
         anchor.mesh.addRule(this.cache.rule, this.cache.medium, label)
     }
 
@@ -20,5 +32,3 @@ export class Connector extends CellAccessory {
     }
 
 }
-
-JungleDomain.register("Connector", Connector, {})

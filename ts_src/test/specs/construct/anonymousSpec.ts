@@ -69,6 +69,10 @@ describe('anonymisation',function(){
     it('should support multiple array nesting', function(){
 
         let app = new TestApp({
+            form:{
+                debug:true
+            },
+
             level:[
                 [0, 1],
                 ['a', 'b']
@@ -81,6 +85,7 @@ describe('anonymisation',function(){
         app.prime()
 
         app.callReturnTest({
+            label:'Multiple Array Nesting',
             inputContact:':grab',
             inputValues:[[0,0],[0,1],[1,0],[1,1]],
             returnValues:[0,1,'a','b']
@@ -90,6 +95,9 @@ describe('anonymisation',function(){
     it('should support designation of contacts within array structure', function(){
 
         let app = new TestApp({
+            form:{
+                debug:true
+            },
 
             brave: [PushDeposit('defaultA'), PullDeposit('defaultB')],
             drop:CallInSync(function(x){
@@ -104,24 +112,26 @@ describe('anonymisation',function(){
 
         //can call inner pull deposit
         app.callReturnTest({
+            label:"call inner pull deposit",
             inputContact:'_.brave:1',
             inputValues:[undefined],
             returnValues:['defaultB']
         })
 
-        //can
         app.call(':drop', "notDefault")
 
-
         app.callReturnTest({
+            label:"Test Change after drop in",
             inputContact:'_.brave:1',
             inputValues:[undefined],
             returnValues:['notDefault']
         })
 
+        //push deposit
         app.call('_.brave:0', 'notDefault')
 
         app.callReturnTest({
+            label:"grab push deposit",
             inputContact:':grab',
             inputValues:[0],
             returnValues:['notDefault']

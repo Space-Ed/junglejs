@@ -2,9 +2,9 @@ import Jasmine = require('jasmine')
 import {Cell} from '../../tertiary/all'
 import {Junction} from '../../util/junction'
 import {Crumb} from '../../util/debug'
-import {JungleDomain} from '../../construction/domain'
 
 export interface CallResponseTestSpec {
+    label?:string;
     inputContact:string;
     outputContact:string;
     respondant?:(data:any, crumb:Crumb)=>Junction;
@@ -14,6 +14,7 @@ export interface CallResponseTestSpec {
 }
 
 export interface CallReturnTestSpec {
+    label?:string;
     inputContact:string;
     inputValues:any[];
     returnValues:any[];
@@ -21,15 +22,18 @@ export interface CallReturnTestSpec {
 
 export default class TestApp extends Cell{
 
+    debug:boolean;
+
     constructor(spec){
         super(spec)
         Crumb.defaultOptions.log = console
         Crumb.defaultOptions.debug = true
     }
 
-    applyForm(form={}){
+    applyForm(form:any={}){
 
         super.applyForm(form);
+        this.debug = form.debug;
 
         this.parseSectionRule("*.**:* to shell as _")
     }
@@ -58,13 +62,24 @@ export default class TestApp extends Cell{
         output.emit = outspy;
 
         for(let i = 0; i < spec.inputValues.length; i++){
+
             let ival = spec.inputValues[i]
-            let ret = input.put(ival)
+
+            let ret
+            if(this.debug){
+                let crumb = new Crumb(`Call Response Test - ${spec.label||"unlabelled"}`)
+                .at('start')
+                .with(ival)
+
+                ret = input.put(ival, crumb)
+            }else{
+                ret = input.put(ival)
+            }
 
             if(spec.outputValues[i] === Symbol.for('NOCALL')){
                 expect(outspy).not.toHaveBeenCalled();
             }else{
-                expect(outspy).toHaveBeenCalledWith(spec.outputValues[i])
+                expect(outspy.calls.first().args[0]).toBe(spec.outputValues[i])
             }
 
             if(spec.returnValues !== undefined){
@@ -79,7 +94,17 @@ export default class TestApp extends Cell{
 
         for(let i = 0; i < spec.inputValues.length; i++){
             let ival = spec.inputValues[i]
-            let ret = input.put(ival)
+
+            let ret;
+            if(this.debug){
+                let crumb = new Crumb(`Call Return Test - ${spec.label||"unlabelled"}`)
+                .at('start')
+                .with(ival)
+
+                ret = input.put(ival, crumb)
+            }else{
+                ret = input.put(ival)
+            }
 
             if(spec.returnValues !== undefined){
                 expect(ret).toEqual(spec.returnValues[i])

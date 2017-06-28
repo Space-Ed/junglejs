@@ -17,13 +17,14 @@ export class CallHook extends CellAccessory {
     anchor: I.CellAnchor
 
     constructor(spec:any){
-        spec.basis = 'CallHook';
+        spec.basis = 'hook:call';
         super(spec);
     }
 
     attach(anchor: I.CellAnchor, k:string){
         super.attach(anchor, k)//console.log('create contact with ',  this.cache)
-        let contactargs = {
+
+        let contactargs:CallContactSpec = {
             label: this.alias,
             tracking:true, //REVIEW: global debug, local debug, denial of tracking, ?
             hook:this.cache.hook,
@@ -31,12 +32,26 @@ export class CallHook extends CellAccessory {
             default:this.cache.default,
             mode:{
                 'push':CALL_MODE.PUSH,
-                'pull':this.cache.sync?CALL_MODE.GET:CALL_MODE.REQUEST
+                'pull':(this.cache.sync )?CALL_MODE.GET:CALL_MODE.REQUEST
             }[this.cache.mode]
         };
 
-        //console.log('contact args', contactargs)
 
+
+        if(this.cache.hook === false){
+            //proxied, no hookage
+        }else if(this.cache.hook instanceof Function){
+            //context hook function
+        }else if(this.cache.hook === true){
+            //reactive value injection
+        }
+
+        if(this.cache.sync){
+            //either defaulted or value hooked
+        }
+
+
+        //console.log('contact args', contactargs)
 
         this.contact = this.cache.direction == "in" ? new IO.CallOut(contactargs) : new IO.CallIn(contactargs);
 
@@ -63,7 +78,4 @@ export class CallHook extends CellAccessory {
 
         return cp;
     }
-
 }
-
-CS.JungleDomain.register('CallHook', CallHook)

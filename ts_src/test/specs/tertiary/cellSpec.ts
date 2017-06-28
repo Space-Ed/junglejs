@@ -1,6 +1,8 @@
 
 import * as Jungle from '../../../jungle'
-const {Construct, Composite, Domain, Cell} = Jungle;
+const {Construct, Composite, Domain} = Jungle.CST;
+const Cell = Jungle.TRT.Cell;
+
 import {CallHook} from '../../../tertiary/hooks/call'
 import * as Debug from '../../../util/debug'
 import * as A from '../../../aliases/all'

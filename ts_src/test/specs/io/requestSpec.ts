@@ -3,8 +3,8 @@ import TestHost from '../../helpers/testHost'
 
 let {Util} = Jungle;
 let Debug = Util.Debug
-let {Membrane, RuleMesh} = Jungle.IO;
-
+let {Membrane} = Jungle.IO;
+import RuleAdapter from '../../helpers/meshAdapter'
 
 describe("request medium and cruxes", function () {
 
@@ -31,7 +31,7 @@ describe("request medium and cruxes", function () {
         let meshbrane = new Membrane()
         meshbrane.addSubrane(memb, 'm')
 
-        mesh = new RuleMesh({
+        mesh = new RuleAdapter({
             rules:{
                 'direct':[
                     '*:a->*:b',
@@ -40,7 +40,7 @@ describe("request medium and cruxes", function () {
             exposed:exposed,
             membrane:meshbrane
         })
-        
+
     })
 
     it("should pass asynchronous requests", function(done){

@@ -9,9 +9,7 @@ describe('rule connector constructs', function(){
 
         let app = new TestApp({
             form:{
-                mesh:{
-                    'direct':[]
-                }
+                debug:false
             },
 
             ghost:TunnelIn(),
@@ -22,6 +20,7 @@ describe('rule connector constructs', function(){
         app.prime();
 
         app.callResponseTest({
+            label:'test scare throughput',
             inputContact:':ghost',
             outputContact:':child',
 
@@ -37,6 +36,7 @@ describe('rule connector constructs', function(){
         app.remove('haunts');
 
         app.callResponseTest({
+            label:'test no scare',
             inputContact:':ghost',
             outputContact:':child',
 

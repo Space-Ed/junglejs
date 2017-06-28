@@ -1,7 +1,9 @@
 
 import * as Jungle from '../../../jungle'
 
-let {Membrane, RuleMesh, CallIn, CallOut} = Jungle.IO;
+let {Membrane, CallIn, CallOut} = Jungle.IO;
+
+import RuleAdapter from '../../helpers/meshAdapter'
 
 import TestHost from '../../helpers/testHost'
 
@@ -25,7 +27,7 @@ describe('The Mesh Host', function () {
 
         exposed = {}
 
-        mesh = new RuleMesh({
+        mesh = new RuleAdapter({
             rules:{
                 'distribute':[
                     '*:a->*:b',
@@ -111,7 +113,7 @@ describe('The Mesh Host', function () {
         meshbrane.addSubrane(memb, 'm1')
         meshbrane.addSubrane(m2, 'm2')
 
-        mesh = new RuleMesh({
+        mesh = new RuleAdapter({
             membrane:meshbrane,
             exposed:exposed,
             rules:{
@@ -146,7 +148,7 @@ describe('The Mesh Host', function () {
     it('should allow addition and removal of rules ', function(){
         let surface = new Membrane()
         let outer = surface.invert()
-        let fabric = new RuleMesh({
+        let fabric = new RuleAdapter({
             rules:{
                 'distribute':[]
             },

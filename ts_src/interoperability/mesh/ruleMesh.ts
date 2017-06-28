@@ -32,10 +32,13 @@ export class RuleMesh implements I.MembraneWatcher {
         this.media = {};
         this.locations = {};
 
+        //map of media keys to media
+        for (let mediakey in initArgs.media){
+            this.addMedium(mediakey, initArgs.media[mediakey])
+        }
+
+        //map of media keys to rule sets to apply
         for (let mediakey in initArgs.rules){
-            //Check there is an over creation of
-            let newMedium = new mediaConstructors[mediakey]({label:mediakey, exposed:this.exposed})
-            this.addMedium(mediakey, newMedium)
             this.parseRules(initArgs.rules[mediakey], mediakey);
         }
 
@@ -49,14 +52,14 @@ export class RuleMesh implements I.MembraneWatcher {
     }
 
 
-    private parseRules(ruleset:string[], mediumkey:string){
+    protected parseRules(ruleset:string[], mediumkey:string){
         for(let link of ruleset){
             let linkIR = this.parseLink(link);
             this.addRule(linkIR, mediumkey)
         }
     }
 
-    private parseLink(link:string):I.LinkRule{
+    protected parseLink(link:string):I.LinkRule{
         let m = link.match(/^([\w\*\:\.]+)(\|?)(<?)([\+\-\!]?)([=\-])(>?)(\|?)([\w\*\:\.]+)/)
 
         if(!m){throw new Error(`Unable to parse link description, expression ${link} did not match regex`)};
@@ -77,14 +80,25 @@ export class RuleMesh implements I.MembraneWatcher {
      * Rule must be applied to existing contacts, .
      */
     addRule(rule:I.LinkRule|string, mediumkey:string, ruleID?:string){
+        if(this.rules[mediumkey] === undefined){
+            throw new Error(`Unable to create rule ${mediumkey} is not a recognised media type`)
+        }
+
         if(typeof rule === 'string'){
+            //parse and add by IR
             this.addRule(this.parseLink(rule), mediumkey, ruleID)
         }else{
+            //add by IR
+
+            //when the rule has a name it can be found
             if(ruleID !== undefined){
                //console.log("rules", this.rules, 'for id ', ruleID)
                 this.rules[mediumkey][ruleID] = rule
+            }else{
+                //an enumeration by addition order for anonymous rules
+                this.rules[mediumkey].push(rule);
             }
-            this.rules[mediumkey].push(rule);
+
             let dA = rule.designatorA.tokenDesignate(this.primary);
             let dB = rule.designatorB.tokenDesignate(this.primary);
             this.square(rule, dA, dB, mediumkey)
@@ -198,7 +212,8 @@ export class RuleMesh implements I.MembraneWatcher {
 
 
             if(contact instanceof medium.typeA){
-                for(let rule of linkRules){
+                for(let ruleID in linkRules){
+                    let rule = linkRules[ruleID]
                     if(rule.designatorA.matches(token)){
                         let dB = rule.designatorB.tokenDesignate(this.primary)
                         let dA = {}; dA[token] = contact;
@@ -208,7 +223,8 @@ export class RuleMesh implements I.MembraneWatcher {
 
             }else if(contact instanceof medium.typeB){
 
-                for(let rule of linkRules){
+                for(let ruleID in linkRules){
+                    let rule = linkRules[ruleID]
                     if(rule.designatorB.matches(token)){
                         let dA = rule.designatorA.tokenDesignate(this.primary)
                         let dB = {}; dB[token] = contact;

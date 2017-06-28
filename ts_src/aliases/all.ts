@@ -7,81 +7,88 @@ import * as T from '../tertiary/interfaces'
 
 export function PushDeposit(defaultValue):T.CallHookSpec{
     return {
-        basis:'CallHook',
+        basis:'hook:call',
         direction:"in",
         default:defaultValue,
         mode:'push',
-        sync:true
+        sync:true,
+        hook:true
     }
 }
 
-export function PullDeposit(defaultValue){
+export function PullDeposit(defaultValue):T.CallHookSpec{
     return {
-        basis:'CallHook',
+        basis:'hook:call',
         direction:"in",
         default:defaultValue,
         mode:'pull',
-        sync:true
+        sync:true,
+        hook:true
     }
 }
 
-export function Reactive(defaultValue){
+export function Reactive(defaultValue):T.CallHookSpec{
     return {
-        basis:'CallHook',
+        basis:'hook:call',
         direction:"out",
         default:defaultValue,
         mode:'push',
-        sync:true
+        sync:true,
+        hook:true
     }
 }
 
-export function Retrieval(defaultValue){
+export function Retrieval(defaultValue):T.CallHookSpec{
     return {
-        basis:'CallHook',
+        basis:'hook:call',
         direction:"out",
         default:defaultValue,
         mode:'pull',
-        sync:true
+        sync:true,
+        hook:true
     }
 }
 
-export function TunnelIn(mode:'push'|'pull' = 'push'){
+export function TunnelIn(mode:'push'|'pull' = 'push'):T.CallHookSpec{
     return {
-        basis:'CallHook',
+        basis:'hook:call',
         direction:"in",
+        sync:true,
         mode:mode,
-        tracking:true
+        hook:false
     }
 }
 
-export function TunnelOut(mode:'push'|'pull' = 'push'){
+export function TunnelOut(mode:'push'|'pull' = 'push'):T.CallHookSpec{
     return {
-        basis:'CallHook',
+        basis:'hook:call',
         direction:"out",
+        sync:true,
         mode:mode,
-        tracking:true
+        hook:false
     }
 }
 
-export function CallInSync(func:(data:any, crumb:Debug.Crumb)=>any){
+export function CallInSync(func:(data:any, crumb:Debug.Crumb)=>any):T.CallHookSpec{
     return {
-        basis:'CallHook',
+        basis:'hook:call',
         direction:"in",
         hook:func,
-        mode:'pull'
+        mode:'pull',
+        sync:false
     }
 }
 
 
 export function Cell(patch){
     return deepMeldF()({
-        basis:'Cell'
+        basis:'cell'
     },patch)
 }
 
 export function Connect(rule:string, medium:string){
     return {
-        basis:'Connector',
+        basis:'link',
         rule:rule,
         medium:medium
     }

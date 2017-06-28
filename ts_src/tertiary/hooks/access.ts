@@ -16,7 +16,7 @@ export class AccessHook extends CellAccessory {
     anchor: I.CellAnchor
 
     constructor(spec:any){
-        spec.basis = 'AccessHook';
+        spec.basis = 'hook:access';
         super(spec);
 
         this.policy = spec.policy;
@@ -42,5 +42,3 @@ export class AccessHook extends CellAccessory {
     }
 
 }
-
-CS.JungleDomain.register('AccessHook', AccessHook)
