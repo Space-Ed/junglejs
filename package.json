@@ -2,16 +2,26 @@
   "name": "jungle-core",
   "version": "0.3.0",
   "description": "The organic programming framework",
-  "main": "./dist/jungle.js",
+  "main": "./build/jungle.js",
+  "types":"./build/jungle.d.ts",
   "scripts": {
     "test": "jasmine"
   },
+
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Space-Ed/junglejs.git"
   },
   "keywords": [
-    "gentle",
+    "jungle",
+    "framework",
+    "modular",
+    "collaboration",
+    "synchronization",
+    "democratic",
+    "organic",
+    "grow",
+    "tree",
     "tool",
     "structural",
     "synthesis",

@@ -1,19 +1,17 @@
 
 import * as I from '../interfaces'
 import {Designator} from '../../util/designator'
-
-import {Visor} from './visor'
 import {BasicContact} from '../contacts/base'
 
 export enum MembraneEvents {
     AddContact, AddMembrane, RemoveContact, RemoveMembrane
 }
 
-interface Watchable<Watcher> {
+export interface Watchable<Watcher> {
     addWatch(watcher:Watcher, alias?:string);
 }
 
-interface SectionWatcher {
+export interface SectionWatcher {
     designator?:Designator;
     changeOccurred(event:MembraneEvents, subject:BasicContact<any>|Section, token:string):void
 }

@@ -2,7 +2,7 @@ import {deepMeldF, deepInvertF} from './ogebra/hierarchical'
 import {meld, invert} from './ogebra/operations'
 import * as f from './ogebra/primary-functions'
 
-declare type DTerm = RegExp|Function|"**"|string;
+export declare type DTerm = RegExp|Function|"**"|string;
 
 export interface DesignatorIR {
     groups:DTerm[]
@@ -202,7 +202,7 @@ export class Designator {
 
     }
 
-    _treeDesignate(target, recurState:RecurState){
+    private _treeDesignate(target, recurState:RecurState){
         let rState = recurState
         let collected = {
             groups:{},

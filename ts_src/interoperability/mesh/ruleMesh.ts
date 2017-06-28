@@ -2,7 +2,6 @@
 import * as I from '../interfaces'
 import {Membrane, MembraneEvents,DemuxWatchMethodsF} from '../membranes/membrane'
 import {mediaConstructors, BaseMedium} from '../media/medium'
-import * as Designate from '../membranes/designable'
 import {Designator} from '../../util/designator'
 
 /**

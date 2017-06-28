@@ -7,7 +7,7 @@
         "jsx": "react",
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
-        "declaration": false,
+        "declaration": true,
         "noImplicitAny": false,
         "noImplicitUseStrict": false,
         "removeComments": true,
@@ -17,6 +17,7 @@
         "sourceMap": true,
         "outDir": "../build"
     },
+
     "exclude": [
         "node_modules",
         "typings/browser",
@@ -53,9 +54,7 @@
         "./interoperability/media/directed.ts",
         "./interoperability/media/distributive.ts",
         "./interoperability/media/medium.ts",
-        "./interoperability/membranes/designable.ts",
         "./interoperability/membranes/membrane.ts",
-        "./interoperability/membranes/visor.ts",
         "./interoperability/mesh/ruleMesh.ts",
         "./jungle.ts",
         "./tertiary/all.ts",

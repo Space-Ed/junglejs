@@ -1,8 +1,5 @@
 
 export * from './membranes/membrane'
-export * from './membranes/visor'
-export * from "./membranes/designable"
-
 export * from './mesh/ruleMesh'
 
 export * from './media/medium'
