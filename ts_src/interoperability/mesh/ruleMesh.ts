@@ -108,19 +108,6 @@ export class RuleMesh implements I.MembraneWatcher {
         }
     }
 
-    balanceSquare(rule:I.LinkRule, dA:Object, dB:Object, mediumkey:string, destructive:boolean){
-        let op = destructive? this.unsquare : this.square;
-        let isUndirected = !rule.backward && !rule.forward
-        if(rule.forward || isUndirected){
-            op.call(this, rule, dA, dB, mediumkey)
-        }
-
-        if(rule.backward){
-            op.call(this, rule, dB, dA, mediumkey)
-        }
-
-    }
-
     removeRule(mediumID:string, ruleID:string){
         let rule:I.LinkRule = this.rules[mediumID][ruleID]
 
@@ -131,6 +118,19 @@ export class RuleMesh implements I.MembraneWatcher {
         let dA = rule.designatorA.tokenDesignate(this.primary);
         let dB = rule.designatorB.tokenDesignate(this.primary);
         this.balanceSquare(rule, dA, dB, mediumID, true)
+    }
+
+    balanceSquare(rule:I.LinkRule, dA:Object, dB:Object, mediumkey:string, destructive:boolean){
+        let op = destructive? this.unsquare : this.square;
+
+        if(rule.forward){
+            op.call(this, rule, dA, dB, mediumkey)
+        }
+
+        if(rule.backward){
+            op.call(this, rule, dB, dA, mediumkey)
+        }
+
     }
 
     unsquare(rule:I.LinkRule, desigA:Object, desigB:Object, mediumkey:string){
@@ -146,8 +146,7 @@ export class RuleMesh implements I.MembraneWatcher {
                     tokenA:tokenA,
                     tokenB:tokenB,
                     contactA:contactA,
-                    contactB:contactB,
-                    directed:(rule.backward || rule.forward)
+                    contactB:contactB
                 }
 
                 if(medium.hasLink(link)){
@@ -183,8 +182,7 @@ export class RuleMesh implements I.MembraneWatcher {
                     tokenA:tokenA,
                     tokenB:tokenB,
                     contactA:contactA,
-                    contactB:contactB,
-                    directed:(rule.backward || rule.forward)
+                    contactB:contactB
                 }
 
                 //if all other media do not hold an exclusive claim to the relevant contact
@@ -231,32 +229,25 @@ export class RuleMesh implements I.MembraneWatcher {
 
              */
 
+             for(let ruleID in linkRules){
+                 let rule:I.LinkRule = linkRules[ruleID]
+                 let matchA = rule.designatorA.matches(token);
+                 let matchB = rule.designatorB.matches(token);
 
-            if(contact instanceof medium.typeA){
-                for(let ruleID in linkRules){
-                    let rule = linkRules[ruleID]
-                    if(rule.designatorA.matches(token)){
-                        let dB = rule.designatorB.tokenDesignate(this.primary)
-                        let dA = {}; dA[token] = contact;
+                 if(matchA){
+                     // match from the contact A to the contact B
+                     let dB = rule.designatorB.tokenDesignate(this.primary)
+                     let dA = {}; dA[token] = contact;
+                     this.balanceSquare(rule, dA, dB, mediumkey, false)
+                 }
 
-                        console.log('sideA', dA, "sideB", dB)
-                        this.balanceSquare(rule, dA, dB, mediumkey, false)
-                    }
-                }
-            }
+                 if(matchB){
+                     let dA = rule.designatorA.tokenDesignate(this.primary)
+                     let dB = {}; dB[token] = contact;
+                     this.balanceSquare(rule, dA, dB, mediumkey, false)
 
-            if(contact instanceof medium.typeB){
-
-                for(let ruleID in linkRules){
-                    let rule = linkRules[ruleID]
-                    if(rule.designatorB.matches(token)){
-                        let dA = rule.designatorA.tokenDesignate(this.primary)
-                        let dB = {}; dB[token] = contact;
-                        console.log('sideA', dA, "sideB", dB)
-                        this.balanceSquare(rule, dA, dB, mediumkey, false)
-                    }
-                }
-            }
+                 }
+             }
 
         }
     }

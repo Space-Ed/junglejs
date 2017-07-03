@@ -4,6 +4,8 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
     exclusive = false;
     multiA = true;
     multiB = true;
+    reflex = true;
+    symmetric:boolean;
 
     abstract typeA:Function;
     abstract typeB:Function;
@@ -11,16 +13,20 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
     matrix:{
         to:any;
         from:any;
-        sym:any;
     };
 
     exposed:any
 
     constructor(spec:I.MediumSpec){
-        this.matrix = {to:{},from:{},sym:{}}
+        this.matrix = {to:{},from:{}}
         this.exposed = spec.exposed || {};
+        this.symmetric = this.typeA === this.typeB;
+        this.typeB = this.symmetric ? undefined: this.typeB; //you're actually creating undefined?
     }
 
+    /**
+     * Called to suppose whether a link will take place after filtering and validation
+     */
     suppose(supposedLink: I.LinkSpec<A,B>):boolean{
 
         if(this.check(supposedLink)){
@@ -57,25 +63,15 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
         determine if the medium has the token in any position
     */
     hasToken(token:string):boolean{
-        return token in this.matrix.to || token in this.matrix.from || token in this.matrix.sym
+        return token in this.matrix.to || token in this.matrix.from
     }
 
     /*
         determine that a certain link is present in a media, requiring both tokens to be represented
     */
     hasLink(link:I.LinkSpec<A,B>):boolean{
-        if(link.directed){
-            if(link.tokenA in this.matrix.to && this.matrix.to[link.tokenA][link.tokenB] !== undefined){
-                return this.matrix.to[link.tokenA][link.tokenB] === this.matrix.from[link.tokenB][link.tokenA];
-            }else{
-                return false
-            }
-        }else{
-            if(link.tokenA in this.matrix.sym ){
-                return this.matrix.sym[link.tokenA][link.tokenB] === this.matrix.from[link.tokenB][link.tokenA]
-            }else{
-                return false
-            }
+        if(link.tokenA in this.matrix.to && this.matrix.to[link.tokenA][link.tokenB] !== undefined){
+            return this.matrix.to[link.tokenA][link.tokenB] === this.matrix.from[link.tokenB][link.tokenA];
         }
     }
 
@@ -83,8 +79,7 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
      * determine whether this media hold an exclusive claim over either of the contacts in question for the link
      */
     hasClaim(link:I.LinkSpec<A,B>):boolean{
-        return this.exclusive && (link.directed && (link.tokenA in this.matrix.to || link.tokenB in this.matrix.from))
-        || (!link.directed && link.tokenA in this.matrix.sym )
+        return this.exclusive && (link.tokenA in this.matrix.to || link.tokenB in this.matrix.from)
     }
 
     breakA(token:string, a:A){
@@ -107,19 +102,12 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
 
     check(link: I.LinkSpec<A,B>){
         //check fan out
+        return  link.contactA instanceof this.typeA && link.contactB instanceof this.typeB //is of the appropriate type
+        &&
+        (this.multiA || ( this.matrix.to[link.tokenA]==undefined) || this.matrix.to[link.tokenA][link.tokenB] === undefined) // Is fanning out or not out linked
+        &&
+        (this.multiB || (this.matrix.from[link.tokenB]== undefined)||this.matrix.from[link.tokenB][link.tokenA] === undefined);//Is fanning in or not linked i
 
-        if(link.directed){
-            return  link.contactA instanceof this.typeA && link.contactB instanceof this.typeB //is of the appropriate type
-                &&
-                    (this.multiA || ( this.matrix.to[link.tokenA]==undefined) || this.matrix.to[link.tokenA][link.tokenB] === undefined) // Is fanning out or not out linked
-                &&
-                    (this.multiB || (this.matrix.from[link.tokenB]== undefined)||this.matrix.from[link.tokenB][link.tokenA] === undefined);//Is fanning in or not linked i
-        }else{
-            return link.contactA instanceof this.typeA && link
-
-            (this.multiA || this.matrix.sym[link.tokenA][link.tokenB] === undefined)&&
-            (this.multiB || this.matrix.sym[link.tokenB][link.tokenA] === undefined)
-        }
     };
 
     abstract inductA(token:string, a:A);
@@ -127,10 +115,8 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
     abstract connect(link: I.LinkSpec<A,B>);
 
     disconnect(link: I.LinkSpec<A,B>){
-        if(link.directed){
-            delete this.matrix.to[link.tokenA][link.tokenB];
-            delete this.matrix.from[link.tokenB][link.tokenA];
-        }
+        delete this.matrix.to[link.tokenA][link.tokenB];
+        delete this.matrix.from[link.tokenB][link.tokenA];
     };
 
 }

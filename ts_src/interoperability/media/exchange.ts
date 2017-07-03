@@ -1,10 +1,8 @@
 
 
-
 import * as I from '../interfaces'
 import {mediaConstructors,BaseMedium } from './medium'
 import {ExchangeTypes,CallExchangeSpec,CallExchange} from '../contacts/call/exchange'
-
 
 export class ExchangeMedium extends BaseMedium<CallExchange, CallExchange> {
     typeA = CallExchange;
@@ -23,7 +21,6 @@ export class ExchangeMedium extends BaseMedium<CallExchange, CallExchange> {
     }
 
     inductA(token:string, a:CallExchange){
-        console.log("inducting A:", token )
         a.emit = this.distribute.bind(this, token)
     }
 

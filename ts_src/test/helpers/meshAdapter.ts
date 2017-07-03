@@ -41,12 +41,15 @@ export default class MeshAdapter extends RuleMesh {
 
         for(let mediakey in mediaWithA){
             let medium:BaseMedium<any,any> = this.media[mediakey]
-            let aToMap =  medium.matrix.to[tokenA]
-            let aSymMap = medium.matrix.sym[tokenA]
+            let aToMap =  medium.matrix.to[tokenA];
+            let bFromMap = medium.matrix.from[tokenB];
 
-            if(directed && aToMap !== undefined &&  aToMap[tokenB] !== undefined){
+            let aToB = aToMap !== undefined &&  aToMap[tokenB] !== undefined;
+            let bFromA = bFromMap !== undefined && bFromMap[tokenA] !== undefined
+
+            if(directed && (aToB && bFromA)){
                 return true
-            }else if(!directed  && aSymMap !== undefined &&  aSymMap[tokenB] !== undefined){
+            }else if(!directed && (aToB || bFromA)){
                 return true
             }
         }

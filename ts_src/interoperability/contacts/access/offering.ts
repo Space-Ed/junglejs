@@ -4,7 +4,7 @@ import {BasicContact} from '../base'
 import {AccessContact} from './access'
 import * as Debug from '../../../util/debug'
 
-export class OfferContact extends BasicContact<AccessContact> implements ProxyHandler<any>{
+export class OfferContact extends BasicContact<AccessContact>{
     //capability flags must be decided
     public  symmetric = false;
     public  invertable = true;
@@ -28,7 +28,7 @@ export class OfferContact extends BasicContact<AccessContact> implements ProxyHa
     }
 
     inject(context, key){
-        
+
         //break all links
         this.hidden = true;
 

@@ -38,6 +38,13 @@ export interface LinkRule {
     propogation:LINK_FILTERS;
 }
 
+export interface LinkSpec<A,B> {
+    tokenA:string,
+    tokenB:string,
+    contactA:A,
+    contactB:B,
+}
+
 export interface MeshInitialiser {
     membrane:Membrane,
     rules:any,
@@ -68,13 +75,7 @@ export interface Medium<A extends Contact, B extends Contact>{
     disconnect(link: LinkSpec<A,B>);
 }
 
-export interface LinkSpec<A,B> {
-    tokenA:string,
-    tokenB:string,
-    contactA:A,
-    contactB:B,
-    directed:boolean
-}
+
 
 export interface ShellPolicy {
     fussy:boolean;

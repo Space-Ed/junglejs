@@ -12,8 +12,6 @@ export class Connector extends CellAccessory {
 
     attach(anchor: I.CellAnchor, label:string){
 
-        console.log("create link", this.cache.rule)
-
         if(!(this.cache.medium in anchor.mesh.media)){
 
             anchor.mesh.addMedium(this.cache.medium, this.domain.recover({

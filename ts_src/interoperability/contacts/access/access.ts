@@ -15,18 +15,17 @@ export class AccessContact extends BasicContact<OfferContact> implements ProxyHa
     constructor(private accessPolicy?:any){
         super()
 
-        this.handler = {
-            set(target, property:PropertyKey, value, reciever){
-               //console.log(`set ${property} to ${value}`)
-                target[property] = value
-                return true
-            },
-            get(target, property:PropertyKey, reciever){
-                let gotten = target[property]
-               //console.log(`get of ${property} giving ${gotten}`)
-                return gotten
-            }
-        }
+    }
+    set(target, property:PropertyKey, value, reciever){
+        //console.log(`set ${property} to ${value}`)
+        target[property] = value
+        return true
+    }
+
+    get(target, property:PropertyKey, reciever){
+        let gotten = target[property]
+        //console.log(`get of ${property} giving ${gotten}`)
+        return gotten
     }
 
     // partner integration
@@ -38,9 +37,8 @@ export class AccessContact extends BasicContact<OfferContact> implements ProxyHa
         return new OfferContact(this.accessPolicy)
     }
 
-
     setAccessed(accessed){
-        this.proxy = new Proxy(accessed, this.handler)
+        this.proxy = new Proxy(accessed, this)
     }
 
     //   return new Partner()

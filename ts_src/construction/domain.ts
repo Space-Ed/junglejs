@@ -86,8 +86,6 @@ export class Domain {
         //when the scan fails, fall back to the parent, or throw if at root or isolated
         if(nresult === 0 ){
             if(this.parent === undefined){
-
-                console.log("Domain:", this)
                 throw new Error(`Unable to locate the basis '${basis}' is not registered to the Domain`)
             }else{
                 this.parent.locateBasis(basis)
