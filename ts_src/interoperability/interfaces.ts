@@ -30,8 +30,10 @@ export enum LINK_FILTERS {
 export interface LinkRule {
     designatorA:Designator;
     designatorB:Designator;
-    closeSource:boolean;
-    closeSink:boolean;
+    closeA:boolean;
+    closeB:boolean;
+    forward:boolean;
+    backward:boolean;
     matching:boolean;
     propogation:LINK_FILTERS;
 }

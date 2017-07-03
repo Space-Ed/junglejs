@@ -101,7 +101,8 @@ export abstract class Construct{
         //local domain self localization and detachment respectively
         if(this.cache.domain !== undefined){
             if(typeof this.cache.domain === 'string'){
-                this.domain = this.cache.domain.locateDomain(this.cache.domain);
+                //access based of provided domain
+                this.domain = this.domain.locateDomain(this.cache.domain);
             }else if (this.cache.domain instanceof Domain){
                 this.domain = this.cache.domain;
             }

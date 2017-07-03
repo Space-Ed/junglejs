@@ -35,5 +35,3 @@ export class DistributeMedium extends BaseMedium<CallOut, CallIn> {
         link.contactA.emit = undefined;
     }
 }
-
-mediaConstructors['distribute'] = DistributeMedium;

@@ -13,7 +13,7 @@ Debug.Crumb.defaultOptions.log = console;
 
 describe('The Mesh Host', function () {
 
-    let host, memb, exposed, mesh, contactA, contactB, meshbrane;
+    let host, memb, exposed, mesh:RuleAdapter, contactA, contactB, meshbrane;
 
     beforeEach(function () {
         meshbrane = new Membrane()

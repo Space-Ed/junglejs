@@ -2,9 +2,9 @@ import {CallIn} from './callin'
 import {CallOut} from './callout'
 import {CALL_MODE} from '../../interfaces'
 
-
 export * from './callin'
 export * from './callout'
+export * from './exchange'
 export {CallContactSpec,CALL_MODE} from '../../interfaces'
 
 

@@ -23,11 +23,11 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
 
     suppose(supposedLink: I.LinkSpec<A,B>):boolean{
 
-        let {tokenA, tokenB, contactA, contactB} = supposedLink;
-
         if(this.check(supposedLink)){
-            //check exclusivity and singularity
 
+            let {tokenA, tokenB, contactA, contactB} = supposedLink;
+
+            //introduce contacts to the medium
             if(this.matrix.to[tokenA] === undefined){
                 this.matrix.to[tokenA] = {};
                 this.inductA(tokenA, contactA);
@@ -38,12 +38,17 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
                 this.inductB(tokenB, contactB);
             }
 
+            //create link in matrix
             this.matrix.to[tokenA][tokenB] = supposedLink;
             this.matrix.from[tokenB][tokenA] = supposedLink;
 
+            //call the linking method
             this.connect(supposedLink)
+
+            //link success
             return true
         }else{
+            //link failure
             return false
         }
     }
@@ -104,11 +109,15 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
         //check fan out
 
         if(link.directed){
-            return (this.multiA || ( this.matrix.to[link.tokenA]==undefined)||this.matrix.to[link.tokenA][link.tokenB] === undefined)&&
-            (this.multiB || (this.matrix.from[link.tokenB]== undefined)||this.matrix.from[link.tokenB][link.tokenA] === undefined)&&
-            link.contactA instanceof this.typeA && link.contactB instanceof this.typeB;
+            return  link.contactA instanceof this.typeA && link.contactB instanceof this.typeB //is of the appropriate type
+                &&
+                    (this.multiA || ( this.matrix.to[link.tokenA]==undefined) || this.matrix.to[link.tokenA][link.tokenB] === undefined) // Is fanning out or not out linked
+                &&
+                    (this.multiB || (this.matrix.from[link.tokenB]== undefined)||this.matrix.from[link.tokenB][link.tokenA] === undefined);//Is fanning in or not linked i
         }else{
-            return (this.multiA || this.matrix.sym[link.tokenA][link.tokenB] === undefined)&&
+            return link.contactA instanceof this.typeA && link
+
+            (this.multiA || this.matrix.sym[link.tokenA][link.tokenB] === undefined)&&
             (this.multiB || this.matrix.sym[link.tokenB][link.tokenA] === undefined)
         }
     };

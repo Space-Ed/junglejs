@@ -11,13 +11,16 @@ export const IO = _IO;
 export const TRT = _TRT;
 export const CST = _CST
 
+export * from './util/all'
+export * from './interoperability/all'
 export * from './construction/all'
 export * from './tertiary/all'
 
 export const Core = new Domain({
     media:new Domain({
         direct:_IO.DirectMedium,
-        distribute:_IO.DistributeMedium
+        distribute:_IO.DistributeMedium,
+        exchange:_IO.ExchangeMedium
     }),
 
     cell:{

@@ -62,13 +62,15 @@ export class RuleMesh implements I.MembraneWatcher {
         let m = link.match(/^([\w\*\:\.]+)(\|?)(<?)([\+\-\!]?)([=\-])(>?)(\|?)([\w\*\:\.]+)/)
 
         if(!m){throw new Error(`Unable to parse link description, expression ${link} did not match regex`)};
-        let [match, srcDesig, srcClose, viceVersa, filter, matching, persistent, snkClose, snkDesig] = m;
+        let [match, srcDesig, srcClose, backward, filter, matching, forward, snkClose, snkDesig] = m;
 
         return {
             designatorA:new Designator('subranes','contacts', srcDesig),
             designatorB:new Designator('subranes','contacts', snkDesig),
-            closeSource:srcClose==='|',
-            closeSink:snkClose==='|',
+            closeA:srcClose==='|',
+            closeB:snkClose==='|',
+            forward:forward==='>',
+            backward:backward==='<',
             matching:matching==="=",
             propogation:filter !== ''?{'+':I.LINK_FILTERS.PROCEED,'-':I.LINK_FILTERS.DECEED, '!':I.LINK_FILTERS.ELSEWHERE}[filter]:I.LINK_FILTERS.NONE
         }
@@ -100,8 +102,23 @@ export class RuleMesh implements I.MembraneWatcher {
 
             let dA = rule.designatorA.tokenDesignate(this.primary);
             let dB = rule.designatorB.tokenDesignate(this.primary);
-            this.square(rule, dA, dB, mediumkey)
+
+
+            this.balanceSquare(rule, dA, dB, mediumkey, false)
         }
+    }
+
+    balanceSquare(rule:I.LinkRule, dA:Object, dB:Object, mediumkey:string, destructive:boolean){
+        let op = destructive? this.unsquare : this.square;
+        let isUndirected = !rule.backward && !rule.forward
+        if(rule.forward || isUndirected){
+            op.call(this, rule, dA, dB, mediumkey)
+        }
+
+        if(rule.backward){
+            op.call(this, rule, dB, dA, mediumkey)
+        }
+
     }
 
     removeRule(mediumID:string, ruleID:string){
@@ -113,8 +130,7 @@ export class RuleMesh implements I.MembraneWatcher {
 
         let dA = rule.designatorA.tokenDesignate(this.primary);
         let dB = rule.designatorB.tokenDesignate(this.primary);
-        this.unsquare(rule, dA, dB, mediumID)
-
+        this.balanceSquare(rule, dA, dB, mediumID, true)
     }
 
     unsquare(rule:I.LinkRule, desigA:Object, desigB:Object, mediumkey:string){
@@ -131,7 +147,7 @@ export class RuleMesh implements I.MembraneWatcher {
                     tokenB:tokenB,
                     contactA:contactA,
                     contactB:contactB,
-                    directed:true
+                    directed:(rule.backward || rule.forward)
                 }
 
                 if(medium.hasLink(link)){
@@ -168,7 +184,7 @@ export class RuleMesh implements I.MembraneWatcher {
                     tokenB:tokenB,
                     contactA:contactA,
                     contactB:contactB,
-                    directed:true
+                    directed:(rule.backward || rule.forward)
                 }
 
                 //if all other media do not hold an exclusive claim to the relevant contact
@@ -188,6 +204,7 @@ export class RuleMesh implements I.MembraneWatcher {
                 }
 
                 if(doSuppose){
+
                     if(medium.suppose(link)){
                         this.locations[tokenA] = this.locations[tokenA]||{}
                         this.locations[tokenB] = this.locations[tokenB]||{}
@@ -204,10 +221,15 @@ export class RuleMesh implements I.MembraneWatcher {
     onAddContact(contact:I.Contact, token:string){
         //introduce to medium
 
-
         for(let mediumkey in this.media){
             let medium:I.Medium<any,any> = this.media[mediumkey];
             let linkRules = <I.LinkRule[]>this.rules[mediumkey];
+
+            /**
+            *   a contact could be elegable for either or both positions
+                we must ensure that if it is in both positions
+
+             */
 
 
             if(contact instanceof medium.typeA){
@@ -216,22 +238,24 @@ export class RuleMesh implements I.MembraneWatcher {
                     if(rule.designatorA.matches(token)){
                         let dB = rule.designatorB.tokenDesignate(this.primary)
                         let dA = {}; dA[token] = contact;
-                        this.square(rule, dA, dB, mediumkey);
+
+                        console.log('sideA', dA, "sideB", dB)
+                        this.balanceSquare(rule, dA, dB, mediumkey, false)
                     }
                 }
+            }
 
-            }else if(contact instanceof medium.typeB){
+            if(contact instanceof medium.typeB){
 
                 for(let ruleID in linkRules){
                     let rule = linkRules[ruleID]
                     if(rule.designatorB.matches(token)){
                         let dA = rule.designatorA.tokenDesignate(this.primary)
                         let dB = {}; dB[token] = contact;
-                        this.square(rule, dA, dB, mediumkey);
+                        console.log('sideA', dA, "sideB", dB)
+                        this.balanceSquare(rule, dA, dB, mediumkey, false)
                     }
                 }
-            }else{
-                //ignore the case where the contact does not fit
             }
 
         }

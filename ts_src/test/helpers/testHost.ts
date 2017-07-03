@@ -2,12 +2,11 @@ import * as Jungle from '../../jungle'
 
 import Jasmine = require('jasmine')
 
-let {Membrane, CallIn, CallOut, DemuxWatchMethodsF} = Jungle.IO;
-
+let {Membrane, CallIn, CallOut, DemuxWatchMethodsF, CallExchange, ExchangeTypes} = Jungle.IO;
 
 export default class TestHost {
     changeOccurred;
-    primary;
+    primary:Jungle.Membrane;
 
     addspy:jasmine.Spy
     remspy:jasmine.Spy
@@ -58,13 +57,17 @@ export default class TestHost {
             if(pmatch){
                 let inp = pmatch[1], label = pmatch[2], out = pmatch[3];
 
-                if(inp == '_'){
+                if(inp == '_' && out == '_'){
+                    this.primary.addContact(new CallExchange({
+                        type:ExchangeTypes.Value,
+                        default:label
+                    }), label)
+                }else if(inp == '_'){
                     this.primary.addContact(new CallIn({
                         label:label,
                         tracking:true
                     }), label)
-                }
-                if(out == '_'){
+                }else if (out == '_'){
                     this.primary.addContact(new CallOut({label:label, tracking:true}), label)
                 }
 

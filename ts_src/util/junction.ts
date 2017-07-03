@@ -6,6 +6,23 @@ enum JResultNatures {
 
 const WAITING = "WAIT";
 
+export function dezalgo(junction, fallback){
+    if(junction instanceof Junction){
+        let zalgo = junction.realize()
+
+        if(zalgo instanceof Junction){
+            //awaiting
+            return fallback
+        }else{
+            //fulfilled
+            return zalgo
+        }
+    }else{
+        return junction
+    }
+
+}
+
 export class Junction {
 
     private resultNature:JResultNatures;

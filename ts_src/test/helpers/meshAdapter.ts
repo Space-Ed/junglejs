@@ -9,6 +9,9 @@ export interface MeshInitialiser {
     exposed:any
 }
 
+/**
+ * Allows the use of jungle-core domain media types by the native means of recovery
+ */
 export default class MeshAdapter extends RuleMesh {
 
     constructor(init:MeshInitialiser){
@@ -31,6 +34,24 @@ export default class MeshAdapter extends RuleMesh {
             this.parseRules(init.rules[mediakey], mediakey);
         }
 
+    }
+
+    hasLinked(tokenA, tokenB, directed=true){
+        let mediaWithA = this.locations[tokenA]
+
+        for(let mediakey in mediaWithA){
+            let medium:BaseMedium<any,any> = this.media[mediakey]
+            let aToMap =  medium.matrix.to[tokenA]
+            let aSymMap = medium.matrix.sym[tokenA]
+
+            if(directed && aToMap !== undefined &&  aToMap[tokenB] !== undefined){
+                return true
+            }else if(!directed  && aSymMap !== undefined &&  aSymMap[tokenB] !== undefined){
+                return true
+            }
+        }
+
+        return false
     }
 
 }
