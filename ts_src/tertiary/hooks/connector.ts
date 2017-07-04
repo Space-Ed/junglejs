@@ -11,6 +11,7 @@ export class Connector extends CellAccessory {
     }
 
     attach(anchor: I.CellAnchor, label:string){
+        super.attach(anchor, label)
 
         if(!(this.cache.medium in anchor.mesh.media)){
 

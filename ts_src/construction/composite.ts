@@ -106,7 +106,7 @@ export class Composite extends Construct{
         //recursively prime and add
         construct.prime(this.domain);
         this.subconstructs[k] = construct;
-        construct.attach(this.anchor, k)
+        construct.attach(this, k)
     }
 
     /**
@@ -128,7 +128,7 @@ export class Composite extends Construct{
         let removing = <Construct>this.subconstructs[k];
 
         if(removing !== undefined){
-            removing.detach(this.anchor, k)
+            removing.detach(this, k)
             let final = removing.dispose();
             delete this.subconstructs[k];
             return final
@@ -147,7 +147,7 @@ export class Composite extends Construct{
         for (let key in this.subconstructs) {
             let construct:Construct = this.subconstructs[key]
 
-            construct.detach(this.anchor, key)
+            construct.detach(this, key)
 
             construct.dispose()
         }

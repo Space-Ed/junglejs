@@ -8,7 +8,7 @@ import * as I from '../interfaces'
 
 export class CellAccessory extends Construct {
 
-    host:I.CellAnchor;
+    host:Cell;
     alias:string;
 
     attach(host:I.CellAnchor, alias:string){

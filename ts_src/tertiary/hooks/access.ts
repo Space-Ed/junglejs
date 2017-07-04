@@ -12,8 +12,7 @@ import * as I from '../interfaces'
 export class AccessHook extends CellAccessory {
 
     contact:IO.AccessContact|IO.OfferContact;
-    policy:I.AccessPolicy
-    anchor: I.CellAnchor
+    policy:I.AccessPolicy;
 
     constructor(spec:any){
         spec.basis = 'hook:access';
@@ -24,7 +23,6 @@ export class AccessHook extends CellAccessory {
 
     attach(anchor: I.CellAnchor, k:string){
         super.attach(anchor, k)
-
 
         this.contact = new IO.OfferContact();
 
@@ -37,8 +35,9 @@ export class AccessHook extends CellAccessory {
     }
 
     detach(){
-        this.contact.retract(this.anchor, this.alias)
-        this.anchor.lining.removeContact(this.alias)
+        super.detach(this.host, this.alias)
+        this.contact.retract(this.host, this.alias)
+        this.host.lining.removeContact(this.alias)
     }
 
 }

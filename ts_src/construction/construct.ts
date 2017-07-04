@@ -32,8 +32,8 @@ export abstract class Construct{
 
     cache:any;
     domain:Domain;
-    anchor:any;
     alias:string;
+    host:Composite;
 
     nucleus:any;
 
@@ -75,13 +75,13 @@ export abstract class Construct{
         this.disposeTractor = undefined
     }
 
-    attach(anchor:any, alias:string){
-        this.anchor = anchor;
+    attach(host:any, alias:string){
+        this.host = host;
         this.alias = alias;
     }
 
-    detach(anchor:any, alias:string){
-        this.anchor = undefined;
+    detach(host:any, alias:string){
+        this.host = undefined;
         this.alias = undefined;
     }
 
@@ -102,7 +102,7 @@ export abstract class Construct{
         if(this.cache.domain !== undefined){
             if(typeof this.cache.domain === 'string'){
                 //access based of provided domain
-                this.domain = this.domain.locateDomain(this.cache.domain);
+                this.domain = Construct.DefaultDomain.locateDomain(this.cache.domain);
             }else if (this.cache.domain instanceof Domain){
                 this.domain = this.cache.domain;
             }

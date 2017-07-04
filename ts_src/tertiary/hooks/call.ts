@@ -61,7 +61,7 @@ export class CallHook extends CellAccessory {
 
     detach(){
         this.contact.retract(this.anchor, this.alias)
-        this.anchor.lining.removeContact(this.alias)
+        this.host.lining.removeContact(this.alias)
     }
 
 

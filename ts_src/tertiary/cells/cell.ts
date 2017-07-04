@@ -8,7 +8,7 @@ import {CellAccessory} from '../hooks/accessory'
 /*
 
 */
-export class Cell extends CS.Composite {
+export class Cell extends CS.Composite implements I.CellAnchor{
 
     shell:IO.Membrane;
     lining:IO.Membrane;
@@ -16,7 +16,6 @@ export class Cell extends CS.Composite {
     mesh:IO.RuleMesh;
 
     nucleus:any;
-    anchor:I.CellAnchor;
     key:string;
 
     constructor(spec:any){
@@ -55,13 +54,6 @@ export class Cell extends CS.Composite {
             media:media,
             exposed:this.nucleus
         })
-
-        //the anchor is provided to constructs at attach time, it is contingent on accessibility restraint
-        this.anchor = {
-            nucleus:this.nucleus,
-            lining:this.lining,
-            mesh:this.mesh
-        }
 
         //the creation of sections for exclusive grouping of internal contacts to be exposed on shell or injected to context
 
