@@ -4,6 +4,7 @@ import {Domain} from './domain'
 import * as Util from '../util/all'
 
 import {deepMeldF} from '../util/ogebra/hierarchical';
+import {meld} from '../util/ogebra/operations'
 
 /*
 
@@ -65,21 +66,34 @@ export abstract class Construct{
         }
     }
 
-    applyForm(form:any = {}){
+    /**
+     * Apply the essential characteristics of the Construct, that will be immutable over its lifetime.
+     */
+    protected applyForm(form:any = {}){
         this.primeTractor = form.prime
         this.disposeTractor = form.dispose
     }
 
-    clearForm(form:any = {}){
+    /**
+     * Clear the form, returning to the basic nature of the
+     */
+    protected clearForm(form:any = {}){
         this.primeTractor = undefined
         this.disposeTractor = undefined
     }
 
+    /**
+     * Called by the host with the host to allow the construct to use it as a platform
+     * Extending: Always call super, and provide your own interface, and rewrite the doc
+     */
     attach(host:any, alias:string){
         this.host = host;
         this.alias = alias;
     }
 
+    /**
+     * remove any trace of this construct from the parent and vice versa
+     */
     detach(host:any, alias:string){
         this.host = undefined;
         this.alias = undefined;
@@ -87,6 +101,7 @@ export abstract class Construct{
 
     /*
         Called to bring the the construct to life, it is given it's domain, that represents the set of components available to it
+        The Parent Composite will pass it's domain and if there is no domain we use the static  Construct.DefaultDomain
     */
     prime(providedDomain?:Domain){
 
@@ -135,8 +150,7 @@ export abstract class Construct{
 
     /*
         modification of structure by application of a patch,
-
-        when alive and being reformed it will
+        when alive and being reformed it will kill it first and then apply a recursive patching
     */
     patch(patch:any){
         if(this.alive && !patch.form != undefined){
@@ -144,10 +158,24 @@ export abstract class Construct{
             this.patch(patch)
             this.prime(this.domain);
         }else{
-            this.cache = deepMeldF()(this.cache, patch)
+            this.cache = deepMeldF(this.shouldMergeChild.bind(this), this.mergeChild.bind(this))(this.cache, patch)
         }
     }
 
+    /**
+     * decide whether a conflict of two objects should be a merge, only vanilla objects are eligeble
+     */
+    protected shouldMergeChild(a:any, b:any, key:string){
+        return Util.isVanillaObject(a) && Util.isVanillaObject(b)
+    }
+
+    /**
+     * Occurs during patching when there is a key conflict, at this level it ok to just overwrite.
+     * Extenders must consider the implications of the changes. If the require the object to be updated
+     */
+    protected mergeChild(a:any, b:any, key:string){
+        return b
+    }
 
     /*
         as an unprimed construct{pattern} this may occur to create an extended version.

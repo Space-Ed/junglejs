@@ -1,5 +1,5 @@
  import {Construct} from './construct'
-import {isPrimative, isVanillaObject, isVanillaArray, B} from '../util/all'
+import {isPrimative, isVanillaObject, isVanillaArray, B, meld} from '../util/all'
 import {Domain} from './domain'
 
 export class Composite extends Construct{
@@ -17,22 +17,7 @@ export class Composite extends Construct{
 
     prime(domain?:Domain){
         super.prime(domain)
-
-        //incrementally apply the patch, ignoring keywords.
-       //console.log("Composite prime: ", this.cache)
-        for(let k in this.cache){
-            if(!(k in this.keywords)){
-                let v = this.cache[k];
-                this.add(v , k);
-            }
-        }
-
-        if(this.cache.anon !== undefined){
-            for(let i = 0; i<this.cache.anon.length; i++){
-                this.add(this.cache.anon[i])
-            }
-        }
-
+        this.livePatch(this.cache);
         if(this.beginTractor){ this.beginTractor.call(this.nucleus) }
     }
 
@@ -66,39 +51,26 @@ export class Composite extends Construct{
 
         let k = key === undefined? this.subconstructs.length++:key
 
-        //saved
-        if(this.alive){
-            if(isPrimative(v)){
-                this.addPrimative(k, v)
-            }else if(v instanceof Construct){
-                //construct replication case
-                let spec = v.extract();
-                let recovered = this.domain.recover(spec);
-                this.addConstruct(k, recovered);
-            }else if(isVanillaObject(v)){
-                if('basis' in v){
-                    //serial recovery case
-                    let recovered = this.domain.recover(v);
-                    this.addConstruct(k, recovered);
-                }else{
-                    v.basis = 'object';
-                    let recovered = this.domain.recover(v);
-                    this.addConstruct(k, recovered);
-                }
-            }else if(isVanillaArray(v)){
-                let patch = {
-                    basis:'array',
-                    anon:v
-                }
-                let recovered = this.domain.recover(patch);
-                this.addConstruct(k, recovered);
-            }else{
-                this.addStrange(k, v)
+        if(isPrimative(v)){
+            this.addPrimative(k, v)
+        }else if(v instanceof Construct){
+            //construct replication case
+            let spec = v.extract();
+            let recovered = this.domain.recover(spec);
+            this.addConstruct(k, recovered);
+        }else if(isVanillaObject(v)){
+            v.basis = v.basis||'object';
+            let recovered = this.domain.recover(v);
+            this.addConstruct(k, recovered);
+        }else if(isVanillaArray(v)){
+            let patch = {
+                basis:'array',
+                anon:v
             }
-        } else {
-
-            //extending dead structure just save it for later
-            this.cache[k] = v;
+            let recovered = this.domain.recover(patch);
+            this.addConstruct(k, recovered);
+        }else{
+            this.addStrange(k, v)
         }
     }
 
@@ -179,10 +151,54 @@ export class Composite extends Construct{
 
     }
 
-    patch(patch){
-        //meld the patch, applying
+    /*
+        modification of structure by application of a patch,
+        when alive and being reformed it will kill it first and then apply a recursive patching
+    */
+    patch(patch:any){
+        if(!this.alive){
+            //reset cache with merged
+            super.patch(patch);
+        }else if(!patch.form != undefined){
+            this.dispose();
+            this.patch(patch)
+            this.prime(this.domain);
+        }else{
+            this.livePatch(patch)
+        }
+    }
 
+    protected livePatch(patch){
+        //incrementally apply the patch, ignoring keywords.
+        console.log("Composite patch: ", patch)
 
+        for(let k in patch){
+            if(!(k in this.keywords)){
+                let v = patch[k];
+                this.patchChild(k, v)
+            }
+        }
+
+        if(patch.anon !== undefined){
+            for(let i = 0; i<patch.anon.length; i++){
+                //push all, no colli
+                this.add(patch.anon[i])
+            }
+        }
+
+    }
+
+    protected patchChild(k, v){
+        let existing:Construct = this.subconstructs[v];
+        if(existing !== undefined){
+            existing.patch(v);
+        }else{
+            if(v === Symbol.for("DELETE")){
+                this.remove(k)
+            }else{
+                this.add(v , k);
+            }
+        }
     }
 
     /*

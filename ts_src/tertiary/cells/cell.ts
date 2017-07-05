@@ -12,11 +12,8 @@ export class Cell extends CS.Composite implements I.CellAnchor{
 
     shell:IO.Membrane;
     lining:IO.Membrane;
-
     mesh:IO.RuleMesh;
-
     nucleus:any;
-    key:string;
 
     constructor(spec:any){
         //overridable
@@ -126,11 +123,6 @@ export class Cell extends CS.Composite implements I.CellAnchor{
 
     addPrimative(k, v){
         this.nucleus[k] = v;
-    }
-
-    addObject(k, v){
-        let construct = new Cell(v)
-        this.addConstruct(k, construct)
     }
 
 }
