@@ -223,3 +223,23 @@ describe('',function(){
     })
 
 })
+
+describe('symbolic matching', function(){
+
+    it('should designate a range', function(){
+
+        let structure = {
+            terminals:{
+                0:'a'
+            },
+            groups:[
+                {
+                    terminals:"that"
+                }
+            ]
+        }
+
+    })
+
+
+})

@@ -14,12 +14,14 @@ interface RecurState {
     glob:boolean
 }
 
+//TODO:include symbolic matching
 export const DesignatorRegExp = /^((?:(?:\w+|\*{1,2})(?:\.(?:\w+|\*{1,2}))*))?\:(\w+|\*|\$)$/;
 
 /**
  * convert globs to regex to use as the designator
  */
 export function regexifyDesignationTerm(term:string):DTerm{
+    //TODO:case for symbolic match
     if(term=='*'){
         return /.*/
     }else if(term=='**'){
@@ -239,6 +241,7 @@ export class Designator {
 
                 //designate subgroups
                 if(matchDesignationTerm(mk, current)){
+                    //TODO: symbolic bind match
                     let proceedwithoutGlob = {thumb:rState.thumb+1, glob:false};
                     let eager= this._treeDesignate(subgroup, proceedwithoutGlob)
 
