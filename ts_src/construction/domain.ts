@@ -96,7 +96,7 @@ export class Domain {
             if(this.parent === undefined){
                 throw new Error(`Unable to locate the basis '${basis}' is not registered to the Domain`)
             }else{
-                this.parent.locateBasis(basis)
+                return this.parent.locateBasis(basis)
             }
         }else if(nresult ===1){
             return result[Object.keys(result)[0]]

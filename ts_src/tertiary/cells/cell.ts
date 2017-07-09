@@ -17,8 +17,6 @@ export class Cell extends CS.Composite implements I.CellAnchor{
 
     constructor(spec:any){
         //overridable
-        spec.domain = spec.domain
-        spec.basis = 'cell'
         super(spec)
 
         this.nucleus = {};

@@ -15,7 +15,6 @@ export class AccessHook extends CellAccessory {
     policy:I.AccessPolicy;
 
     constructor(spec:any){
-        spec.basis = 'hook:access';
         super(spec);
 
         this.policy = spec.policy;

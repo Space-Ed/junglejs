@@ -25,21 +25,22 @@ describe("A Cell", function () {
                 mesh:{
 
                 }
-
             },
 
-            mouth:new CallHook({
+            mouth:{
+                basis:'hook:call',
                 direction:"in",
                 mode:"push",
                 hook(food){//console.log(`eating ${food},`,this)
                     this.hungry = false;
                     this.oesophagus['stomach:contents'] = food
                 }
-            }),
+            },
 
-            stomach: A.Cell({
+            stomach:{
+                basis:'cell',
                 contents:A.PushDeposit('empty')
-            }),
+            },
 
             hungry:true
         });

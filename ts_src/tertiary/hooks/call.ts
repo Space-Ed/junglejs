@@ -17,7 +17,6 @@ export class CallHook extends CellAccessory {
     anchor: I.CellAnchor
 
     constructor(spec:any){
-        spec.basis = 'hook:call';
         super(spec);
     }
 

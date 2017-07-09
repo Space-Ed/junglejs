@@ -1,5 +1,7 @@
 import Jasmine = require('jasmine')
 import TestApp from "../../helpers/testApp";
+import * as Jungle from '../../../jungle'
+
 
 describe('life cycle', function(){
 
@@ -18,12 +20,17 @@ describe('life cycle', function(){
                     dispose:disposespy,
                     begin:beginspy,
                     end:endspy
-                }
+                },
+
+                hello:"something"
             })
 
             app.prime()
 
+
+
             expect(primespy).toHaveBeenCalledTimes(1)
+            expect(primespy.calls.first().object.hello).toBe("something")
             expect(primespy.calls.first().object).toBe(app.nucleus)
 
             expect(beginspy).toHaveBeenCalledTimes(1)
@@ -37,6 +44,35 @@ describe('life cycle', function(){
 
             expect(endspy).toHaveBeenCalledTimes(1)
             expect(endspy.calls.first().object).toBe(app.nucleus)
+        })
+
+        fit('should have base properties exposed to prime when extended', function(){
+            Jungle.Core.branch("pollute")
+            Jungle.Core.extend('object', 'pollute:object')
+
+            let pspy = jasmine.createSpy("pspy")
+
+            let app = new TestApp({
+                domain:'pollute',
+                form:{
+                    begin(){
+                        console.log(this)
+                        pspy(this.monster);
+                    }
+                },
+                monster:"garbage",
+
+                trash:{
+                },
+
+            })
+
+            app.prime()
+
+            console.log(app.nucleus)
+
+            expect(pspy).toHaveBeenCalledWith("garbage")
+
         })
 
     })

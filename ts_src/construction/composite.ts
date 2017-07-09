@@ -16,11 +16,14 @@ export class Composite extends Construct{
     }
 
     prime(domain?:Domain){
+
         super.prime(domain)
 
         //add Everything
         this.addStrange('domain', this.domain.getExposure())
         this.addStrange('meta', this.getExposure())
+
+
         this.livePatch(this.cache);
 
         if(this.beginTractor){ this.beginTractor.call(this.nucleus) }
@@ -186,7 +189,7 @@ export class Composite extends Construct{
 
     protected livePatch(patch){
         //incrementally apply the patch, ignoring keywords.
-        console.log("Composite patch: ", patch)
+        //console.log("Composite patch: ", patch)
 
         for(let k in patch){
             if(!(k in this.keywords)){

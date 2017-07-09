@@ -112,7 +112,16 @@ describe('Domains', function(){
         })
 
         it('can select from the parent domain by basis fallback', function(){
+            let subDom = new Jungle.Domain({
 
+            })
+
+            let domain  = new Jungle.Domain({
+                sub:subDom,
+                fallback(){}
+            })
+
+            expect(subDom.locateBasis('fallback').nature.name).toBe('fallback')
         })
 
     })
@@ -182,6 +191,7 @@ describe('Domains', function(){
             expect(extendspy).toHaveBeenCalledWith('undeepExtend')
 
         })
+
 
 
     })
