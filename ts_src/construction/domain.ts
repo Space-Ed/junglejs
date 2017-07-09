@@ -8,12 +8,20 @@ export class Domain {
 
     parent:Domain;
     registry:any
+    exposed:any;
+
     subdomain:any
     melder:(a:any, b:any)=>any
 
     constructor(init:any = {}, private isolated:boolean = false){
         this.registry = {};
         this.subdomain = {};
+        this.exposed = {
+            register:(key, basis, patch)=>{
+                this.register(key, basis, patch)
+            }
+
+        };
 
         //
         this.melder = deepMeldF();
@@ -164,6 +172,14 @@ export class Domain {
             targetDomain.addNature(targetName, nature, patch)
         }
 
+    }
+
+    addStatic(name, value){
+        this.exposed[name] = value
+    }
+
+    getExposure(){
+        return this.exposed
     }
 
 }
