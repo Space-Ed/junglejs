@@ -3,6 +3,9 @@
 
 [![npm version](https://badge.fury.io/js/junglejs.svg)](https://badge.fury.io/js/junglejs)
 
+[Documentation](https://www.gitbook.com/book/space-ed/jungle-book/details)
+[Presentation](https://prezi.com/view/CSbkjg2fVJZsorHAm3Gq/)
+
 ## Abstract
 
 A framework for creating modular systems with high levels of structural dynamism, interconnectedness, contextual dependency and recursive depth. These aspects are often found in the ‘organic’ systems of nature and society which is why it is called an __Organic Programming Framework__.

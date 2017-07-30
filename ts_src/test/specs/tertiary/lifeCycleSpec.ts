@@ -46,7 +46,7 @@ describe('life cycle', function(){
             expect(endspy.calls.first().object).toBe(app.nucleus)
         })
 
-        fit('should have base properties exposed to prime when extended', function(){
+        it('should have base properties exposed to prime when extended', function(){
             Jungle.Core.branch("pollute")
             Jungle.Core.extend('object', 'pollute:object')
 
