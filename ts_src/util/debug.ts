@@ -28,14 +28,15 @@ export function dumpToDepthF(maxdepth, indentSym="  "){
             outstr = String(item);
         }else if(item instanceof Array){
             outstr = "[\n"
-            item.forEach((item)=>{outstr+=(indentation+recur(depth-1, indentation+indentSym, item)+'\n')});
-            outstr += "\n]"
+            item.forEach((item)=>{outstr+=(indentation+indentSym+recur(depth-1, indentation+indentSym, item)+'\n')});
+            outstr += indentation+"]"
         }else if(item instanceof Object){
             outstr = "{\n"
-            for(let k in item){
-                outstr+=(indentation+indentSym+k+': '+recur(depth-1, indentation+indentSym, item[k])+'\n');
+            for(let k of (<any>Object.keys(item)).concat(Object.getOwnPropertySymbols(item))){
+                let printk = String(k)
+                outstr+=(indentation+indentSym+printk+': '+recur(depth-1, indentation+indentSym, item[k])+'\n');
             }
-            outstr += "\n"+indentation+"}";
+            outstr += indentation+"}";
         }
 
         return outstr;
@@ -48,6 +49,10 @@ export function dumpToDepthF(maxdepth, indentSym="  "){
        //console.log("dump to depth", x)
         return recur(maxdepth, "", x)
     }
+}
+
+export function logdump(head, obj){
+    console.log(`${head}: \n${dumpToDepthF(Infinity)(obj)}`)
 }
 
 export class JungleError {

@@ -1,11 +1,8 @@
 
-import * as Designate from '../../util/designator'
-import {Designator} from '../../util/designator'
-import {deeplyEqualsThrow} from '../../util/checks'
-import {B} from '../../util/blender'
-
-import jasmine = require('jasmine')
-
+import * as Designate from '../../../util/designator'
+import {Designator} from '../../../util/designator'
+import {deeplyEqualsThrow} from '../../../util/checks'
+import {B} from '../../../util/blender'
 
 describe('',function(){
 
@@ -221,5 +218,25 @@ describe('',function(){
         expect(one.scan(structure)[':CEO']).toBe('Big Boss')
 
     })
+
+})
+
+describe('symbolic matching', function(){
+
+    it('should designate a range', function(){
+
+        let structure = {
+            terminals:{
+                0:'a'
+            },
+            groups:[
+                {
+                    terminals:"that"
+                }
+            ]
+        }
+
+    })
+
 
 })

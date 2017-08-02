@@ -1,6 +1,7 @@
 
 import * as T from './types'
 
+
 export function meld(reduce:T.Reducer):(obj1:Object, obj2:Object)=>Object{
 
     return function(obj1:Object, obj2:Object):Object{
@@ -20,8 +21,8 @@ export function meld(reduce:T.Reducer):(obj1:Object, obj2:Object)=>Object{
                 if(obj1[k] === Symbol.for('delete') || obj2[k] === Symbol.for('delete')){
                     continue;
                 }
-
-                melded[k] = reduce(obj1[k], obj2[k], k) //collision
+                let reduced = reduce(obj1[k], obj2[k], k)
+                if(reduced !== Symbol.for('delete')) melded[k] = reduced;
             }else{
                 melded[k] = obj2[k];
             }
@@ -31,8 +32,6 @@ export function meld(reduce:T.Reducer):(obj1:Object, obj2:Object)=>Object{
     }
 
 }
-
-
 
 export function mask(reduce:T.Reducer):(obj1:Object, obj2:Object)=>Object{
 
@@ -45,7 +44,8 @@ export function mask(reduce:T.Reducer):(obj1:Object, obj2:Object)=>Object{
                 if(obj1[k] === Symbol.for('delete') || obj2[k] === Symbol.for('delete')){
                     continue;
                 }
-                masked[k] = reduce(obj1[k], obj2[k], k)
+                let reduced = reduce(obj1[k], obj2[k], k)
+                if(reduced !== Symbol.for('delete')) masked[k] = reduced;
             }
         }
 
@@ -54,6 +54,13 @@ export function mask(reduce:T.Reducer):(obj1:Object, obj2:Object)=>Object{
 
 }
 
+export function assoc(reducer:T.Reducer):(obj:Object, prop:PropertyKey, val:any)=>Object{
+    return function(obj:Object, prop:PropertyKey, val:any):Object{
+        let assoced = {}
+        assoced[prop] = val;
+        return meld(reducer)(obj, assoced)
+    }
+}
 
 export function invert(negate:(a:any, k:string)=>any):(obj:Object)=>Object{
     return function(obj:Object):Object{
