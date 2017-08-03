@@ -166,7 +166,6 @@ export class Designator {
 
         for (let sym of Object.getOwnPropertySymbols(patha.bindings||{})){
             merged.bindings[sym] = patha.bindings[sym]
-            console.log('merged binding to sym: ', sym)
         }
 
         for (let sym of Object.getOwnPropertySymbols(pathb.bindings||{})){

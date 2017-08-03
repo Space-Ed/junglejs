@@ -238,23 +238,15 @@ export class Junction {
     }
 
     //phase complete;
-    private proceedThen(residue?){
+    private proceedThen(){
 
-        console.log('residue', residue)
         this.proceeded = true;
 
-        let cached;
-        if(!this.cache.isBusy()){
-            cached = residue
-        }else{
-            cached = this.cache.getCached()
-        }
-
+        let cached = this.cache.getCached()
+        
         if (this.thenCallback !== undefined){
             let future = this.future;
             let propagate = this.thenCallback(cached);
-
-            console.log('propagate', propagate)
 
             if(propagate instanceof Junction){
                 propagate.then(function(result){

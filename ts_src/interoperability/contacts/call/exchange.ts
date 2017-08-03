@@ -5,7 +5,7 @@ import * as I from '../../interfaces'
 import {BasicContact} from '../base'
 import {CallOut} from './callout'
 import * as Debug from '../../../util/debug'
-import {Junction} from '../../../util/junction'
+import {Junction} from '../../../util/all'
 
 export enum ExchangeTypes{
     Hook, Value

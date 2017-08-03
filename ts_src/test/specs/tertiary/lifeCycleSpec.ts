@@ -56,7 +56,6 @@ describe('life cycle', function(){
                 domain:'pollute',
                 form:{
                     begin(){
-                        console.log(this)
                         pspy(this.monster);
                     }
                 },
@@ -68,8 +67,6 @@ describe('life cycle', function(){
             })
 
             app.prime()
-
-            console.log(app.nucleus)
 
             expect(pspy).toHaveBeenCalledWith("garbage")
 

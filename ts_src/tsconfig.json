@@ -93,7 +93,6 @@
         "./util/blender.ts",
         "./util/checks.ts",
         "./util/debug.ts",
-        "./util/designation/designator.ts",
         "./util/designation/matching.ts",
         "./util/designation/parsing.ts",
         "./util/junction/junction.ts",

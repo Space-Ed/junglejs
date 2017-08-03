@@ -3,7 +3,7 @@ import * as I from '../interfaces'
 import {Membrane, MembraneEvents,DemuxWatchMethodsF} from '../membranes/membrane'
 import {mediaConstructors, BaseMedium} from '../media/medium'
 import {Designator} from '../../util/designator'
-
+import {pairByBinding} from "../../util/designation/matching";
 /**
  * A multimedia connections manager with updating
  */
@@ -59,7 +59,7 @@ export class RuleMesh implements I.MembraneWatcher {
     }
 
     protected parseLink(link:string):I.LinkRule{
-        let m = link.match(/^([\w\*\:\.]+)(\|?)(<?)([\+\-\!]?)([=\-])(>?)(\|?)([\w\*\:\.]+)/)
+        let m = link.match(/^([\w\*\:\.#]+)(\|?)(<?)([\+\-\!]?)([=\-])(>?)(\|?)([\w\*\:\.#]+)/)
 
         if(!m){throw new Error(`Unable to parse link description, expression ${link} did not match regex`)};
         let [match, srcDesig, srcClose, backward, filter, matching, forward, snkClose, snkDesig] = m;
@@ -134,84 +134,107 @@ export class RuleMesh implements I.MembraneWatcher {
     }
 
     unsquare(rule:I.LinkRule, desigA:Object, desigB:Object, mediumkey:string){
-        for(let tokenA in desigA){
+
+        let pairs = pairByBinding(desigA, desigB, rule.matching)
+
+        for(let pair of pairs){
+            let tokenA = pair.tokenA
+            let tokenB = pair.tokenB
             let contactA = desigA[tokenA];
+            let contactB = desigB[tokenB];
+            let medium:I.Medium<any,any> = this.media[mediumkey]
 
-            for (let tokenB in desigB){
-                let doSuppose = true;
-                let contactB = desigB[tokenB];
-                let medium:I.Medium<any,any> = this.media[mediumkey]
-
-                let link:I.LinkSpec<any, any> = {
-                    tokenA:tokenA,
-                    tokenB:tokenB,
-                    contactA:contactA,
-                    contactB:contactB
-                }
-
-                if(medium.hasLink(link)){
-                    medium.disconnect(link)
-
-                    //if this token is no longer represented in the medium
-                    if(!medium.hasToken(tokenA)){
-                        delete this.locations[tokenA][mediumkey]
-                    }
-
-                    if(!medium.hasToken(tokenA)){
-                        delete this.locations[tokenB][mediumkey]
-
-                    }
-                }
+            let link:I.LinkSpec<any, any> = {
+                tokenA:tokenA,
+                tokenB:tokenB,
+                contactA:contactA,
+                contactB:contactB,
+                bindings:pair.bindings
             }
 
+            if(medium.hasLink(link)){
+                medium.disconnect(link)
+
+                //if this token is no longer represented in the medium
+                if(!medium.hasToken(tokenA)){
+                    delete this.locations[tokenA][mediumkey]
+                }
+
+                if(!medium.hasToken(tokenA)){
+                    delete this.locations[tokenB][mediumkey]
+
+                }
+            }
         }
+        // for(let tokenA in desigA){
+        //     let contactA = desigA[tokenA];
+        //
+        //     for (let tokenB in desigB){
+        //         let doSuppose = true;
+        //         let contactB = desigB[tokenB];
+        //         let medium:I.Medium<any,any> = this.media[mediumkey]
+        //
+        //         let link:I.LinkSpec<any, any> = {
+        //             tokenA:tokenA,
+        //             tokenB:tokenB,
+        //             contactA:contactA,
+        //             contactB:contactB
+        //         }
+        //
+        //         if(medium.hasLink(link)){
+        //             medium.disconnect(link)
+        //
+        //             //if this token is no longer represented in the medium
+        //             if(!medium.hasToken(tokenA)){
+        //                 delete this.locations[tokenA][mediumkey]
+        //             }
+        //
+        //             if(!medium.hasToken(tokenA)){
+        //                 delete this.locations[tokenB][mediumkey]
+        //
+        //             }
+        //         }
+        //     }
+        //
+        // }
     }
 
     square(rule:I.LinkRule, desigA:Object, desigB:Object, mediumkey:string){
         let firstGlove = false;
 
-        for(let tokenA in desigA){
+        let pairs = pairByBinding(desigA, desigB, rule.matching)
+
+        for(let pair of pairs){
+            let tokenA = pair.tokenA
+            let tokenB = pair.tokenB
+
             let contactA = desigA[tokenA];
+            let contactB = desigB[tokenB];
+            let medium = this.media[mediumkey]
 
-            for (let tokenB in desigB){
-                let doSuppose = true;
-                let contactB = desigB[tokenB];
-                let medium = this.media[mediumkey]
-
-                let link:I.LinkSpec<any, any> = {
-                    tokenA:tokenA,
-                    tokenB:tokenB,
-                    contactA:contactA,
-                    contactB:contactB
-                }
-
-                //if all other media do not hold an exclusive claim to the relevant contact
-                for(let mk in this.media){
-                    let claimer = this.media[mk]
-                    if(mk !== mediumkey && claimer.hasClaim(link)){
-                        throw new Error('Unable to suppose link when another medium has claimed the token')
-                    }
-                }
-
-                if(rule.matching){
-                    let label1 =  link.tokenA.match(/:(\w+)$/)[1]
-                    let label2 =  link.tokenB.match(/:(\w+)$/)[1]
-                    if(label1 !== label2){
-                        doSuppose = false;
-                    }
-                }
-
-                if(doSuppose){
-
-                    if(medium.suppose(link)){
-                        this.locations[tokenA] = this.locations[tokenA]||{}
-                        this.locations[tokenB] = this.locations[tokenB]||{}
-                        this.locations[tokenA][mediumkey] = medium
-                        this.locations[tokenB][mediumkey] = medium
-                    }
-                }
-
+            let link:I.LinkSpec<any, any> = {
+                bindings:pair.bindings,
+                tokenA:tokenA,
+                tokenB:tokenB,
+                contactA:contactA,
+                contactB:contactB
             }
+
+            //if all other media do not hold an exclusive claim to the relevant contact
+            for(let mk in this.media){
+                let claimer = this.media[mk]
+                if(mk !== mediumkey && claimer.hasClaim(link)){
+                    throw new Error('Unable to suppose link when another medium has claimed the token')
+                }
+            }
+
+            if(medium.suppose(link)){
+                this.locations[tokenA] = this.locations[tokenA]||{}
+                this.locations[tokenB] = this.locations[tokenB]||{}
+                this.locations[tokenA][mediumkey] = medium
+                this.locations[tokenB][mediumkey] = medium
+            }
+
         }
 
     }

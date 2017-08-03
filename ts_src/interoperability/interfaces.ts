@@ -43,6 +43,7 @@ export interface LinkSpec<A,B> {
     tokenB:string,
     contactA:A,
     contactB:B,
+    bindings:{[sym:string]:string}
 }
 
 export interface MeshInitialiser {

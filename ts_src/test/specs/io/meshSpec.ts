@@ -101,16 +101,23 @@ describe('The Mesh Host', function () {
     })
 
     it('should allow match connection', function(){
-        let h2 = new TestHost();
-        h2.populate(['_a', 'b_']);
-        let m2 = h2.primary;
-        let contactB2 = m2.contacts.b;
-        let contactA2 = m2.contacts.a;
+        let h1 = new TestHost();
+        h1.populate(['a_', 'b_']);
 
-        meshbrane.removeSubrane('m')
+        let h2 = new TestHost();
+        h2.populate(['_a', '_b'])
+
+        let m1 = h1.primary
+        let m2 = h2.primary
+
+        let contactA1 = m1.contacts.a;
+        let contactB1 = m1.contacts.b;
+
+        let contactA2 = m2.contacts.a;
+        let contactB2 = m2.contacts.b;
 
         meshbrane = new Membrane()
-        meshbrane.addSubrane(memb, 'm1')
+        meshbrane.addSubrane(m1, 'm1')
         meshbrane.addSubrane(m2, 'm2')
 
         mesh = new RuleAdapter({
@@ -118,30 +125,29 @@ describe('The Mesh Host', function () {
             exposed:exposed,
             rules:{
                 'distribute':[
-                    'm1:*=>m2:*',
-                    'm2:*=>m1:*'
+                    'm1:a#->m2:a#',
                 ]
             }
         })
 
-        let outspy = jasmine.createSpy("1");
-        contactB.invert().emit =outspy;
+        let outspyA = jasmine.createSpy("1");
+        contactA2.invert().emit =outspyA
 
-        let outspy2 = jasmine.createSpy("2");
-        contactA2.invert().emit =outspy2;
+        let outspyB = jasmine.createSpy("1");
+        contactB2.invert().emit =outspyB;
 
         //each calls the corresponding and not the other a -> a2, b2 -> b
 
-        contactA.invert().put("Hello?");
-        expect(outspy).not.toHaveBeenCalledWith("Hello?")
-        expect(outspy2).toHaveBeenCalledWith("Hello?")
+        contactA1.invert().put("Hello?");
+        expect(outspyA).toHaveBeenCalledWith("Hello?")
+        expect(outspyB).not.toHaveBeenCalledWith("Hello?")
 
-        outspy.calls.reset();
-        outspy2.calls.reset();
+        outspyA.calls.reset();
+        outspyB.calls.reset();
 
-        contactB2.invert().put("Hola?");
-        expect(outspy).toHaveBeenCalledWith("Hola?")
-        expect(outspy2).not.toHaveBeenCalledWith("Hola?")
+        contactB1.invert().put("Hola?");
+        expect(outspyA).not.toHaveBeenCalledWith("Hola?")
+        expect(outspyB).toHaveBeenCalledWith("Hola?")
 
     })
 

@@ -18,7 +18,6 @@ describe("junction", function(){
         jasmine.DEFAULT_TIMEOUT_INTERVAL = 1000;
         j1 = new Junction();
         callout = jasmine.createSpy('callout').and.callFake(x=>{
-            console.log(`callout: ${JSON.stringify(x)}`)
             return x
         })
     });

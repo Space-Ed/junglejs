@@ -1,4 +1,4 @@
-import {assoc, mask} from "../ogebra/operations";
+import {mask} from "../ogebra/operations";
 
 /**
  * return the tokens that have an agreeable symbolic matching

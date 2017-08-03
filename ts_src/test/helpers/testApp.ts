@@ -1,6 +1,6 @@
 import Jasmine = require('jasmine')
 import {Cell} from '../../tertiary/all'
-import {Junction} from '../../util/junction'
+import {Junction} from '../../util/all'
 import {Crumb} from '../../util/debug'
 import {CallIn, CallOut, CallExchange} from '../../interoperability/contacts/call/common'
 
