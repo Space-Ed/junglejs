@@ -41,7 +41,11 @@ export default class TestApp extends Cell{
 
     call(contact:string, data:any){
         let input = this.shell.designate(contact)[contact];
-        input.put(data)
+
+        let crumb = new Crumb("Call from TestApp")
+            .with(data)
+            
+        input.put(data, crumb)
     }
 
     /**
@@ -80,6 +84,7 @@ export default class TestApp extends Cell{
             if(spec.outputValues[i] === Symbol.for('NOCALL')){
                 expect(outspy).not.toHaveBeenCalled();
             }else{
+                expect(outspy).toHaveBeenCalled();
                 expect(outspy.calls.first().args[0]).toBe(spec.outputValues[i])
             }
 
@@ -90,6 +95,7 @@ export default class TestApp extends Cell{
     }
 
     callReturnTest(spec:CallReturnTestSpec){
+        console.log(`------------Call Return Test - ${spec.label||"unlabelled"}----------------`)
 
         let input = this.shell.designate(spec.inputContact)[spec.inputContact]
 
@@ -108,8 +114,9 @@ export default class TestApp extends Cell{
             }
 
             if(spec.returnValues !== undefined){
-                expect(ret).toEqual(spec.returnValues[i])
+                expect(ret).toEqual(spec.returnValues[i], `Call Return Test - ${spec.label||"unlabelled"} -\n     unexpected return value`)
             }
         }
+        console.log('------------------------------------------------------------------\n\n')
     }
 }

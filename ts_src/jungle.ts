@@ -20,7 +20,46 @@ export const Core = new Domain({
     media:new Domain({
         direct:_IO.DirectMedium,
         distribute:_IO.DistributeMedium,
-        exchange:_IO.ExchangeMedium
+        plexdist:{
+            nature:_IO.MuxMedium,
+            patch:{
+                symbols:[],
+                emitArgType: _IO.DEMUXARG.DONT,
+                emitRetType: _IO.MUXRESP.DROP,
+                emitCallType:_IO.CALLTYPE.BREADTH_FIRST
+            }
+        },
+
+        split:{
+            nature:_IO.MuxMedium,
+            patch:{
+                symbols:[],
+                emitArgType: _IO.DEMUXARG.SOME,
+                emitRetType: _IO.MUXRESP.ORDER,
+                emitCallType:_IO.CALLTYPE.BREADTH_FIRST
+            }
+        },
+
+        compose:{
+            nature:_IO.MuxMedium,
+            patch:{
+                symbols:[],
+                emitArgType: _IO.DEMUXARG.DONT,
+                emitRetType: _IO.MUXRESP.MAP,
+                emitCallType:_IO.CALLTYPE.BREADTH_FIRST
+            }
+        },
+
+        race:{
+            nature:_IO.MuxMedium,
+            patch:{
+                symbols:[],
+                emitArgType: _IO.DEMUXARG.DONT,
+                emitRetType: _IO.MUXRESP.RACE,
+                emitCallType:_IO.CALLTYPE.BREADTH_FIRST
+            }
+        }
+
     }),
 
     cell:{
@@ -41,6 +80,7 @@ export const Core = new Domain({
     hook:new Domain({
         call:TRT.CallHook,
         access:TRT.AccessHook
+
     })
 })
 

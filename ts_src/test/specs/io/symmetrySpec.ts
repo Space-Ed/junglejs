@@ -15,7 +15,7 @@ describe("symmetric linking", function(){
             mesh = new TestMesh({
                 membrane:membrane,
                 rules:{
-                    'exchange':[],
+                    'plexdist':[],
                 },
                 exposed:{}
             })
@@ -29,14 +29,14 @@ describe("symmetric linking", function(){
         })
 
         it("should create a link in either direction",function(){
-            mesh.addRule("a<->b", 'exchange')
+            mesh.addRule("a<->b", 'plexdist')
             expect(mesh.hasLinked(':a', ':b')).toBe(true, "has linked a to b")
             expect(mesh.hasLinked(':b', ':a')).toBe(true, "has linked b to a")
         })
 
         it("should create a link in only one direction when it is a symmetric rule", function(){
             pending('Definition and Implementation of Symmetric clusters')
-            mesh.addRule("a-b", 'exchange')
+            mesh.addRule("a-b", 'direct')
             expect(mesh.hasLinked(':a', ':b')).toBe(true, "has linked a to b")
             expect(mesh.hasLinked(':b', ':a')).toBe(true, "has linked b to a")
         })

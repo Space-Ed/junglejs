@@ -101,6 +101,7 @@ describe('anonymisation',function(){
 
             brave: [PushDeposit('defaultA'), PullDeposit('defaultB')],
             drop:CallInSync(function(x){
+                console.log(this)
                 this.brave[1] = x
             }),
             grab:CallInSync(function(x){

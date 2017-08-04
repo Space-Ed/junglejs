@@ -5,6 +5,8 @@ import {mediaConstructors, BaseMedium} from './medium'
 import {CallOut} from '../contacts/call/callout'
 import {CallIn} from '../contacts/call/callin'
 
+import {logdump} from '../../util/debug'
+
 export class DirectMedium extends BaseMedium<CallOut, CallIn> {
 
     typeA;

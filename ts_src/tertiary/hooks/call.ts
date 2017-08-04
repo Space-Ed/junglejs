@@ -5,13 +5,12 @@ import {deepCopy, Junction} from '../../util/all'
 
 import {Cell} from '../cells/cell'
 import {CellAccessory} from './accessory'
-import {CALL_MODE, CallContactSpec, Hookable} from '../../interoperability/interfaces'
 
 import * as I from '../interfaces'
 
 export class CallHook extends CellAccessory {
 
-    contact:IO.CallIn|IO.CallOut;
+    contact:IO.CallExchange;
     cache:I.CallHookSpec
 
     anchor: I.CellAnchor
@@ -21,46 +20,28 @@ export class CallHook extends CellAccessory {
     }
 
     attach(anchor: I.CellAnchor, k:string){
-        super.attach(anchor, k)//console.log('create contact with ',  this.cache)
+        super.attach(anchor, k)
 
-        let contactargs:CallContactSpec = {
-            label: this.alias,
-            tracking:true, //REVIEW: global debug, local debug, denial of tracking, ?
+        let contactargs = {
+            tracking:k,
+            type:this.cache.type,
             hook:this.cache.hook,
-            syncOnly:this.cache.sync,
             default:this.cache.default,
-            mode:{
-                'push':CALL_MODE.PUSH,
-                'pull':(this.cache.sync )?CALL_MODE.GET:CALL_MODE.REQUEST
-            }[this.cache.mode]
-        };
-
-
-
-        if(this.cache.hook === false){
-            //proxied, no hookage
-        }else if(this.cache.hook instanceof Function){
-            //context hook function
-        }else if(this.cache.hook === true){
-            //reactive value injection
+            forceSync:false
         }
 
-        if(this.cache.sync){
-            //either defaulted or value hooked
+        this.contact = new ({"in":IO.CallOut, "out":IO.CallIn, "both":IO.CallExchange}[this.cache.direction])(contactargs)
+
+        if(this.cache.inject){
+            this.contact.inject(anchor.nucleus, k);
         }
 
-
-        //console.log('contact args', contactargs)
-
-        this.contact = this.cache.direction == "in" ? new IO.CallOut(contactargs) : new IO.CallIn(contactargs);
-
-        this.contact.inject(anchor.nucleus, k);
         anchor.lining.addContact( this.contact, k)
     }
 
-    detach(){
-        this.contact.retract(this.anchor, this.alias)
-        this.host.lining.removeContact(this.alias)
+    detach(anchor, alias:string){
+        this.contact.retract(anchor, alias)
+        this.host.lining.removeContact(alias)
     }
 
 

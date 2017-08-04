@@ -14,7 +14,7 @@ describe("A Cell", function () {
 
     let cell;
 
-    beforeAll(function(){
+    beforeEach(function(){
 
         cell = new Cell({
 
@@ -30,7 +30,8 @@ describe("A Cell", function () {
             mouth:{
                 basis:'hook:call',
                 direction:"in",
-                mode:"push",
+                type:"hook",
+                inject:true,
                 hook(food){//console.log(`eating ${food},`,this)
                     this.hungry = false;
                     this.oesophagus['stomach:contents'] = food
@@ -49,18 +50,15 @@ describe("A Cell", function () {
     })
 
     it('should not be hungry when it has been fed', function () {
-
         expect(cell.shell.contacts.mouth).not.toBeUndefined();
-
         let crumb = new Debug.Crumb("Beginning")
-
         cell.shell.contacts.mouth.put("Nachos", crumb);
-
         expect(cell.nucleus.hungry).toBe(false);
     })
 
     it('should deposit to the stomach, via oesophagus', function(){
-        cell.shell.contacts.mouth.put("Nachos");
+        let crumb = new Debug.Crumb("Beginning Feed");
+        cell.shell.contacts.mouth.put("Nachos", crumb);
         expect(cell.subconstructs.stomach.nucleus.contents).toBe("Nachos");
     })
 

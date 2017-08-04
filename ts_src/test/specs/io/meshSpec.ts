@@ -1,11 +1,10 @@
 
 import * as Jungle from '../../../jungle'
-
 let {Membrane, CallIn, CallOut} = Jungle.IO;
-
 import RuleAdapter from '../../helpers/meshAdapter'
-
 import TestHost from '../../helpers/testHost'
+import {PushInTrack, PushOutTrack} from '../../helpers/testContacts'
+
 
 let Debug = Jungle.Util.Debug;
 Debug.Crumb.defaultOptions.debug = true;
@@ -162,8 +161,8 @@ describe('The Mesh Host', function () {
             exposed:{},
         })
 
-        surface.addContact(new CallOut({label:'pointA'}), 'pointA')
-        surface.addContact(new CallIn({label:'pointB'}), 'pointB');
+        surface.addContact(PushOutTrack(), 'pointA')
+        surface.addContact(PushInTrack(), 'pointB');
 
         let outspy = jasmine.createSpy('outspy');
         fabric.addRule(':pointA->:pointB','distribute', 'rule1');

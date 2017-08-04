@@ -1,87 +1,25 @@
 
 import * as I from '../../interfaces'
-import {BasicContact} from '../base'
+import {CallExchange, CallExchangeSpec} from './exchange'
 import {CallIn} from './callin'
-import * as Debug from '../../../util/debug'
 
-export class CallOut extends BasicContact<CallIn> {
+
+export class CallOut extends CallExchange {
 
     invertable = true;
     symmetric = false;
 
-    constructor(private spec:I.CallContactSpec){
-        super()
-
-        if(spec.mode !== I.CALL_MODE.PROXY){
-            this.hidden = true
-        }
+    constructor(spec:CallExchangeSpec){
+        super(spec)
+        this.spec.hasInput = false, this.spec.hasOutput = true;
     }
 
-    emit:(data, track?)=>any;
-
-    invert(){
-        return super.invert();
+    invert():CallIn{
+        return <CallIn>super.invert();
     }
 
-    createPartner(){
+    createPartner():CallIn{
         return new CallIn(this.spec)
-    }
-
-    inject(into, key){
-        let _spec = this.spec;
-        if(_spec.mode == I.CALL_MODE.PUSH){
-            if(_spec.hook instanceof Function){
-                this.emit = (inp:any, crumb:Debug.Crumb)=>{
-                    if(crumb && _spec.tracking){
-                        let end = crumb.drop("Hook Call Terminal")
-                            .with(inp)
-                            .at(key)
-                        }
-                    _spec.hook.call(into, inp, crumb)
-                }
-            }else{
-                into[key] = _spec.default;
-                this.emit = (inp:any, crumb:Debug.Crumb)=>{
-
-                    if(crumb && _spec.tracking){
-                        let end = crumb.drop("Value Deposit Hook")
-                        .with(inp)
-                        .at(key)
-                    }
-
-                    into[key] = inp;
-                }
-            }
-        }else if(_spec.mode == I.CALL_MODE.GET){
-            into[key] = _spec.default;
-
-            this.emit = (inp:any, crumb:Debug.Crumb)=>{
-                let gotten = into[key]
-
-                if(crumb && _spec.tracking){
-                    crumb.drop("Synchronous Value Retrieval(Get) Hook")
-                    .with(inp)
-                    .at(key)
-                    .as(gotten)
-                }
-
-                return gotten
-            }
-        }else if(_spec.mode == I.CALL_MODE.REQUEST){
-            //REVIEW: should hook functions be accessible internally
-            this.emit = (inp:any, crumb:Debug.Crumb)=>{
-                if(crumb && _spec.tracking){
-                    crumb.drop("Function Hook")
-                    .with(inp)
-                    .at(key)
-                }
-                return _spec.hook.call(into, inp, crumb)
-            }
-        }
-    }
-
-    retract(context, key){
-
     }
 
 }

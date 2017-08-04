@@ -17,9 +17,9 @@ export interface CellAnchor {
 
 export interface CallHookSpec {
     basis:"hook:call",
-    direction:"in"|"out",
-    mode:"push"|"pull",
-    sync:boolean,
+    inject:boolean,
+    direction:"in"|"out"|"both",
+    type:'hook'|'deposit'|'retrieve'
     hook?:any,
     default?:any
 }
