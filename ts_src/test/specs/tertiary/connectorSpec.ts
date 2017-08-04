@@ -12,9 +12,9 @@ describe('rule connector constructs', function(){
                 debug:false
             },
 
-            ghost:TunnelIn(),
+            ghost:TunnelIn("hook"),
             haunts:Connect(':ghost->:child','direct'),
-            child:TunnelOut()
+            child:TunnelOut("hook")
         })
 
         app.prime();

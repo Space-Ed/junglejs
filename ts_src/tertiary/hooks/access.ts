@@ -5,7 +5,6 @@ import {deepCopy, Junction} from '../../util/all'
 
 import {Cell} from '../cells/cell'
 import {CellAccessory} from './accessory'
-import {CALL_MODE, CallContactSpec, Hookable} from '../../interoperability/interfaces'
 
 import * as I from '../interfaces'
 
