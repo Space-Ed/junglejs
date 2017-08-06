@@ -19,7 +19,15 @@ export class CallIn extends CallExchange {
     }
 
     createPartner():CallOut{
-         return new CallOut(this.spec)
+         return new CallOut({
+             hasInput:this.spec.hasOutput,
+             hasOutput:this.spec.hasInput,
+             default:this.spec.default,
+             forceSync:this.spec.forceSync,
+             hook:this.spec.hook,
+             tracking:this.spec.tracking,
+             type:this.spec.type
+         })
     }
 
 }

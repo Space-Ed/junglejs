@@ -34,8 +34,6 @@ export class BaseMode {
         this.checkedTickets[ticket] = true
     }
 
-
-
     protected allIn():boolean{
         return this.checkedTickets.reduce((prev, current)=>{
             return prev && current
@@ -193,12 +191,25 @@ export class ObjectMode extends BaseMode implements CacheMode{
 
     depart(...args):number {
         let ticket = this.checkOut()
+
         return ticket
     }
 
     backOK(ticket:number, value, ...args){
         this.checkIn(ticket)
-        this.returned[args[0]] = value
+
+        let derefs = args[0]||[]
+        derefs = typeof derefs == "string"?[derefs]:derefs
+
+        if(derefs.length === 0){
+            this.returned = value
+        }else{
+            let tip = this.returned
+            for(let i = 0; i<derefs.length ;i ++){
+                let deref = derefs[i]
+                tip = tip[deref] = tip[deref]||(i===derefs.length-1? value : {})
+            }
+        }
     }
 
     getCached(){

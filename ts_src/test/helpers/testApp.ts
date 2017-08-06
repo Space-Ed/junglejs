@@ -44,7 +44,7 @@ export default class TestApp extends Cell{
 
         let crumb = new Crumb("Call from TestApp")
             .with(data)
-            
+
         input.put(data, crumb)
     }
 
@@ -53,10 +53,15 @@ export default class TestApp extends Cell{
       essentially choosing an in and out contact(by designator) and the sequences of expected
       receptions and return values
      */
-    callResponseTest(spec:CallResponseTestSpec){
+    callResponseTest(spec:CallResponseTestSpec):Junction{
 
         let input = this.shell.designate(spec.inputContact)[spec.inputContact]
+
+        expect(input).toBeDefined("Unable to find input contact")
+
         let output = this.shell.designate(spec.outputContact)[spec.outputContact]
+
+        expect(output).toBeDefined("Unable to find output contact")
 
         let respondant = spec.respondant || ((data, crumb)=>{
             return data
@@ -66,57 +71,77 @@ export default class TestApp extends Cell{
         let outspy = jasmine.createSpy('outspy', respondant).and.callThrough()
         output.emit = outspy;
 
+        let allDone = new Junction()
+
         for(let i = 0; i < spec.inputValues.length; i++){
 
             let ival = spec.inputValues[i]
 
-            let ret
-            if(this.debug){
-                let crumb = new Crumb(`Call Response Test - ${spec.label||"unlabelled"}`)
-                .at('start')
-                .with(ival)
+            allDone.then(()=>{
+                let ret
+                if(this.debug){
+                    let crumb = new Crumb(`Call Response Test - ${spec.label||"unlabelled"}`)
+                    .at('start')
+                    .with(ival)
 
-                ret = input.put(ival, crumb)
-            }else{
-                ret = input.put(ival)
-            }
+                    ret = input.put(ival, crumb)
+                }else{
+                    ret = input.put(ival)
+                }
+                return ret
+            }).then((ret)=>{
+                if(spec.outputValues[i] === Symbol.for('NOCALL')){
+                    expect(outspy).not.toHaveBeenCalled();
+                }else{
+                    expect(outspy).toHaveBeenCalled();
+                    expect(outspy.calls.first().args[0]).toBe(spec.outputValues[i])
+                }
 
-            if(spec.outputValues[i] === Symbol.for('NOCALL')){
-                expect(outspy).not.toHaveBeenCalled();
-            }else{
-                expect(outspy).toHaveBeenCalled();
-                expect(outspy.calls.first().args[0]).toBe(spec.outputValues[i])
-            }
-
-            if(spec.returnValues !== undefined){
-                expect(ret).toEqual(spec.returnValues[i])
-            }
+                if(spec.returnValues !== undefined){
+                    expect(ret).toEqual(spec.returnValues[i])
+                }
+            })
         }
+
+        return allDone
     }
 
-    callReturnTest(spec:CallReturnTestSpec){
+    callReturnTest(spec:CallReturnTestSpec):Junction{
         console.log(`------------Call Return Test - ${spec.label||"unlabelled"}----------------`)
-
         let input = this.shell.designate(spec.inputContact)[spec.inputContact]
+        expect(input).toBeDefined("Unable to find input contact")
+
+
+        let allDone = new Junction()
 
         for(let i = 0; i < spec.inputValues.length; i++){
             let ival = spec.inputValues[i]
 
-            let ret;
-            if(this.debug){
-                let crumb = new Crumb(`Call Return Test - ${spec.label||"unlabelled"}`)
-                .at('start')
-                .with(ival)
+            allDone.then(()=>{
+                let ret;
+                if(this.debug){
+                    let crumb = new Crumb(`Call Return Test - ${spec.label||"unlabelled"}`)
+                    .at('start')
+                    .with(ival)
 
-                ret = input.put(ival, crumb)
-            }else{
-                ret = input.put(ival)
-            }
+                    ret = input.put(ival, crumb)
+                }else{
+                    ret = input.put(ival)
+                }
 
-            if(spec.returnValues !== undefined){
-                expect(ret).toEqual(spec.returnValues[i], `Call Return Test - ${spec.label||"unlabelled"} -\n     unexpected return value`)
-            }
+                return ret
+            }).then((ret)=>{
+                if(spec.returnValues !== undefined){
+                    expect(ret).toEqual(spec.returnValues[i], `Call Return Test - ${spec.label||"unlabelled"} -\n     unexpected return value`)
+                }
+            })
+
         }
-        console.log('------------------------------------------------------------------\n\n')
+
+        allDone.then(()=>{
+            console.log('------------------------------------------------------------------\n\n')
+        })
+
+        return allDone
     }
 }

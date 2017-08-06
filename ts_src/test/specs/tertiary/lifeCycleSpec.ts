@@ -27,8 +27,6 @@ describe('life cycle', function(){
 
             app.prime()
 
-
-
             expect(primespy).toHaveBeenCalledTimes(1)
             expect(primespy.calls.first().object.hello).toBe("something")
             expect(primespy.calls.first().object).toBe(app.nucleus)

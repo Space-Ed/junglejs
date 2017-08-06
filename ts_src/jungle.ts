@@ -18,7 +18,15 @@ export * from './tertiary/all'
 
 export const Core = new Domain({
     media:new Domain({
-        direct:_IO.DirectMedium,
+        direct:{
+            nature:_IO.MuxMedium,
+            patch:{
+                symbols:[],
+                emitArgType: _IO.DEMUXARG.ONE,
+                emitRetType: _IO.MUXRESP.LAST,
+                emitCallType:_IO.CALLTYPE.DIRECT
+            }
+        },
         distribute:_IO.DistributeMedium,
         plexdist:{
             nature:_IO.MuxMedium,
@@ -35,7 +43,7 @@ export const Core = new Domain({
             patch:{
                 symbols:[],
                 emitArgType: _IO.DEMUXARG.SOME,
-                emitRetType: _IO.MUXRESP.ORDER,
+                emitRetType: _IO.MUXRESP.MAP,
                 emitCallType:_IO.CALLTYPE.BREADTH_FIRST
             }
         },

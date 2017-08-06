@@ -67,6 +67,11 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
 
     constructor(private muxspec:MuxMediumSpec){
         super(muxspec);
+
+        if(muxspec.emitCallType == CALLTYPE.DIRECT){
+            this.multiA = false;
+            this.multiB = false;
+        }
     }
 
     emitArgProcess(inpArg, crumb, sink:CallIn, link:I.LinkSpec<CallOut, CallIn>){
@@ -76,14 +81,28 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
 
         if(eType === DEMUXARG.DONT){
             arg = inpArg
-        }else if(eType !== DEMUXARG.ONE){
+        }else { // DEMUX
+
+            if (eType == DEMUXARG.ONE){
+                if (this.emitScope.oneDone){
+                    crumb.raise(`Incoming packet breaches single target constraint`)
+                    return
+                }else{
+                    this.emitScope.oneDone = true;
+                }
+            }
 
             let packet = inpArg
 
-            for(let sym of this.muxspec.symbols){
+            for(let symk in this.muxspec.symbols){
+                let sym = this.muxspec.symbols[symk]
 
                 if(sym in link.bindings){
                     let bound = link.bindings[sym]
+
+                    if(!(packet instanceof Object)){
+                        crumb.raise(`incoming packet must be object to be demuxed`)
+                    }
 
                     if(bound in packet){
                         packet = packet[bound] //demux
@@ -91,17 +110,17 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
                         //packet has no binding for this mux symbol
                         if(eType === DEMUXARG.ALL){
                             crumb.raise(`Incoming packet must include key: ${bound}, but only has ${Object.getOwnPropertyNames(packet)}`)
+
                         }
                     }
                 }else{
                     //media symbol does not appear in the link bindings
                 }
             }
-
             arg = packet
-        }else if(eType == DEMUXARG.ONE){
-
         }
+
+        return arg
 
     }
 
@@ -114,7 +133,8 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
         }else if(Rtype == MUXRESP.MAP){
             let demuxterms = []
 
-            for(let sym in this.muxspec.symbols){
+            for(let symk in this.muxspec.symbols){
+                let sym = this.muxspec.symbols[symk]
                 if(sym in link.bindings){
                     let term = link.bindings[sym]
                     demuxterms.push(term)
@@ -159,6 +179,10 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
             this.emitScope.junction.mode(JunctionModeKeys[this.muxspec.emitRetType])
         }
 
+        if(this.muxspec.emitArgType == DEMUXARG.ONE){
+            this.emitScope.oneDone = false
+        }
+
         this.emitScope.packet = {};
     }
 
@@ -169,20 +193,24 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
     }
 
     inductA(token:string, a:CallOut){
-        a.emit = this.emitter.bind(this, token)
+        if(this.muxspec.emitCallType !== CALLTYPE.DIRECT){
+            a.emit = this.emitter.bind(this, token)
+        }
     }
 
     inductB(token:string, b:CallIn){
     }
 
     connect(link: I.LinkSpec<CallOut, CallIn>){
+        if(this.muxspec.emitCallType == CALLTYPE.DIRECT){
+            link.contactA.emit = link.contactB.put
+        }
     }
 
     check(link: I.LinkSpec<CallOut, CallIn>){
         let superok =  super.check(link)
         let out = link.contactA.spec.hasOutput
         let inp = link.contactB.spec.hasInput
-        console.log("checked link", superok, " out: ", out, '  inp:', inp)
 
         return superok && out && inp
     }

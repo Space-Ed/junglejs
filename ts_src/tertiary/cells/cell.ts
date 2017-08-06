@@ -4,6 +4,7 @@ import * as CS  from '../../construction/all'
 import{ShellPolicy, FreePolicy, Contact} from '../../interoperability/interfaces'
 import * as I from '../interfaces'
 import {CellAccessory} from '../hooks/accessory'
+import {meld} from "../../util/ogebra/operations";
 
 /*
 
@@ -33,12 +34,25 @@ export class Cell extends CS.Composite implements I.CellAnchor{
 
         //draw the appropriate media from the basis given
         let media = {};
-        for (let mediumBasis of form.media||[]){
-            media[mediumBasis] = this.domain.recover({
-                basis:'media:'+mediumBasis,
-                label:mediumBasis,
-                exposed:this.nucleus
-            })
+
+        if(form.media instanceof Array){
+            for (let mediumBasis of form.media||[]){
+                media[mediumBasis] = this.domain.recover({
+                    basis:'media:'+mediumBasis,
+                    label:mediumBasis,
+                    exposed:this.nucleus
+                })
+            }
+        }else if(form.media instanceof Object){
+            for (let mediumBasis in form.media){
+
+
+                media[mediumBasis] = this.domain.recover(meld((a, b)=>{return b})({
+                    basis:'media:'+mediumBasis,
+                    label:mediumBasis,
+                    exposed:this.nucleus
+                },form.media[mediumBasis]))
+            }
         }
 
         let rules = form.mesh || {}
