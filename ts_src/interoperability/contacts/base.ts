@@ -69,9 +69,6 @@ export abstract class BasicContact<Partner extends BasicContact<any>> {
     abstract createPartner():Partner
     //   return new Partner()
 
-    abstract inject(context, key);
-    abstract retract(context, key);
-
     //--------------End Copy-----------------------
 
     // /**

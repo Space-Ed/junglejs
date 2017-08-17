@@ -1,33 +1,167 @@
  import {Construct} from './construct'
 import {isPrimative, isVanillaObject, isVanillaArray, B, meld} from '../util/all'
 import {Domain} from './domain'
+import {HostState, AccessoryState, ExposureLevel} from './state'
 
 export class Composite extends Construct{
 
     keywords = {basis:null, domain:null, form:null, anon:null}
     subconstructs:any;
 
+    state:HostState
+    nucleus:any
+
     beginTractor:()=>void;
     endTractor:()=>void;
 
-    constructor(spec:any){
-        super(spec); //cache
+
+    constructor(domain?:Domain){
+        super(domain); //cache
+
         this.subconstructs = [];
+        this.nucleus = {}
     }
 
-    prime(domain?:Domain){
+    init(patch){
 
-        super.prime(domain)
+        super.init(patch)
 
         //add Everything
         this.addStrange('domain', this.domain.getExposure())
         this.addStrange('meta', this.getExposure())
 
-
-        this.livePatch(this.cache);
-
-        if(this.beginTractor){ this.beginTractor.call(this.nucleus) }
+        if(this.beginTractor){ this.beginTractor.call(this.local) }
     }
+
+    /*
+        essential configuration to occur before constructions
+    */
+    applyForm(form:any={}){
+        super.applyForm(form)
+
+        this.state = new HostState(this.exposure, this.nucleus)
+        this.exposed = this.state.exposed
+        this.local = this.state.local
+
+        this.beginTractor = form.begin;
+        this.endTractor = form.end;
+    }
+
+    /*
+        undo the setup so that a new form can be applied
+    */
+    clearForm(){
+        this.beginTractor = undefined;
+        this.endTractor = undefined;
+        super.clearForm()
+    }
+
+
+    /*
+        modification of structure by application of a patch,
+        when alive and being reformed it will kill it first and then apply a recursive patching
+    */
+    patch(patch:any){
+        //incrementally apply the patch, ignoring keywords.
+        //console.log("Composite patch: ", patch)
+
+        for(let k in patch){
+            if(!(k in this.keywords)){
+                let v = patch[k];
+                this.patchChild(k, v)
+            }
+        }
+
+        if(patch.anon !== undefined){
+            for(let i = 0; i<patch.anon.length; i++){
+                //push all, no colli
+                this.add(patch.anon[i])
+            }
+        }
+    }
+
+    reset(patch){
+        this.dispose()
+        this.init(patch)
+    }
+
+    protected patchChild(k, v){
+
+        let existing:Construct = this.subconstructs[k];
+        if(existing !== undefined){
+            existing.patch(v);
+        }else{
+            if(v === Symbol.for("DELETE")){
+                this.remove(k)
+            }else{
+                this.add(v , k);
+            }
+        }
+    }
+
+    /**
+     * Add any kind of item to the composite, will split into 4 cases
+     * Ultimately adding to the subcomposite and/or context objects
+     */
+    add(val:any , key?:string){
+
+        let k = key === undefined? this.subconstructs.length++:key
+
+        if(this.nucleus instanceof Array){
+            this.nucleus.length = this.subconstructs.length
+        }
+
+        if(isPrimative(val)){
+            this.addPrimative(k, val)
+        }else if(isVanillaObject(val)){
+            val.basis = val.basis||'object';
+            let recovered = this.domain.recover(val);
+            this.attachChild(recovered, k);
+        }else if(isVanillaArray(val)){
+            let patch = {
+                basis:'array',
+                anon:val
+            }
+            let recovered = this.domain.recover(patch);
+            this.attachChild(recovered, k);
+        }else{
+            this.addStrange(k, val)
+        }
+
+    }
+
+    attachChild(construct:Construct, key:any){
+        this.subconstructs[key] = construct;
+        construct.attach(this, key)
+    }
+
+    detachChild(key){
+        let construct = this.subconstructs[key];
+        delete this.subconstructs[key]
+
+        construct.detach(this, key)
+
+        this.state.removeSub(key)
+    }
+
+
+    /**
+     * Add an item to the construct that is an object of a Class that is not conformant or
+     Coercible to a standard jungle Construct object.
+     */
+    addStrange(k, v){
+        this.nucleus[k] = v
+    }
+
+    /**
+     * Add an item to the composite that is not an object
+     */
+    addPrimative(k, v){
+        this.nucleus[k] = v
+    }
+
+
+
 
     getExposure():any{
         return {
@@ -41,89 +175,18 @@ export class Composite extends Construct{
     }
 
 
-    /*
-        essential configuration to occur before constructions
-    */
-    applyForm(form:any){
-        super.applyForm(form)
-
-        this.beginTractor = form.begin;
-        this.endTractor = form.end;
-
-
-    }
-
-    /*
-        undo the setup so that a new form can be applied
-    */
-    clearForm(){
-        this.beginTractor = undefined;
-        this.endTractor = undefined;
-        super.clearForm()
-    }
-
-    /**
-     * Add any kind of item to the composite, will split into 4 cases
-     * Ultimately adding to the subcomposite and/or context objects
-     */
-    add(v:any , key?:string){
-
-        let k = key === undefined? this.subconstructs.length++:key
-
-        if(isPrimative(v)){
-            this.addPrimative(k, v)
-        }else if(v instanceof Construct){
-            //construct replication case
-            let spec = v.extract();
-            let recovered = this.domain.recover(spec);
-            this.addConstruct(k, recovered);
-        }else if(isVanillaObject(v)){
-            v.basis = v.basis||'object';
-            let recovered = this.domain.recover(v);
-            this.addConstruct(k, recovered);
-        }else if(isVanillaArray(v)){
-            let patch = {
-                basis:'array',
-                anon:v
-            }
-            let recovered = this.domain.recover(patch);
-            this.addConstruct(k, recovered);
-        }else{
-            this.addStrange(k, v)
-        }
-    }
-
-    addConstruct(k, construct:Construct){
-        //recursively prime and add
-        construct.prime(this.domain);
-        this.subconstructs[k] = construct;
-        construct.attach(this, k)
-    }
-
-    /**
-     * Add an item to the construct that is an object of a Class that is not conformant or
-     Coercible to a standard jungle Construct object.
-     */
-    addStrange(k, v){
-
-    }
-
-    /**
-     * Add an item to the composite that is not an object
-     */
-    addPrimative(k, v){
-
-    }
-
     remove(k){
         let removing = <Construct>this.subconstructs[k];
 
         if(removing !== undefined){
-            removing.detach(this, k)
+            this.detachChild(k)
             let final = removing.dispose();
-            delete this.subconstructs[k];
             return final
+        }else if(k in this.nucleus){
+            let removeState = this.nucleus[k];
+            delete this.nucleus
         }
+
 
     }
 
@@ -133,14 +196,13 @@ export class Composite extends Construct{
         it should retract any changes it enacted on the parent.
     */
     dispose():any{
-        if(this.endTractor){ this.endTractor.call(this.nucleus) }
+        if(this.endTractor){ this.endTractor.call(this.state.local) }
 
         for (let key in this.subconstructs) {
             let construct:Construct = this.subconstructs[key]
 
-            construct.detach(this, key)
-
             construct.dispose()
+            this.detachChild(key)
         }
 
         this.clearForm()
@@ -160,78 +222,18 @@ export class Composite extends Construct{
                 extracted[key] = construct.extract();
             }
 
-            return B()
-                .init(this.cache)    // original copy
-                .blend(extracted)    // changes within extracted
-                .dump()
-        }else{
-            return this.cache
-        }
-
-    }
-
-    /*
-        modification of structure by application of a patch,
-        when alive and being reformed it will kill it first and then apply a recursive patching
-    */
-    patch(patch:any){
-        if(!this.alive){
-            //reset cache with merged
-            super.patch(patch);
-        }else if(!patch.form != undefined){
-            this.dispose();
-            this.patch(patch)
-            this.prime(this.domain);
-        }else{
-            this.livePatch(patch)
-        }
-    }
-
-    protected livePatch(patch){
-        //incrementally apply the patch, ignoring keywords.
-        //console.log("Composite patch: ", patch)
-
-        for(let k in patch){
-            if(!(k in this.keywords)){
-                let v = patch[k];
-                this.patchChild(k, v)
+            for (let key in this.nucleus){
+                if(!(key in this.subconstructs)){
+                    if(isPrimative(this.nucleus[key])){
+                        extracted[key] = this.nucleus[key]
+                    }
+                }
             }
-        }
 
-        if(patch.anon !== undefined){
-            for(let i = 0; i<patch.anon.length; i++){
-                //push all, no colli
-                this.add(patch.anon[i])
-            }
-        }
+            return extracted
 
-    }
-
-    protected patchChild(k, v){
-        let existing:Construct = this.subconstructs[v];
-        if(existing !== undefined){
-            existing.patch(v);
         }else{
-            if(v === Symbol.for("DELETE")){
-                this.remove(k)
-            }else{
-                this.add(v , k);
-            }
+            return undefined
         }
     }
-
-    /*
-        as an unprimed construct{pattern} this may occur to create an extended version.
-    */
-    extend(patch):Construct{
-
-        let ext = B()
-            .init(this.extract())
-            .merge(patch)
-            .dump();
-
-        return this.domain.recover(ext)
-
-    }
-
 }

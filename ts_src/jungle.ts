@@ -86,9 +86,7 @@ export const Core = new Domain({
     link:TRT.Connector,
 
     hook:new Domain({
-        call:TRT.CallHook,
-        access:TRT.AccessHook
-
+        call:TRT.CallHook
     })
 })
 

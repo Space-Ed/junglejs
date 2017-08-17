@@ -16,12 +16,11 @@ describe("A Cell", function () {
 
     beforeEach(function(){
 
-        cell = new Cell({
+        cell = new Cell();
+
+        cell.init({
 
             form:{
-                sections:[
-                    "stomach:contents to nucleus as oesophagus"
-                ],
                 mesh:{
 
                 }
@@ -31,10 +30,9 @@ describe("A Cell", function () {
                 basis:'hook:call',
                 direction:"in",
                 type:"hook",
-                inject:true,
                 hook(food){//console.log(`eating ${food},`,this)
                     this.hungry = false;
-                    this.oesophagus['stomach:contents'] = food
+                    this.stomach.contents = food
                 }
             },
 
@@ -45,8 +43,6 @@ describe("A Cell", function () {
 
             hungry:true
         });
-
-        cell.prime();
     })
 
     it('should not be hungry when it has been fed', function () {
@@ -59,14 +55,11 @@ describe("A Cell", function () {
     it('should deposit to the stomach, via oesophagus', function(){
         let crumb = new Debug.Crumb("Beginning Feed");
         cell.shell.contacts.mouth.put("Nachos", crumb);
-        expect(cell.subconstructs.stomach.nucleus.contents).toBe("Nachos");
+        expect(cell.local.stomach.contents).toBe("Nachos");
     })
 
     it('should properly dispose', function(){
         cell.dispose();
-
-        expect(cell.alive).toBe(false);
-
         expect(cell.shell.designate(':mouth')[":mouth"]).toBe(undefined)
     })
 

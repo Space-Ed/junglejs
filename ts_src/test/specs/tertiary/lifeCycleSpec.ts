@@ -14,7 +14,9 @@ describe('life cycle', function(){
             let beginspy = jasmine.createSpy('begin')
             let endspy = jasmine.createSpy('end')
 
-            let app = new TestApp({
+            let app = new TestApp()
+
+            app.init({
                 form:{
                     prime:primespy,
                     dispose:disposespy,
@@ -25,48 +27,71 @@ describe('life cycle', function(){
                 hello:"something"
             })
 
-            app.prime()
-
             expect(primespy).toHaveBeenCalledTimes(1)
             expect(primespy.calls.first().object.hello).toBe("something")
-            expect(primespy.calls.first().object).toBe(app.nucleus)
+            expect(primespy.calls.first().object).toBe(app.local)
 
             expect(beginspy).toHaveBeenCalledTimes(1)
-            expect(beginspy.calls.first().object).toBe(app.nucleus)
+            expect(beginspy.calls.first().object).toBe(app.local)
 
             app.dispose()
 
             expect(disposespy).toHaveBeenCalledTimes(1)
-            expect(disposespy.calls.first().object).toBe(app.nucleus)
+            expect(disposespy.calls.first().object).toBe(app.local)
 
 
             expect(endspy).toHaveBeenCalledTimes(1)
-            expect(endspy.calls.first().object).toBe(app.nucleus)
+            expect(endspy.calls.first().object).toBe(app.local)
         })
 
         it('should have base properties exposed to prime when extended', function(){
-            Jungle.Core.branch("pollute")
-            Jungle.Core.extend('object', 'pollute:object')
+            let subd = Jungle.Core.branch("pollute")
+            Jungle.Core.extend('object', 'pollute:object', {
+                form:{
+                    dispose(){
+                        pspy('backwater')
+                    }
+                }
+            })
 
             let pspy = jasmine.createSpy("pspy")
 
-            let app = new TestApp({
+            let app = subd.recover({
+                basis:'object',
                 domain:'pollute',
                 form:{
+
+                    prime(){
+                        pspy(this.trash.fiend);
+                    },
+
                     begin(){
                         pspy(this.monster);
-                    }
+                    },
+
+                    end(){
+                        pspy('turgid')
+                    },
+
                 },
+
                 monster:"garbage",
 
                 trash:{
+                    fiend:'gargoyle'
                 },
 
             })
 
-            app.prime()
+            expect(pspy.calls.first().args[0]).toBe("gargoyle")
+            expect(pspy.calls.mostRecent().args[0]).toBe("garbage")
 
-            expect(pspy).toHaveBeenCalledWith("garbage")
+            pspy.calls.reset()
+            app.dispose()
+
+            expect(pspy.calls.first().args[0]).toBe("turgid")
+            expect(pspy.calls.mostRecent().args[0]).toBe("backwater")
+
 
         })
 

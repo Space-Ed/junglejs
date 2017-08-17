@@ -162,7 +162,8 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
             let arg = this.emitArgProcess(data, crumb, sink, link);
 
             //Only depth first
-            let putResp = sink.put(arg, crumb.drop());
+            //HACK: setting undefined argument ill advised
+            let putResp = sink.put(arg, crumb?crumb.drop("Multiplexing"):undefined);
 
             this.emitResponse(putResp, crumb, link)
 

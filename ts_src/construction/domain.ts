@@ -1,6 +1,7 @@
 
 import {deepMeldF} from '../util/ogebra/hierarchical'
 import {Designator} from "../util/designator";
+import {Construct} from './construct'
 /*
     a place where constructs are stored in either static or serial form and recovered from a serial form using a basis
 */
@@ -106,16 +107,42 @@ export class Domain {
 
     }
 
-    recover(construct):any{
-        let {nature, patch} = this.locateBasis(construct.basis);
+    recover(spec:any):any{
+        let {nature, patch} = this.locateBasis(spec.basis);
 
-        try {
-            let spec = this.melder(patch, construct)
-            return new nature(spec);
-        }catch (e){
-            console.error("basis: ",construct.basis," not a constructor in registry")
-            throw e
+        if(nature === undefined || patch === undefined){
+            throw new Error(`basis: ${spec.basis}, not a constructor in registry`)
         }
+
+        let recovered
+        if(nature.prototype instanceof Construct || nature === Construct){
+            let domain = this.defaultDomain(spec.domain)
+            recovered = new nature(domain);
+            let tertiarySpec = this.melder(patch, spec)
+
+            recovered.init(tertiarySpec)
+        }else{
+
+            let tertiarySpec = this.melder(patch, spec)
+            recovered = new nature(tertiarySpec)
+        }
+
+        return recovered
+    }
+
+    defaultDomain(targetDomain?:string|Domain):Domain{
+        let givenDomain = <Domain>this
+        //local domain self localization and detachment respectively
+        if(targetDomain !== undefined){
+            if(typeof targetDomain === 'string'){
+                //access based of provided domain
+                givenDomain = Construct.DefaultDomain.locateDomain(targetDomain);
+            }else if (targetDomain instanceof Domain){
+                givenDomain = targetDomain;
+            }
+        }
+
+        return givenDomain
     }
 
     register(key:string, basis:Function|string, patch={}){
@@ -144,7 +171,6 @@ export class Domain {
         let {nature, patch} = this.locateBasis(seat);
 
         let upspec = this.melder(patch, newSpec);
-
         targetDomain.addNature(targetName, nature, upspec);
     }
 

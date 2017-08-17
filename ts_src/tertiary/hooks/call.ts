@@ -4,58 +4,53 @@ import * as Debug from '../../util/debug'
 import {deepCopy, Junction} from '../../util/all'
 
 import {Cell} from '../cells/cell'
-import {CellAccessory} from './accessory'
 
 import * as I from '../interfaces'
 
-export class CallHook extends CellAccessory {
+export class CallHook extends CS.Construct {
 
+    host:Cell
     contact:IO.CallExchange;
-    cache:I.CallHookSpec
+    nucleus:I.CallHookSpec
+    spec:I.CallHookSpec
 
-    anchor: I.CellAnchor
+    applyForm(form){
+        super.applyForm()
+        //this is FUDGE
+        this.exposure = 'public'
 
-    constructor(spec:any){
-        super(spec);
     }
 
-    attach(anchor: I.CellAnchor, k:string){
+    attach(anchor:Cell, k:string){
+        this.spec = this.nucleus
+        this.nucleus = this.nucleus.default
         super.attach(anchor, k)
 
         let contactargs = {
             tracking:k,
-            type:this.cache.type,
-            hook:this.cache.hook,
-            default:this.cache.default,
+            type:this.spec.type,
+            hook:this.spec.hook,
+            default:this.nucleus,
             forceSync:false
         }
 
-        this.contact = new ({"in":IO.CallOut, "out":IO.CallIn, "both":IO.CallExchange}[this.cache.direction])(contactargs)
+        this.contact = new ({"in":IO.CallOut, "out":IO.CallIn, "both":IO.CallExchange}[this.spec.direction])(contactargs)
 
-        if(this.cache.inject){
-            this.contact.inject(anchor.nucleus, k);
+        anchor.lining.addContact(this.contact, k)
+
+        if(this.spec.type !== 'through'){
+            this.contact.inject(this.local, 'me')
         }
 
-        anchor.lining.addContact( this.contact, k)
     }
 
     detach(anchor, alias:string){
-        this.contact.retract(anchor, alias)
         this.host.lining.removeContact(alias)
     }
 
-
-    patch(patch){
-        this.dispose()
-
-    }
-
     extract(){
-        let cp = deepCopy(this.cache);
-        if(this.alive){
-            cp.default = this.anchor.nucleus[this.alias]; //the only thing that changes
-        }
-
+        let cp = deepCopy(this.spec);
+        cp.default = this.nucleus; //the only thing that changes
         return cp;
     }
 }

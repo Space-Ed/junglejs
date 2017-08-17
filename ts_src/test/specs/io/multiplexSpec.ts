@@ -4,7 +4,9 @@ import TestApp from '../../helpers/testApp'
 describe("multiplex medium", function(){
 
     it('should transport data across the cell', function(done){
-        let app = new TestApp({
+        let app = new TestApp();
+
+        app.init({
             form:{
                 debug:true,
                 media:['direct'],
@@ -15,11 +17,11 @@ describe("multiplex medium", function(){
                 }
             },
 
-            a:{basis:'hook:call', direction:'in', type:'hook', inject:false},
-            b:{basis:'hook:call', direction:'out', type:'hook', inject:false}
+            a:{basis:'hook:call', direction:'in', type:'through'},
+            b:{basis:'hook:call', direction:'out', type:'through'}
         });
 
-        app.prime();
+        expect(app.mesh.media.direct.muxspec.emitCallType).toBe(0)
 
         app.callResponseTest({
             label:'plexresponse',
@@ -28,12 +30,16 @@ describe("multiplex medium", function(){
             inputValues:['one'],
             outputValues:['one'],
             returnValues:['one'],
-            respondant(x){return x}
+            respondant(x){
+                console.log('reached here with', x)
+                return x}
         }).then(done)
     })
 
     describe('entry and subcells situation', function(){
-        let app = new TestApp({
+        let app = new TestApp();
+
+        app.init({
             form:{
                 debug:true,
                 media:{
@@ -55,22 +61,20 @@ describe("multiplex medium", function(){
 
             a:{
                 basis:'cell',
-                receptorA:{basis:'hook:call', direction:'in', type:'hook', inject:true, hook(val){return "receptorA in cell a got "+val}},
-                receptorB:{basis:'hook:call', direction:'in', type:'hook', inject:true, hook(val){return "receptorB in cell a got "+val}}
+                receptorA:{basis:'hook:call', direction:'in', type:'hook', hook(val){return "receptorA in cell a got "+val}},
+                receptorB:{basis:'hook:call', direction:'in', type:'hook', hook(val){return "receptorB in cell a got "+val}}
             },
 
             b:{
                 basis:'cell',
-                receptorA:{basis:'hook:call', direction:'in', type:'hook', inject:true, hook(val){return "receptorA in cell b got "+val}},
-                receptorB:{basis:'hook:call', direction:'in', type:'hook', inject:true, hook(val){return "receptorB in cell b got "+val}}
+                receptorA:{basis:'hook:call', direction:'in', type:'hook', hook(val){return "receptorA in cell b got "+val}},
+                receptorB:{basis:'hook:call', direction:'in', type:'hook', hook(val){return "receptorB in cell b got "+val}}
             },
 
-            entry:{basis:'hook:call', direction:'in', type:'hook', inject:false},
-            split:{basis:'hook:call', direction:'in', type:'hook', inject:false},
+            entry:{basis:'hook:call', direction:'in', type:'through'},
+            split:{basis:'hook:call', direction:'in', type:'through'},
 
         });
-
-        app.prime();
 
         it('should perform recomposition the cell', function(done){
 

@@ -25,18 +25,17 @@ export default class TestApp extends Cell{
 
     debug:boolean;
 
-    constructor(spec){
-        super(spec)
-        Crumb.defaultOptions.log = console
-        Crumb.defaultOptions.debug = true
-    }
 
     applyForm(form:any={}){
+        Crumb.defaultOptions.log = console
+        Crumb.defaultOptions.debug = true
+
+        this.exposure = form.exposure || 'public'
 
         super.applyForm(form);
         this.debug = form.debug;
 
-        this.parseSectionRule("*.**:* to shell as _")
+        //this.parseSectionRule("*.**:* to shell as _")
     }
 
     call(contact:string, data:any){

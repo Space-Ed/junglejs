@@ -7,7 +7,9 @@ describe('rule connector constructs', function(){
 
     it('should create link when part of spec', function(){
 
-        let app = new TestApp({
+        let app = new TestApp()
+
+        app.init({
             form:{
                 debug:false
             },
@@ -15,9 +17,7 @@ describe('rule connector constructs', function(){
             ghost:TunnelIn("hook"),
             haunts:Connect(':ghost->:child','direct'),
             child:TunnelOut("hook")
-        })
-
-        app.prime();
+        });
 
         app.callResponseTest({
             label:'test scare throughput',

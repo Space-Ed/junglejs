@@ -11,7 +11,6 @@ export function PushDeposit(defaultValue):T.CallHookSpec{
         basis:'hook:call',
         type:'deposit',
         direction:"in",
-        inject:true,
         default:defaultValue
     }
 }
@@ -21,7 +20,6 @@ export function PullDeposit(defaultValue):T.CallHookSpec{
         basis:'hook:call',
         type:'retrieve',
         direction:"in",
-        inject:true,
         default:defaultValue
     }
 }
@@ -31,8 +29,7 @@ export function Reactive(defaultValue):T.CallHookSpec{
         basis:'hook:call',
         direction:"out",
         default:defaultValue,
-        type:'deposit',
-        inject:true
+        type:'deposit'
     }
 }
 
@@ -41,26 +38,23 @@ export function Retrieval(defaultValue):T.CallHookSpec{
         basis:'hook:call',
         direction:"out",
         type:'retrieve',
-        default:defaultValue,
-        inject:true
+        default:defaultValue
     }
 }
 
-export function TunnelIn(type:ExchangeTypes):T.CallHookSpec{
+export function TunnelIn():T.CallHookSpec{
     return {
         basis:'hook:call',
-        type: type,
-        direction:"in",
-        inject:false
+        type: 'through',
+        direction:"in"
     }
 }
 
-export function TunnelOut(type:ExchangeTypes):T.CallHookSpec{
+export function TunnelOut():T.CallHookSpec{
     return {
         basis:'hook:call',
         direction:"out",
-        type:type,
-        inject:false
+        type:'through',
     }
 }
 
@@ -69,7 +63,6 @@ export function CallInSync(func:(data:any, crumb:Debug.Crumb)=>any):T.CallHookSp
         basis:'hook:call',
         type:'hook',
         direction:"in",
-        inject:true,
         hook:func
     }
 }

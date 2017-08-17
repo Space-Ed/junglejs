@@ -4,8 +4,8 @@ export class ArrayCell extends DefaultCell{
 
     nucleus:Array<any>
 
-    constructor(spec){
-        super(spec)
+    constructor(domain?){
+        super(domain)
         this.nucleus = []
     }
 

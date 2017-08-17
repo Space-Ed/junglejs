@@ -3,7 +3,6 @@ import * as CS  from '../../construction/all'
 
 import{ShellPolicy, FreePolicy, Contact} from '../../interoperability/interfaces'
 import * as I from '../interfaces'
-import {CellAccessory} from '../hooks/accessory'
 import {meld} from "../../util/ogebra/operations";
 
 /*
@@ -11,16 +10,15 @@ import {meld} from "../../util/ogebra/operations";
 */
 export class Cell extends CS.Composite implements I.CellAnchor{
 
+    host:Cell;
     shell:IO.Membrane;
     lining:IO.Membrane;
     mesh:IO.RuleMesh;
-    nucleus:any;
+    forward:IO.Section;
 
-    constructor(spec:any){
+    constructor(domain?:CS.Domain){
         //overridable
-        super(spec)
-
-        this.nucleus = {};
+        super(domain)
 
         this.shell = new IO.Membrane();
         this.lining = this.shell.invert();
@@ -46,13 +44,16 @@ export class Cell extends CS.Composite implements I.CellAnchor{
         }else if(form.media instanceof Object){
             for (let mediumBasis in form.media){
 
-
                 media[mediumBasis] = this.domain.recover(meld((a, b)=>{return b})({
                     basis:'media:'+mediumBasis,
                     label:mediumBasis,
                     exposed:this.nucleus
                 },form.media[mediumBasis]))
             }
+        }
+
+        if(form.forward){
+            this.forward=this.shell.createSection(form.forward)
         }
 
         let rules = form.mesh || {}
@@ -63,15 +64,6 @@ export class Cell extends CS.Composite implements I.CellAnchor{
             media:media,
             exposed:this.nucleus
         })
-
-        //the creation of sections for exclusive grouping of internal contacts to be exposed on shell or injected to context
-
-        if(form.sections !== undefined){
-            for(let sectionkey in form.sections){
-                this.parseSectionRule(form.sections[sectionkey])
-            }
-
-        }
     }
 
     /*
@@ -81,60 +73,22 @@ export class Cell extends CS.Composite implements I.CellAnchor{
         //everything recreated is sufficient
     }
 
-    parseSectionRule(rule:string){
-        let match = rule.match(/^([\w\:\.\*]*)\s*to\s*(nucleus|shell)\s*(?:as\s*(\w*))?$/)
-        if(match){
-           //console.log(match)
-            let desexp = match[1]
-            let target = match[2]
-            let alias = match[3]
 
-            let sect = this.lining.addSection(desexp)
+    attach(anchor:Cell, alias){
+        super.attach(anchor, alias)
+        this.host.lining.addSubrane(this.shell, alias)
 
-            if(target === 'shell'){
-                this.shell.addSubrane(sect, alias)
-            }else if(target === 'nucleus'){
-                if(alias !== undefined){
-                    this.nucleus[alias] = {};
-                }
-
-                //should be nucleus
-                sect.addWatch({
-                    changeOccurred:(event:IO.MembraneEvents, subject:IO.BasicContact<any>|IO.Section, token:string)=>{
-                        if(event == IO.MembraneEvents.AddContact){
-                            let injectsite = alias === undefined ? this.nucleus : this.nucleus[alias];
-
-                            (<IO.BasicContact<any>>subject).inject(injectsite, token)
-
-                           //console.log(`detect injection on token ${token} with alias ${alias}`);
-
-                        }
-                    }
-                })
-            }
-        }else{
-            throw `Invalid section expression: ${rule}`
+        if(this.forward){
+            this.host.shell.addSubrane(this.forward, alias)
         }
     }
 
-    attach(anchor:I.CellAnchor, alias){
-        anchor.lining.addSubrane(this.shell, alias)
-    }
-
-    detach(anchor:I.CellAnchor, alias){
+    detach(anchor:Cell, alias){
+        super.detach(anchor, alias)
         anchor.lining.removeSubrane(alias)
-    }
 
-    addConstruct(k, construct:CS.Construct){
-        super.addConstruct(k, construct)
+        if(this.forward){
+            anchor.shell.removeSubrane(alias)
+        }
     }
-
-    addStrange(k, v){
-        this.nucleus[k] = v;
-    }
-
-    addPrimative(k, v){
-        this.nucleus[k] = v;
-    }
-
 }

@@ -1,33 +1,30 @@
-import {CellAccessory} from "./accessory";
+
+import {Construct} from '../../construction/construct'
 import * as I from '../interfaces'
 import {LinkRule} from '../../interoperability/interfaces'
 
-export class Connector extends CellAccessory {
+export class Connector extends Construct {
 
-    cache:I.ConnectorSpec
-
-    constructor(spec: I.ConnectorSpec){
-        super(spec)
-    }
+    nucleus:I.ConnectorSpec
 
     attach(anchor: I.CellAnchor, label:string){
         super.attach(anchor, label)
 
-        if(!(this.cache.medium in anchor.mesh.media)){
+        if(!(this.nucleus.medium in anchor.mesh.media)){
 
-            anchor.mesh.addMedium(this.cache.medium, this.domain.recover({
-                basis:'media:'+this.cache.medium,
-                label:this.cache.medium,
+            anchor.mesh.addMedium(this.nucleus.medium, this.domain.recover({
+                basis:'media:'+this.nucleus.medium,
+                label:this.nucleus.medium,
                 exposed:this.nucleus
             }))
 
         }
 
-        anchor.mesh.addRule(this.cache.rule, this.cache.medium, label)
+        anchor.mesh.addRule(this.nucleus.rule, this.nucleus.medium, label)
     }
 
     detach(anchor:I.CellAnchor, label:string){
-        anchor.mesh.removeRule(this.cache.medium, label)
+        anchor.mesh.removeRule(this.nucleus.medium, label)
     }
 
 }

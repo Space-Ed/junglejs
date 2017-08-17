@@ -3,7 +3,7 @@ import {BasicContact} from '../base'
 import * as Debug from '../../../util/debug'
 import {Junction} from '../../../util/all'
 
-export type ExchangeTypes = 'hook'|'deposit'|'retrieve'
+export type ExchangeTypes = 'hook'|'deposit'|'retrieve'|'through'
 
 export interface CallExchangeSpec {
     tracking:boolean|string,

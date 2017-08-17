@@ -41,7 +41,7 @@ export class Section implements Watchable<SectionWatcher>, SectionWatcher{
         this.watches = [];
     }
 
-    addSection(desexp:string, alias?:string|number):Section{
+    createSection(desexp:string, alias?:string|number):Section{
         let section = new Section();
 
         if(this instanceof Membrane){
@@ -155,8 +155,6 @@ export class Membrane extends Section{
         this.subranes = {};
         this.notify = true;
     }
-
-
 
     invert(){
         if(this.inverted === undefined){

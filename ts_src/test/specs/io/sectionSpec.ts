@@ -2,7 +2,7 @@
 import Jasmine = require('jasmine')
 import {MembraneEvents, Section, Membrane} from '../../../interoperability/membranes/membrane'
 import {CallIn, CallOut} from '../../../interoperability/contacts/call/common'
-import {PushInTrack, PushOutTrack} from '../../helpers/testContacts' 
+import {PushInTrack, PushOutTrack} from '../../helpers/testContacts'
 
 function spyOnSection(section: Section, label:string):jasmine.Spy{
     let spy = jasmine.createSpy(label)
@@ -21,7 +21,7 @@ describe("sectionalization", function(){
     it('should be able to section a membrane', function(){
 
         let memb = new Membrane();
-        let sect = memb.addSection("**:*");
+        let sect = memb.createSection("**:*");
 
         memb.addContact( PushInTrack(), "contact")
 
@@ -33,7 +33,7 @@ describe("sectionalization", function(){
 
     it('should notify the section as the membrane is changed', function(){
         let memb = new Membrane();
-        let sect = memb.addSection("**:*");
+        let sect = memb.createSection("**:*");
         let addspy = spyOnSection(sect, "sect")
 
         memb.addContact( PushOutTrack(), "contact")
@@ -43,7 +43,7 @@ describe("sectionalization", function(){
 
     it('should obscure visibility to the membrane', function(){
         let memb = new Membrane();
-        let sect = memb.addSection("**:*");
+        let sect = memb.createSection("**:*");
         let addspy = spyOnSection(memb,"memb")
 
         memb.addContact( PushOutTrack(), "contact")
@@ -55,7 +55,7 @@ describe("sectionalization", function(){
     it('should cut into two parts', function(){
 
         let memb = new Membrane();
-        let sect = memb.addSection("a:*");
+        let sect = memb.createSection("a:*");
 
         let subA = new Membrane()
         let subB = new Membrane()
