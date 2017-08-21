@@ -197,7 +197,6 @@ export class CallExchange extends BasicContact<CallExchange> {
                         }
                     },
                     set:(value)=>{
-                        console.log("set value to ", value)
                         this.spec.default = value
                     },
                     enumerable:true

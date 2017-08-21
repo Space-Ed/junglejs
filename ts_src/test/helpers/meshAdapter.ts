@@ -2,10 +2,12 @@ import {RuleMesh} from "../../interoperability/mesh/ruleMesh";
 import {Membrane} from "../../interoperability/membranes/membrane";
 import {BaseMedium} from "../../interoperability/media/medium";
 import {Core} from "../../jungle";
+import {meld} from "../../util/ogebra/operations";
 
 export interface MeshInitialiser {
     membrane:Membrane
-    rules:any
+    media:any,
+    laws:any,
     exposed:any
 }
 
@@ -15,46 +17,32 @@ export interface MeshInitialiser {
 export default class MeshAdapter extends RuleMesh {
 
     constructor(init:MeshInitialiser){
-        super({
-            membrane:init.membrane,
-            media:{},
-            rules:{},
-            exposed:init.exposed
-        })
+        super(init.membrane)
 
-        for (let mediakey in init.rules){
-            //Check there is an over creation of
-            let newMedium = Core.recover({
-                basis:'media:'+mediakey,
-                label:mediakey,
-                exposed:this.exposed
-            })
-
-            this.addMedium(mediakey, newMedium)
-            this.parseRules(init.rules[mediakey], mediakey);
-        }
-
-    }
-
-    hasLinked(tokenA, tokenB, directed=true){
-        let mediaWithA = this.locations[tokenA]
-
-        for(let mediakey in mediaWithA){
-            let medium:BaseMedium<any,any> = this.media[mediakey]
-            let aToMap =  medium.matrix.to[tokenA];
-            let bFromMap = medium.matrix.from[tokenB];
-
-            let aToB = aToMap !== undefined &&  aToMap[tokenB] !== undefined;
-            let bFromA = bFromMap !== undefined && bFromMap[tokenA] !== undefined
-
-            if(directed && (aToB && bFromA)){
-                return true
-            }else if(!directed && (aToB || bFromA)){
-                return true
+        if(init.media instanceof Array){
+            for (let mediumBasis of init.media||[]){
+                this.addMedium(mediumBasis, Core.recover({
+                    basis:'media:'+mediumBasis,
+                    label:mediumBasis,
+                    exposed:init.exposed
+                }))
+            }
+        }else if(init.media instanceof Object){
+            for (let mediumBasis in init.media){
+                this.addMedium(mediumBasis, Core.recover(meld((a, b)=>{return b})({
+                    basis:'media:'+mediumBasis,
+                    label:mediumBasis,
+                    exposed:init.exposed
+                },init.media[mediumBasis])))
             }
         }
 
-        return false
+        for(let lawmedium in init.laws||{}){
+            for (let law of init.laws[lawmedium]){
+                this.addRule(law, lawmedium)
+            }
+        }
+
     }
 
 }

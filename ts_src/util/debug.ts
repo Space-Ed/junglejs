@@ -24,8 +24,10 @@ export function dumpToDepthF(maxdepth, indentSym="  "){
 
         let outstr = "\n";
 
-        if(isPrimative(item) || depth <= 0){
+        if(isPrimative(item))
             outstr = String(item);
+        else if(depth <= 0){
+            outstr = "Object"
         }else if(item instanceof Array){
             outstr = "[\n"
             item.forEach((item)=>{outstr+=(indentation+indentSym+recur(depth-1, indentation+indentSym, item)+'\n')});

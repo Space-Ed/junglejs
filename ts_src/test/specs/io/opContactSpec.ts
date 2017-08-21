@@ -1,6 +1,6 @@
 
 import {Junction} from '../../../util/junction/junction'
-import {Op,OpSpec,OpCallTarget} from '../../../interoperability/contacts/call/op'
+import {Op,OpSpec,OpCallTarget} from '../../../interoperability/contacts/op'
 
 interface OpTest {
     spec:OpSpec,
@@ -63,7 +63,7 @@ describe('op contact', function(){
 
         op.put(' your ')
 
-        expect(espy).toHaveBeenCalledWith('Fiddle your Diddle')
+        expect(espy.calls.first().args[0]).toBe('Fiddle your Diddle')
 
     })
 
@@ -88,10 +88,10 @@ describe('op contact', function(){
 
         op.put(' this ')
 
-        expect(espy).toHaveBeenCalledWith('Fiddle this Diddle')
+        expect(espy.calls.first().args[0]).toBe('Fiddle this Diddle')
     })
 
-    fit('should create a bidirectional push, pull buffer', function(){
+    it('should create a bidirectional push, pull buffer', function(){
         let buffer = []
         let op = new Op({
             context:buffer,
@@ -117,7 +117,7 @@ describe('op contact', function(){
         opinv.put().then(x=>{expect(x).toBe(3)})
     })
 
-    fit('should create full monty ', function(){
+    it('should create full monty ', function(){
         let op = new Op({
             context:context,
             major_op(data, carry, reflex){
@@ -157,7 +157,7 @@ describe('op contact', function(){
 
     })
 
-    fit('should allow drain',function(){
+    it('should allow drain',function(){
 
         function drain(data){
             this.dumped = data
@@ -181,7 +181,7 @@ describe('op contact', function(){
 
     })
 
-    fit('should allow spring', function(){
+    it('should allow spring', function(){
 
         let op = new Op({
             context:context,
@@ -201,8 +201,8 @@ describe('op contact', function(){
 
         context.hook('hello all')
 
-        expect(opemit).toHaveBeenCalledWith('hello all')
-        expect(invemit).toHaveBeenCalledWith('hello all')
+        expect(opemit.calls.first().args[0]).toBe('hello all')
+        expect(invemit.calls.first().args[0]).toBe('hello all')
 
     })
 

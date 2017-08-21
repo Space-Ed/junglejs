@@ -1,15 +1,15 @@
 import * as Jungle from '../../../jungle'
 
-let {Membrane, CallOut, CallIn} = Jungle.IO;
+let {Membrane} = Jungle.IO;
 import TestHost from '../../helpers/testHost'
-import {PushInTrack, PushOutTrack} from '../../helpers/testContacts'
+import {Input, Output} from '../../helpers/testContacts'
 
 describe('basic membrane', function(){
 
     let memb, host;
 
     beforeEach(function(){
-        host =  new TestHost()
+        host =  new TestHost([])
         memb = host.primary
     })
 
@@ -17,8 +17,8 @@ describe('basic membrane', function(){
     })
 
     it('should allow addition and removal of ports', function(){
-        let newb = PushInTrack()
-        let new2 = PushOutTrack()
+        let newb = Input()
+        let new2 = Output()
 
         memb.addContact( newb, 'calledA');
         memb.addContact( new2, 'caller1');
@@ -60,7 +60,7 @@ describe('basic membrane', function(){
         })
 
         it('should invert further contactes added', function(){
-            memb.addContact(PushOutTrack(), 'lame-o');
+            memb.addContact(Output(), 'lame-o');
 
            //console.log(invert.contacts)
             let desall = invert.designate(":*");
@@ -68,7 +68,7 @@ describe('basic membrane', function(){
             expect(desall[':lame-o']).not.toBeUndefined();
 
             //a caller in the inversion is a called in the original
-            invert.addContact(PushOutTrack(), 'cool-cat');
+            invert.addContact(Output(), 'cool-cat');
             let desallop = memb.designate(":*");
             expect(desallop[':cool-cat']).not.toBeUndefined();
         })
@@ -85,7 +85,7 @@ describe('basic membrane', function(){
         let subhost, submemb
 
         beforeEach(function(){
-            subhost = new TestHost()
+            subhost = new TestHost([])
 
             submemb = subhost.primary;
             memb.addSubrane(submemb, 'sub')
@@ -103,7 +103,7 @@ describe('basic membrane', function(){
         it('globbing should collect at many depths',function(){
             let sub2 = new Membrane()
 
-            sub2.addContact(PushInTrack() , 'a');
+            sub2.addContact(Input() , 'a');
             submemb.addSubrane(sub2, 'sub')
 
             let desig = memb.designate('sub.sub:a')
@@ -145,7 +145,7 @@ describe('basic membrane', function(){
             let sub = new Membrane()
             memb.addSubrane(sub, 'sub')
 
-            sub.addContact(PushInTrack(), 'piwi')
+            sub.addContact(Input(), 'piwi')
 
             expect(host.addspy.calls.allArgs()[0][0]).toBe(sub.contacts.piwi)
             expect(host.addspy.calls.allArgs()[0][1]).toBe('sub:piwi')
@@ -166,7 +166,7 @@ describe('basic membrane', function(){
             let sub = new Membrane()
             memb.addSubrane(sub, 'sub')
 
-            sub.addContact(PushInTrack(),'piwi')
+            sub.addContact(Input(),'piwi')
 
             let removed = sub.removeContact('piwi')
 
@@ -194,7 +194,7 @@ describe('basic membrane', function(){
             host.membaddspy.calls.reset();
 
             let sub2 = new Membrane()
-            sub2.addContact(PushOutTrack(),'fogle')
+            sub2.addContact(Output(),'fogle')
 
             sub.addSubrane(sub2, 'sub2')
 
@@ -224,7 +224,7 @@ describe('basic membrane', function(){
                 changeOccurred:indexSpy
             }, 0)
 
-            let contact = PushInTrack()
+            let contact = Input()
             memb.addContact(contact, 'twice')
 
             expect(changeSpy.calls.allArgs()[0][2]).toBe(':twice', "because anonymous wipes the front")

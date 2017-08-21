@@ -1,4 +1,4 @@
-import {MuxMedium} from "../../../interoperability/media/multiplexing";
+import {MuxMedium,CALLTYPE} from "../../../interoperability/media/multiplexing";
 import TestApp from '../../helpers/testApp'
 
 describe("multiplex medium", function(){
@@ -9,19 +9,20 @@ describe("multiplex medium", function(){
         app.init({
             form:{
                 debug:true,
-                media:['direct'],
-                mesh:{
-                    'direct':[
+                media:['smear'],
+                laws:{
+                    'smear':[
                         ':a->:b'
                     ],
                 }
             },
 
-            a:{basis:'hook:call', direction:'in', type:'through'},
-            b:{basis:'hook:call', direction:'out', type:'through'}
+            a:{basis:'contact:op', carry_in:true},
+            b:{basis:'contact:op', carry_out:true}
+
         });
 
-        expect(app.mesh.media.direct.muxspec.emitCallType).toBe(0)
+        // expect(app.mesh.media.smear.muxspec.emitCallType).toBe(CALLTYPE.BREADTH_FIRST)
 
         app.callResponseTest({
             label:'plexresponse',
@@ -31,51 +32,67 @@ describe("multiplex medium", function(){
             outputValues:['one'],
             returnValues:['one'],
             respondant(x){
-                console.log('reached here with', x)
                 return x}
         }).then(done)
     })
 
     describe('entry and subcells situation', function(){
-        let app = new TestApp();
+        let app
 
-        app.init({
-            form:{
-                debug:true,
-                media:{
-                    'compose':{
-                        symbols:['outer', 'inner']
-                    },'split':{
-                        symbols:['outer', 'inner']
+        beforeAll(function(){
+            app= new TestApp();
+
+            app.init({
+                form:{
+                    debug:true,
+
+                    prime(){
+                        // this.addMedium('compose', {
+                        //     symbols:['outer', 'inner']
+                        // })
+                        //
+                        // this.addMedium('split', {
+                        //     symbols:['outer', 'inner']
+                        // })
+                        //
+                        // this.addRule('compose', ':entry->outer#:inner#')
+                        // this.addRule('split', ':split->outer#:inner#')
+                    },
+
+                    media:{
+                        'compose':{
+                            symbols:['outer', 'inner']
+                        },'split':{
+                            symbols:['outer', 'inner']
+                        }
+                    },
+                    laws:{
+                        'compose':[
+                            ':entry->outer#:inner#'
+                        ],
+                        'split':[
+                            ':split->outer#:inner#'
+                        ]
                     }
                 },
-                mesh:{
-                    'compose':[
-                        ':entry->outer#:inner#'
-                    ],
-                    'split':[
-                        ':split->outer#:inner#'
-                    ]
-                }
-            },
 
-            a:{
-                basis:'cell',
-                receptorA:{basis:'hook:call', direction:'in', type:'hook', hook(val){return "receptorA in cell a got "+val}},
-                receptorB:{basis:'hook:call', direction:'in', type:'hook', hook(val){return "receptorB in cell a got "+val}}
-            },
+                a:{
+                    basis:'cell',
+                    receptorA:{basis:'contact:op', resolve_in(val){return "receptorA in cell a got "+val}},
+                    receptorB:{basis:'contact:op', resolve_in(val){return "receptorB in cell a got "+val}}
+                },
 
-            b:{
-                basis:'cell',
-                receptorA:{basis:'hook:call', direction:'in', type:'hook', hook(val){return "receptorA in cell b got "+val}},
-                receptorB:{basis:'hook:call', direction:'in', type:'hook', hook(val){return "receptorB in cell b got "+val}}
-            },
+                b:{
+                    basis:'cell',
+                    receptorA:{basis:'contact:op', resolve_in(val){return "receptorA in cell b got "+val}},
+                    receptorB:{basis:'contact:op', resolve_in(val){return "receptorB in cell b got "+val}}
+                },
 
-            entry:{basis:'hook:call', direction:'in', type:'through'},
-            split:{basis:'hook:call', direction:'in', type:'through'},
+                entry:{basis:'contact:op', carry_in:true},
+                split:{basis:'contact:op', carry_in:true}
 
-        });
-
+            });
+        })
         it('should perform recomposition the cell', function(done){
 
             app.callReturnTest({

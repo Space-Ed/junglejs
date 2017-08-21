@@ -101,7 +101,7 @@ describe('symbol match designator pairing', function(){
       ])
     })
 
-    // fit('should match across many possibilities in squared fashion', function(){
+    // it('should match across many possibilities in squared fashion', function(){
     //
     //
     //     let d1 = new D.Designator('g', 't', 'Alpha.mine#:ours#')

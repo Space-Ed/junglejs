@@ -10,17 +10,18 @@ describe("symmetric linking", function(){
         let host:TestHost, mesh:TestMesh, membrane:Membrane
 
         beforeEach(function(){
-            host = new TestHost()
+            host = new TestHost(['_a_', '_b_'])
+
             membrane = host.primary;
+
             mesh = new TestMesh({
                 membrane:membrane,
-                rules:{
-                    'plexdist':[],
-                },
-                exposed:{}
+                media:[
+                    'smear'
+                ],
+                exposed:{},
+                laws:{}
             })
-
-            host.populate(['_a_', '_b_'])
 
         })
 
@@ -29,7 +30,7 @@ describe("symmetric linking", function(){
         })
 
         it("should create a link in either direction",function(){
-            mesh.addRule("a<->b", 'plexdist')
+            mesh.addRule("a<->b", 'smear')
             expect(mesh.hasLinked(':a', ':b')).toBe(true, "has linked a to b")
             expect(mesh.hasLinked(':b', ':a')).toBe(true, "has linked b to a")
         })

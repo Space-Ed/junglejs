@@ -119,8 +119,8 @@ export class Domain {
             let domain = this.defaultDomain(spec.domain)
             recovered = new nature(domain);
             let tertiarySpec = this.melder(patch, spec)
-
             recovered.init(tertiarySpec)
+
         }else{
 
             let tertiarySpec = this.melder(patch, spec)

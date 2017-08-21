@@ -34,8 +34,6 @@ export default class TestApp extends Cell{
 
         super.applyForm(form);
         this.debug = form.debug;
-
-        //this.parseSectionRule("*.**:* to shell as _")
     }
 
     call(contact:string, data:any){
@@ -44,7 +42,7 @@ export default class TestApp extends Cell{
         let crumb = new Crumb("Call from TestApp")
             .with(data)
 
-        input.put(data, crumb)
+        return input.put(data, crumb)
     }
 
     /**
@@ -143,4 +141,5 @@ export default class TestApp extends Cell{
 
         return allDone
     }
+
 }

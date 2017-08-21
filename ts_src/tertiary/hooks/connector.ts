@@ -9,7 +9,6 @@ export class Connector extends Construct {
 
     attach(anchor: I.CellAnchor, label:string){
         super.attach(anchor, label)
-
         if(!(this.nucleus.medium in anchor.mesh.media)){
 
             anchor.mesh.addMedium(this.nucleus.medium, this.domain.recover({

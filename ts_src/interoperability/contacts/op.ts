@@ -1,8 +1,7 @@
 
-import * as I from '../../interfaces'
-import {BasicContact} from '../base'
-import * as Debug from '../../../util/debug'
-import {Junction} from '../../../util/all'
+import {BasicContact} from './base'
+import * as Debug from '../../util/debug'
+import {Junction} from '../../util/all'
 
 export type OpCallTarget = 'carry'|'resolve'|'reflex'
 
@@ -35,8 +34,8 @@ export class Op extends BasicContact<Op> {
     public hasInput:boolean;
     public hasOutput:boolean
 
-    put:(data?:any)=>Junction;
-    emit:(data?:any)=>any;
+    put:(data?:any, crumb?:Debug.Crumb)=>Junction;
+    emit:(data?:any, crumb?:Debug.Crumb)=>any;
 
     constructor(public spec: OpSpec){
         super()
@@ -45,6 +44,7 @@ export class Op extends BasicContact<Op> {
     }
 
     attachInput(){
+
 
         let troubles = [
             this.spec.major_arg1, this.spec.major_arg2 ,this.spec.major_return
@@ -76,24 +76,45 @@ export class Op extends BasicContact<Op> {
 
         if(this.spec.major_op instanceof Function){
             this.hasInput = true;
+            this.put = this.inputFunction.bind(this)
+        }
+    }
 
-            this.put = (inp)=>{
-                let returned = new Junction().mode('single')
+    inputFunction(inp, crumb){
+        let returned = new Junction().mode('single')
 
-                let arg1 = this.targetCallF(this.spec.major_arg1, returned)
-                let arg2 = this.targetCallF(this.spec.major_arg2, returned)
+        let arg1 = this.targetCallF(this.spec.major_arg1, returned)
+        let arg2 = this.targetCallF(this.spec.major_arg2, returned)
 
-                let result = (<Function>this.spec.major_op).call(this.spec.context, inp, arg1, arg2)
+        let mycrumb = (crumb || new Debug.Crumb("Begin tracking"))
+            .drop("Op Contact Put")
+            .with(inp)
 
-                if(this.spec.major_return === 'resolve'){
-                    returned.merge(result, true)
-                }else if (this.spec.major_return !== undefined){
-                    returned.merge(this.targetCallF(this.spec.major_return)(result), true)
-                }
 
-                return returned
+        let result;
+        try{
+            result = (<Function>this.spec.major_op).call(this.spec.context, inp, arg1, arg2)
+        }catch (e){
+            mycrumb.raise(e.message)
+        }
+
+
+        if(this.spec.major_return === 'resolve'){
+            returned.merge(result, true)
+        }else if (this.spec.major_return !== undefined){
+
+            let target = this.targetCallF(this.spec.major_return)
+
+            if(target !== undefined){
+                let final = target(result, mycrumb)
+                returned.merge(final, true)
+            }else{
+                returned.merge(undefined, true)
+                // crumb.raise("Undefined emit Target")
             }
         }
+
+        return returned
     }
 
     attachHook(){

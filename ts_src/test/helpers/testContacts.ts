@@ -1,18 +1,28 @@
 
-import {CallIn, CallOut} from '../../interoperability/contacts/call/common'
+import {Op} from '../../interoperability/contacts/op'
 
-export function PushInTrack(){
-    return new CallIn({
-        type:'deposit',
-        tracking:true,
-        default:'pushIn',
+export function Input():Op{
+    return new Op({
+        context:{},
+        minor_op:true,
+        minor_return:'carry'
     })
 }
 
-export function PushOutTrack(){
-    return new CallOut({
-        type:'deposit',
-        tracking:true,
-        default:'pushOut',
+export function Output():Op{
+    return new Op({
+        context:{},
+        major_op:true,
+        major_return:'carry'
+    })
+}
+
+export function Duplex():Op{
+    return new Op({
+        context:{},
+        minor_op:true,
+        minor_return:'carry',
+        major_op:true,
+        major_return:'carry'
     })
 }

@@ -48,6 +48,7 @@ export abstract class Construct{
         bring the the construct to life
     */
     init(patch){
+
         let ensured = this.ensureObject(patch)
         this.applyForm(ensured.form)
         this.patch(ensured)

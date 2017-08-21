@@ -27,13 +27,12 @@ export const Core = new Domain({
                 emitCallType:_IO.CALLTYPE.DIRECT
             }
         },
-        distribute:_IO.DistributeMedium,
-        plexdist:{
+        smear:{
             nature:_IO.MuxMedium,
             patch:{
                 symbols:[],
                 emitArgType: _IO.DEMUXARG.DONT,
-                emitRetType: _IO.MUXRESP.DROP,
+                emitRetType: _IO.MUXRESP.LAST,
                 emitCallType:_IO.CALLTYPE.BREADTH_FIRST
             }
         },
@@ -70,23 +69,26 @@ export const Core = new Domain({
 
     }),
 
-    cell:{
-        nature:TRT.Cell,
-        patch:{
-            form:{
-                sections:[],
-                mesh:{}
-            }
-        }
-    },
-
+    cell:TRT.Cell,
     object:TRT.DefaultCell,
     array:TRT.ArrayCell,
 
     link:TRT.Connector,
 
-    hook:new Domain({
-        call:TRT.CallHook
+    contact:new Domain({
+        op:TRT.StandardOp,
+        outof:{
+            nature:TRT.StandardOp,
+            patch:{
+                carry_out:true
+            }
+        },
+        into:{
+            nature:TRT.StandardOp,
+            patch:{
+                carry_in:true
+            }
+        }
     })
 })
 

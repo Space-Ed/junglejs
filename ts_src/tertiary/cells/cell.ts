@@ -30,40 +30,36 @@ export class Cell extends CS.Composite implements I.CellAnchor{
     applyForm(form:any={}){
         super.applyForm(form)
 
-        //draw the appropriate media from the basis given
-        let media = {};
-
-        if(form.media instanceof Array){
-            for (let mediumBasis of form.media||[]){
-                media[mediumBasis] = this.domain.recover({
-                    basis:'media:'+mediumBasis,
-                    label:mediumBasis,
-                    exposed:this.nucleus
-                })
-            }
-        }else if(form.media instanceof Object){
-            for (let mediumBasis in form.media){
-
-                media[mediumBasis] = this.domain.recover(meld((a, b)=>{return b})({
-                    basis:'media:'+mediumBasis,
-                    label:mediumBasis,
-                    exposed:this.nucleus
-                },form.media[mediumBasis]))
-            }
-        }
-
         if(form.forward){
             this.forward=this.shell.createSection(form.forward)
         }
 
-        let rules = form.mesh || {}
-        //the internal interlinking mechanism, contingent upon which rules are added as neccessary to the cell
-        this.mesh = new IO.RuleMesh({
-            membrane:this.lining,
-            rules:rules,
-            media:media,
-            exposed:this.nucleus
-        })
+        //the internal interlinking mechanism
+        this.mesh = new IO.RuleMesh(this.lining)
+
+        if(form.media instanceof Array){
+            for (let mediumBasis of form.media||[]){
+                this.mesh.addMedium(mediumBasis, this.domain.recover({
+                    basis:'media:'+mediumBasis,
+                    label:mediumBasis,
+                    exposed:this.local
+                }))
+            }
+        }else if(form.media instanceof Object){
+            for (let mediumBasis in form.media){
+                this.mesh.addMedium(mediumBasis, this.domain.recover(meld((a, b)=>{return b})({
+                    basis:'media:'+mediumBasis,
+                    label:mediumBasis,
+                    exposed:this.local
+                },form.media[mediumBasis])))
+            }
+        }
+
+        for(let lawmedium in form.laws||{}){
+            for (let law of form.laws[lawmedium]){
+                this.mesh.addRule(law, lawmedium)
+            }
+        }
     }
 
     /*

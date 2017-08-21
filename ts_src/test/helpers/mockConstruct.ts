@@ -8,12 +8,9 @@ export class MockConstruct extends Construct {
     spies:any
 
     constructor(spec:{message:string}){
-        super({
-            basis:"Mocked",
-            message:spec.message
-        })
+        super()
 
-        this.state = this.cache.patch;
+        this.state = this.nucleus;
 
         this.spies = jasmine.createSpyObj('mock-construct', [
             'prime',
@@ -48,7 +45,7 @@ export class MockConstruct extends Construct {
     */
     extract():any {
         this.spies.extract(this.state.message)
-        return this.cache;
+        return super.extract();
     }
 
     /*

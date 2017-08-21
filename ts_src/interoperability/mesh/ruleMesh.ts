@@ -14,33 +14,18 @@ export class RuleMesh implements I.MembraneWatcher {
     media:any;
     locations:any;
 
-    exposed:any;
-
     changeOccurred
 
-    constructor(initArgs:I.MeshInitialiser){
+    constructor(membrane:Membrane){
 
         this.changeOccurred = DemuxWatchMethodsF(this)
 
-        this.primary = initArgs.membrane;
+        this.primary = membrane;
         this.primary.addWatch(this);
-
-        this.exposed = initArgs.exposed;
 
         this.rules = {};
         this.media = {};
         this.locations = {};
-
-        //map of media keys to media
-        for (let mediakey in initArgs.media){
-            this.addMedium(mediakey, initArgs.media[mediakey])
-        }
-
-        //map of media keys to rule sets to apply
-        for (let mediakey in initArgs.rules){
-            this.parseRules(initArgs.rules[mediakey], mediakey);
-        }
-
 
     }
 
@@ -64,7 +49,7 @@ export class RuleMesh implements I.MembraneWatcher {
         if(!m){throw new Error(`Unable to parse link description, expression ${link} did not match regex`)};
         let [match, srcDesig, srcClose, backward, filter, matching, forward, snkClose, snkDesig] = m;
 
-        return {
+        let ruleIR  =  {
             designatorA:new Designator('subranes','contacts', srcDesig),
             designatorB:new Designator('subranes','contacts', snkDesig),
             closeA:srcClose==='|',
@@ -75,6 +60,7 @@ export class RuleMesh implements I.MembraneWatcher {
             propogation:filter !== ''?{'+':I.LINK_FILTERS.PROCEED,'-':I.LINK_FILTERS.DECEED, '!':I.LINK_FILTERS.ELSEWHERE}[filter]:I.LINK_FILTERS.NONE
         }
 
+        return ruleIR
     }
 
     /**
@@ -88,12 +74,12 @@ export class RuleMesh implements I.MembraneWatcher {
         if(typeof rule === 'string'){
             //parse and add by IR
             this.addRule(this.parseLink(rule), mediumkey, ruleID)
-        }else{
+        }else if(typeof rule === 'object'){
             //add by IR
 
+            // console.log("rules", this.rules, 'for id ', ruleID)
             //when the rule has a name it can be found
             if(ruleID !== undefined){
-               //console.log("rules", this.rules, 'for id ', ruleID)
                 this.rules[mediumkey][ruleID] = rule
             }else{
                 //an enumeration by addition order for anonymous rules
@@ -166,37 +152,7 @@ export class RuleMesh implements I.MembraneWatcher {
                 }
             }
         }
-        // for(let tokenA in desigA){
-        //     let contactA = desigA[tokenA];
-        //
-        //     for (let tokenB in desigB){
-        //         let doSuppose = true;
-        //         let contactB = desigB[tokenB];
-        //         let medium:I.Medium<any,any> = this.media[mediumkey]
-        //
-        //         let link:I.LinkSpec<any, any> = {
-        //             tokenA:tokenA,
-        //             tokenB:tokenB,
-        //             contactA:contactA,
-        //             contactB:contactB
-        //         }
-        //
-        //         if(medium.hasLink(link)){
-        //             medium.disconnect(link)
-        //
-        //             //if this token is no longer represented in the medium
-        //             if(!medium.hasToken(tokenA)){
-        //                 delete this.locations[tokenA][mediumkey]
-        //             }
-        //
-        //             if(!medium.hasToken(tokenA)){
-        //                 delete this.locations[tokenB][mediumkey]
-        //
-        //             }
-        //         }
-        //     }
-        //
-        // }
+
     }
 
     square(rule:I.LinkRule, desigA:Object, desigB:Object, mediumkey:string){
@@ -228,7 +184,8 @@ export class RuleMesh implements I.MembraneWatcher {
                 }
             }
 
-            if(medium.suppose(link)){
+            let supposeResult = medium.suppose(link)
+            if(supposeResult){
                 this.locations[tokenA] = this.locations[tokenA]||{}
                 this.locations[tokenB] = this.locations[tokenB]||{}
                 this.locations[tokenA][mediumkey] = medium
@@ -241,7 +198,6 @@ export class RuleMesh implements I.MembraneWatcher {
 
     onAddContact(contact:I.Contact, token:string){
         //introduce to medium
-
         for(let mediumkey in this.media){
             let medium:I.Medium<any,any> = this.media[mediumkey];
             let linkRules = <I.LinkRule[]>this.rules[mediumkey];
@@ -249,7 +205,6 @@ export class RuleMesh implements I.MembraneWatcher {
             /**
             *   a contact could be elegable for either or both positions
                 we must ensure that if it is in both positions
-
              */
 
              for(let ruleID in linkRules){
@@ -276,14 +231,14 @@ export class RuleMesh implements I.MembraneWatcher {
     }
 
     onRemoveContact(contact:I.Contact, token:string){
-
         for (let loc in this.locations[token] ){
 
             let location:I.Medium<any,any> = this.locations[token][loc]
 
             if(contact instanceof location.typeA) {
                 location.breakA(token, contact)
-            }else if (contact instanceof location.typeB){
+            }
+            if (contact instanceof location.typeB){
                 location.breakB(token, contact)
             }
         }
@@ -295,6 +250,27 @@ export class RuleMesh implements I.MembraneWatcher {
 
     onRemoveMembrane(membrane:Membrane, token){
         //
+    }
+
+    hasLinked(tokenA, tokenB, directed=true){
+        let mediaWithA = this.locations[tokenA]
+
+        for(let mediakey in mediaWithA){
+            let medium:BaseMedium<any,any> = this.media[mediakey]
+            let aToMap =  medium.matrix.to[tokenA];
+            let bFromMap = medium.matrix.from[tokenB];
+
+            let aToB = aToMap !== undefined &&  aToMap[tokenB] !== undefined;
+            let bFromA = bFromMap !== undefined && bFromMap[tokenA] !== undefined
+
+            if(directed && (aToB && bFromA)){
+                return true
+            }else if(!directed && (aToB || bFromA)){
+                return true
+            }
+        }
+
+        return false
     }
 
 }

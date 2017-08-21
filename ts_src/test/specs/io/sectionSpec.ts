@@ -1,8 +1,13 @@
 
 import Jasmine = require('jasmine')
 import {MembraneEvents, Section, Membrane} from '../../../interoperability/membranes/membrane'
-import {CallIn, CallOut} from '../../../interoperability/contacts/call/common'
-import {PushInTrack, PushOutTrack} from '../../helpers/testContacts'
+import {Op} from '../../../interoperability/contacts/op'
+
+function Contact(){
+    return new Op({
+        context:{}
+    })
+}
 
 function spyOnSection(section: Section, label:string):jasmine.Spy{
     let spy = jasmine.createSpy(label)
@@ -23,7 +28,7 @@ describe("sectionalization", function(){
         let memb = new Membrane();
         let sect = memb.createSection("**:*");
 
-        memb.addContact( PushInTrack(), "contact")
+        memb.addContact(Contact(), "contact")
 
         let desig = sect.designate(":hi", false)
 
@@ -36,7 +41,7 @@ describe("sectionalization", function(){
         let sect = memb.createSection("**:*");
         let addspy = spyOnSection(sect, "sect")
 
-        memb.addContact( PushOutTrack(), "contact")
+        memb.addContact( Contact(), "contact")
         expect(addspy).toHaveBeenCalledWith(MembraneEvents.AddContact, memb.contacts.contact, ":contact")
 
     })
@@ -46,7 +51,7 @@ describe("sectionalization", function(){
         let sect = memb.createSection("**:*");
         let addspy = spyOnSection(memb,"memb")
 
-        memb.addContact( PushOutTrack(), "contact")
+        memb.addContact( Contact(), "contact")
         expect(addspy).not.toHaveBeenCalled()
         expect(memb.designate(':contact')[':contact']).toBeUndefined()
 
@@ -66,8 +71,8 @@ describe("sectionalization", function(){
         let sectspy = spyOnSection(sect, "sect")
         let membspy = spyOnSection(memb, "memb")
 
-        subA.addContact( PushOutTrack(), "aContact")
-        subB.addContact( PushOutTrack(), "bContact")
+        subA.addContact( Contact(), "aContact")
+        subB.addContact ( Contact(), "bContact")
 
         expect(sectspy).toHaveBeenCalledTimes(1)
         expect(membspy).toHaveBeenCalledTimes(1)

@@ -2,9 +2,16 @@
 
 import * as I from '../interfaces'
 import {mediaConstructors,BaseMedium } from './medium'
-import {ExchangeTypes, CallIn, CallOut,CallExchange} from '../contacts/call/common'
+import {ExchangeTypes, CallExchange} from '../contacts/call/common'
 import {Junction} from '../../util/all'
 import * as Debug from '../../util/debug'
+
+import {BasicContact} from '../contacts/base'
+import {Op} from '../contacts/op'
+
+export type CallContact = Op
+export type CallIn = CallContact
+export type CallOut = CallContact
 
 /*
     A one size fits all callover contraption, designed to work with:
@@ -60,8 +67,8 @@ export interface MuxMediumSpec extends I.MediumSpec{
 
 export class MuxMedium extends BaseMedium <CallOut, CallIn> {
 
-    typeA = CallExchange;
-    typeB  = CallExchange;
+    typeA = Op;
+    typeB  = Op;
 
     emitScope:any;
 
@@ -163,7 +170,7 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
 
             //Only depth first
             //HACK: setting undefined argument ill advised
-            let putResp = sink.put(arg, crumb?crumb.drop("Multiplexing"):undefined);
+            let putResp = sink.put(arg, crumb);
 
             this.emitResponse(putResp, crumb, link)
 
@@ -210,8 +217,8 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
 
     check(link: I.LinkSpec<CallOut, CallIn>){
         let superok =  super.check(link)
-        let out = link.contactA.spec.hasOutput
-        let inp = link.contactB.spec.hasInput
+        let out = link.contactA.hasOutput
+        let inp = link.contactB.hasInput
 
         return superok && out && inp
     }

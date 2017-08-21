@@ -70,11 +70,11 @@ export class HostState {
                             let exposing = outsourced[prop]
                             if(exposing instanceof AccessoryState){
                                 return exposing.exposed[prop] = value;
-                            }else{
-                                return false //cant reset a host, must be done manually
+                            }else {
+                                throw new Error("An child subproperty cannot be reset, must dispose")
                             }
                         }else{
-                            return false
+                            throw new Error(`Cannot assign, this space: ${prop} is taken by subconstruct that is closed`)
                         }
                     }else{
                         target[prop] = value

@@ -1,7 +1,7 @@
 import Jasmine = require('jasmine')
 import {Cell, DefaultCell, ArrayCell} from '../../../tertiary/all'
 import TestApp from '../../helpers/testApp'
-import {CallInSync, PushDeposit, PullDeposit} from '../../../aliases/all'
+import {Reset, Get} from '../../../aliases/all'
 
 describe('anonymisation',function(){
 
@@ -77,9 +77,12 @@ describe('anonymisation',function(){
                 ['a', 'b']
             ],
 
-            grab:CallInSync(function(x){
-                return this.level[x[0]][x[1]]
-            })
+            grab:{
+                basis:'contact:op',
+                resolve_in(x){
+                    return this.level[x[0]][x[1]]
+                }
+            }
         })
 
         app.callReturnTest({
@@ -99,13 +102,17 @@ describe('anonymisation',function(){
                 debug:true
             },
 
-            brave: [PushDeposit('defaultA'), PullDeposit('defaultB')],
-            drop:CallInSync(function(x){
-                this.brave[1] = x
-            }),
-            grab:CallInSync(function(x){
-                return this.brave[x]
-            })
+            brave: [Reset('defaultA'), Get('defaultB')],
+
+            drop:{
+                basis:'contact:op',
+                resolve_in(x){this.brave[1] = x}
+            },
+
+            grab:{
+                basis:'contact:op',
+                resolve_in(x){return this.brave[x]}
+            }
         })
 
         expect(app.shell.subranes.brave.contacts['0']).not.toBeUndefined()

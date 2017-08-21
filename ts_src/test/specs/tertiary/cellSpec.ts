@@ -3,9 +3,7 @@ import * as Jungle from '../../../jungle'
 const {Construct, Composite, Domain} = Jungle.CST;
 const Cell = Jungle.TRT.Cell;
 
-import {CallHook} from '../../../tertiary/hooks/call'
 import * as Debug from '../../../util/debug'
-import * as A from '../../../aliases/all'
 
 describe("A Cell", function () {
 
@@ -21,35 +19,50 @@ describe("A Cell", function () {
         cell.init({
 
             form:{
-                mesh:{
-
+                media:['direct'],
+                laws:{
+                    'direct':[
+                        'mouth->stomach:oesophagus',
+                        'stomach:fullness->fullness'
+                    ]
                 }
             },
 
             mouth:{
-                basis:'hook:call',
-                direction:"in",
-                type:"hook",
-                hook(food){//console.log(`eating ${food},`,this)
-                    this.hungry = false;
-                    this.stomach.contents = food
-                }
+                basis:'contact:op',
+                carry_in:true
             },
 
             stomach:{
                 basis:'cell',
-                contents:A.PushDeposit('empty')
+                form:{
+                    exposure:'public'
+                },
+
+                oesophagus :{
+                    basis:'contact:op',
+                    form:{
+                        exposure:'private'
+                    },
+
+                    resolve_in(food){
+                        this.contents = food
+                        this.hungry = false
+                    }
+                },
+                contents:'empty',
+                hungry:true
             },
 
-            hungry:true
         });
     })
 
     it('should not be hungry when it has been fed', function () {
         expect(cell.shell.contacts.mouth).not.toBeUndefined();
         let crumb = new Debug.Crumb("Beginning")
+
         cell.shell.contacts.mouth.put("Nachos", crumb);
-        expect(cell.nucleus.hungry).toBe(false);
+        expect(cell.exposed.stomach.hungry).toBe(false);
     })
 
     it('should deposit to the stomach, via oesophagus', function(){

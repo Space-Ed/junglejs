@@ -2,27 +2,39 @@ import * as Jungle from '../../jungle'
 
 import Jasmine = require('jasmine')
 
-let {Membrane, CallIn, CallOut, DemuxWatchMethodsF, CallExchange} = Jungle.IO;
+let {Membrane, DemuxWatchMethodsF, Op} = Jungle.IO;
+
+import {Input, Output, Duplex} from './testContacts'
 
 export default class TestHost {
     changeOccurred;
     primary:Jungle.Membrane;
+    invert:Jungle.Membrane;
 
     addspy:jasmine.Spy
     remspy:jasmine.Spy
     membaddspy:jasmine.Spy
     membremspy:jasmine.Spy
 
-    constructor(){
+    inputs:any
+    outputs:any
+
+    constructor(labels){
 
         this.changeOccurred = DemuxWatchMethodsF(this)
         this.primary = new Membrane()
         this.primary.addWatch(this)
+        this.invert = this.primary.invert()
 
         this.addspy = jasmine.createSpy("add contact")
         this.remspy = jasmine.createSpy("remove contact")
         this.membaddspy = jasmine.createSpy("add membrane")
         this.membremspy = jasmine.createSpy("remove membrane")
+
+        this.inputs = {}
+        this.outputs = {}
+
+        this.populate(labels)
 
     }
 
@@ -58,22 +70,23 @@ export default class TestHost {
                 let inp = pmatch[1], label = pmatch[2], out = pmatch[3];
 
                 if(inp == '_' && out == '_'){
-                    this.primary.addContact(new CallExchange({
-                        type:"deposit",
-                        default:label,
-                        tracking:true
-                    }), label)
+
+                    let add = Duplex()
+
+                    this.primary.addContact(add, label)
+                    this.inputs[label] = (<any>add).partner
+                    this.outputs[label] =(<any>add).partner
+
                 }else if(inp == '_'){
-                    this.primary.addContact(new CallIn({
-                        type:"deposit",
-                        tracking:true,
-                        default:label
-                    }), label)
+                    let add = Input()
+                    this.primary.addContact(add, label)
+                    this.inputs[label] = (<any>add).partner
+
                 }else if (out == '_'){
-                    this.primary.addContact(new CallOut({
-                        tracking:true,
-                        type:'deposit'
-                    }), label)
+                    let add = Output()
+                    this.primary.addContact(add, label)
+                    this.outputs[label] = (<any>add).partner
+
                 }
 
             }else{

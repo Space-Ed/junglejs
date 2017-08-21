@@ -6,66 +6,52 @@ import {ExchangeTypes} from '../interoperability/contacts/call/exchange'
 
 //the 4 synchronous call-value conversions
 
-export function PushDeposit(defaultValue):T.CallHookSpec{
+export function Reset(defaultValue){
     return {
-        basis:'hook:call',
-        type:'deposit',
-        direction:"in",
+        basis:'contact:op',
+        form:{
+            exposure:'public'
+        },
+        resolve_in(data){
+            this.me = data
+        },
         default:defaultValue
     }
 }
 
-export function PullDeposit(defaultValue):T.CallHookSpec{
+export function Get(defaultValue){
     return {
-        basis:'hook:call',
-        type:'retrieve',
-        direction:"in",
+        basis:'contact:op',
+        form:{
+            exposure:'public'
+        },
+        resolve_in(data){
+            return this.me
+        },
         default:defaultValue
     }
 }
 
-export function Reactive(defaultValue):T.CallHookSpec{
-    return {
-        basis:'hook:call',
-        direction:"out",
-        default:defaultValue,
-        type:'deposit'
-    }
-}
 
-export function Retrieval(defaultValue):T.CallHookSpec{
-    return {
-        basis:'hook:call',
-        direction:"out",
-        type:'retrieve',
-        default:defaultValue
-    }
-}
+// export function Notify(defaultValue):T.CallHookSpec{
+//     return {
+//         basis:'contact:remote',
+//         direction:"out",
+//         default:defaultValue,
+//         type:'deposit'
+//     }
+// }
+//
+// export function Fetch(defaultValue):T.CallHookSpec{
+//     return {
+//         basis:'contact:remote',
+//         resolve_in(data){
+//             this.me = data
+//         },
+//         default:defaultValue
+//     }
+// }
 
-export function TunnelIn():T.CallHookSpec{
-    return {
-        basis:'hook:call',
-        type: 'through',
-        direction:"in"
-    }
-}
-
-export function TunnelOut():T.CallHookSpec{
-    return {
-        basis:'hook:call',
-        direction:"out",
-        type:'through',
-    }
-}
-
-export function CallInSync(func:(data:any, crumb:Debug.Crumb)=>any):T.CallHookSpec{
-    return {
-        basis:'hook:call',
-        type:'hook',
-        direction:"in",
-        hook:func
-    }
-}
 
 export function Cell(patch){
     return deepMeldF()({

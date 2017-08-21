@@ -1,10 +1,9 @@
 
 import * as Jungle from '../../../jungle'
-let {Membrane, CallIn, CallOut} = Jungle.IO;
+import {Membrane} from '../../../interoperability/membranes/membrane'
 import RuleAdapter from '../../helpers/meshAdapter'
 import TestHost from '../../helpers/testHost'
-import {PushInTrack, PushOutTrack} from '../../helpers/testContacts'
-
+import {Input, Output} from '../../helpers/testContacts'
 
 let Debug = Jungle.Util.Debug;
 Debug.Crumb.defaultOptions.debug = true;
@@ -12,178 +11,110 @@ Debug.Crumb.defaultOptions.log = console;
 
 describe('The Mesh Host', function () {
 
-    let host, memb, exposed, mesh:RuleAdapter, contactA, contactB, meshbrane;
+    let host:TestHost, memb:Membrane, exposed, mesh:RuleAdapter, contactA, contactB, meshbrane;
 
-    beforeEach(function () {
-        meshbrane = new Membrane()
+    describe('basic',function(){
 
-        host = new TestHost()
-        memb = host.primary
-        host.populate(['a_', '_b'])
+        beforeEach(function () {
+            host = new TestHost(['_a'])
 
-        contactA = memb.contacts.a
-        contactB = memb.contacts.b
+            mesh = new RuleAdapter({
+                membrane:host.primary,
+                exposed:exposed,
+                media:['direct'],
+                laws:{
+                    'direct':[
+                        ':a->**:*'
+                    ]
+                }
+            })
 
-        exposed = {}
-
-        mesh = new RuleAdapter({
-            rules:{
-                'distribute':[
-                    '*:a->*:b',
-                ]
-            },
-            exposed:exposed,
-            membrane:meshbrane
         })
 
-        meshbrane.addSubrane(memb, 'm')
+        it('Should successfully disconnect when a contact is removed', function(){
+            host.primary.addContact(Output(), 'b')
+            expect(mesh.hasLinked(':a',':b')).toBe(true)
+            host.primary.removeContact('a')
+            expect(mesh.hasLinked(':a',':b')).toBe(false)
+        })
 
-    })
+        it('should gracefully connect and disconnect to an added membrane',function () {
 
-    it("should connect a to b of a single membrane", function () {
-        let outspy = jasmine.createSpy('outspy');
+            let m2 = new Membrane()
+            let m2inv = m2.invert()
 
-        contactB.invert().emit = outspy;
-        contactA.invert().put("Hello?");
+            m2.addContact(Output(),'c')
 
-        expect(outspy.calls.mostRecent().args[0]).toBe("Hello?")
-    });
-
-    it('Should successfully disconnect when a crux is removed', function(){
-
-        memb.removeContact('a')
-       //console.log(mesh.media['distribute'].matrix)
-        expect(mesh.media['distribute'].matrix.to['m:a']['m:b']).toBeUndefined()
-
-    })
-
-    it('should gracefully connect to an added membrane',function () {
-        let h2 = new TestHost();
-        h2.populate(['_b']);
-        let secondmemb = h2.primary;
-        let contact2 = secondmemb.contacts.b;
-
-        meshbrane.addSubrane(secondmemb, "secondmemb");
-
-        expect(mesh.media['distribute'].matrix.to['m:a']['secondmemb:b']).not.toBeUndefined();
-
-        let outspy = jasmine.createSpy("outspy");
-        contact2.invert().emit =outspy;
-
-        let outspy2 = jasmine.createSpy("outspy2");
-        contactB.invert().emit =outspy2;
-
-
-        contactA.invert().put("Hello?");
-        expect(outspy).toHaveBeenCalledWith("Hello?")
-        expect(outspy2).toHaveBeenCalledWith("Hello?")
-    })
-
-    it("should gracefully drop connections when subrane disappears", function () {
-        let h2 = new TestHost();
-        h2.populate(['_b']);
-        let m2 = h2.primary;
-        let contact2 = m2.contacts.b;
-
-        let h3 = new TestHost();
-        h3.populate(['a_']);
-        let m3 = h3.primary;
-        let pA3 = m3.contacts.a;
-
-        meshbrane.addSubrane(m2, "m2");
-        meshbrane.addSubrane(m3, "m3");
-        meshbrane.removeSubrane('m');
-
-        expect(mesh.media['distribute'].matrix.from['m2:b']['m:a']).toBeUndefined();
-        expect(mesh.media['distribute'].matrix.to['m3:a']['m:b']).toBeUndefined();
+            host.primary.addSubrane(m2, 'sub')
+            expect(mesh.hasLinked(':a','sub:c')).toBe(true)
+            host.primary.removeSubrane('sub')
+            expect(mesh.hasLinked(':a','sub:c')).toBe(false)
+        })
 
     })
 
     it('should allow match connection', function(){
-        let h1 = new TestHost();
-        h1.populate(['a_', 'b_']);
-
-        let h2 = new TestHost();
-        h2.populate(['_a', '_b'])
-
-        let m1 = h1.primary
-        let m2 = h2.primary
-
-        let contactA1 = m1.contacts.a;
-        let contactB1 = m1.contacts.b;
-
-        let contactA2 = m2.contacts.a;
-        let contactB2 = m2.contacts.b;
+        let h1 = new TestHost(['_a', '_b']);
+        let h2 = new TestHost(['a_', 'b_']);
 
         meshbrane = new Membrane()
-        meshbrane.addSubrane(m1, 'm1')
-        meshbrane.addSubrane(m2, 'm2')
+        meshbrane.addSubrane(h1.primary, 'm1')
+        meshbrane.addSubrane(h2.primary, 'm2')
 
         mesh = new RuleAdapter({
             membrane:meshbrane,
             exposed:exposed,
-            rules:{
-                'distribute':[
-                    'm1:a#->m2:a#',
+            media:['direct'],
+            laws:{
+                'direct':[
+                    '*:Z#->*:Z#'
                 ]
             }
         })
 
-        let outspyA = jasmine.createSpy("1");
-        contactA2.invert().emit =outspyA
-
-        let outspyB = jasmine.createSpy("1");
-        contactB2.invert().emit =outspyB;
-
         //each calls the corresponding and not the other a -> a2, b2 -> b
+        expect(mesh.hasLinked('m1:a', 'm2:a')).toBe(true, 'should have created link a -> a')
+        expect(mesh.hasLinked('m1:b', 'm2:b')).toBe(true, 'should have created link b -> b')
+        expect(mesh.hasLinked('m1:a', 'm2:b')).toBe(false, 'shoule not have created link a-> b')
+        expect(mesh.hasLinked('m1:b', 'm2:a')).toBe(false, 'shoule not have created link b -> a')
 
-        contactA1.invert().put("Hello?");
-        expect(outspyA).toHaveBeenCalledWith("Hello?")
-        expect(outspyB).not.toHaveBeenCalledWith("Hello?")
-
-        outspyA.calls.reset();
-        outspyB.calls.reset();
-
-        contactB1.invert().put("Hola?");
-        expect(outspyA).not.toHaveBeenCalledWith("Hola?")
-        expect(outspyB).toHaveBeenCalledWith("Hola?")
 
     })
 
     it('should allow addition and removal of rules ', function(){
-        let surface = new Membrane()
-        let outer = surface.invert()
+        let host = new TestHost(['_pointA','pointB_'])
+        let surface = host.primary
+        let outer = host.invert
+
         let fabric = new RuleAdapter({
-            rules:{
-                'distribute':[]
-            },
+            media:['smear'],
+            laws:{},
             membrane:surface,
             exposed:{},
         })
 
-        surface.addContact(PushOutTrack(), 'pointA')
-        surface.addContact(PushInTrack(), 'pointB');
-
         let outspy = jasmine.createSpy('outspy');
-        fabric.addRule(':pointA->:pointB','distribute', 'rule1');
+        fabric.addRule(':pointA->:pointB','smear', 'rule1');
 
         (outer.contacts.pointB).emit = outspy;
 
         outer.contacts.pointA.put("hello")
-        expect(outspy).toHaveBeenCalledWith('hello')
+        expect(outspy.calls.first().args[0]).toBe('hello')
 
         //improper usage
+
+        //rule does not exist
         expect(function(){
             fabric.removeRule('inject', 'rule1')
         }).toThrowError()
 
         expect(function(){
-            fabric.removeRule('distribute', 'rule2')
+            fabric.removeRule('smear', 'rule2')
         }).toThrowError()
 
         outspy.calls.reset()
 
-        fabric.removeRule('distribute', 'rule1')
+        fabric.removeRule('smear', 'rule1')
 
         expect(surface.contacts.pointA.emit).toBeUndefined()
         outer.contacts.pointA.put("hello")
