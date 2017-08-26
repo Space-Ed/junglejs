@@ -1,5 +1,4 @@
 
-import {Composite} from './composite'
 import {Domain} from './domain'
 import * as Util from '../util/all'
 
@@ -31,7 +30,9 @@ export abstract class Construct{
     alive:boolean;
 
     alias:string;
-    host:Composite;
+    host:any;
+
+    isComposite =false;
 
     nucleus:any;
     local:any;
@@ -39,6 +40,7 @@ export abstract class Construct{
 
     primeTractor:()=>void;
     disposeTractor:()=>void;
+
     exposure:ExposureLevel;
     reach:ReachLevel
 
@@ -91,7 +93,7 @@ export abstract class Construct{
         this.host = host;
         this.alias = alias;
 
-        if(this instanceof Composite){
+        if(this.isComposite){
             host.state.addSub(alias, this)
         }else{
             let acc = host.state.createAccessory(this.reach, this.exposure, alias, this.nucleus)

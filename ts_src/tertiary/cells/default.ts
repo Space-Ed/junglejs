@@ -1,6 +1,5 @@
 import {Cell} from './cell'
 import* as I from '../interfaces'
-import {AccessContact, OfferContact} from '../../interoperability/contacts/access/common'
 
 export class DefaultCell extends Cell {
 

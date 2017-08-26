@@ -5,7 +5,7 @@ import {HostState, AccessoryState, ExposureLevel} from './state'
 
 export class Composite extends Construct{
 
-    keywords = {basis:null, domain:null, form:null, anon:null}
+    static keywords = {basis:null, domain:null, form:null, anon:null}
     subconstructs:any;
 
     state:HostState
@@ -13,6 +13,8 @@ export class Composite extends Construct{
 
     beginTractor:()=>void;
     endTractor:()=>void;
+
+    isComposite = true
 
 
     constructor(domain?:Domain){
@@ -66,7 +68,7 @@ export class Composite extends Construct{
         //console.log("Composite patch: ", patch)
 
         for(let k in patch){
-            if(!(k in this.keywords)){
+            if(!(k in Composite.keywords)){
                 let v = patch[k];
                 this.patchChild(k, v)
             }
