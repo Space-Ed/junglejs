@@ -6,7 +6,7 @@ import {BedAgent, AnchorAgent, AgentPool} from './agency'
 
 export class Composite extends Construct{
 
-    static keywords = {basis:null, domain:null, form:null, anon:null}
+    static keywords = {basis:null, domain:null, form:null, anon:null, meta:null}
     subconstructs:any;
 
     state:HostState
@@ -34,7 +34,6 @@ export class Composite extends Construct{
 
         //add Everything
         this.addStrange('domain', this.domain.getExposure())
-        this.addStrange('meta', this.getExposure())
 
         if(this.beginTractor){ this.beginTractor.call(this.local) }
     }
@@ -244,14 +243,14 @@ export class Composite extends Construct{
 
         let extracted = {}
         for (let key in this.subconstructs) {
-            if(voidspace === null || key in voidspace){
+            if(voidspace === undefined || key in voidspace){
                 let construct = this.subconstructs[key]
-                extracted[key] = construct.extract(voidspace===null?null:voidspace[key]);
+                extracted[key] = construct.extract(voidspace===undefined?undefined:voidspace[key]);
             }
         }
 
         for (let key in this.nucleus){
-            if(voidspace === null || (key in voidspace && voidspace[key] === null)){
+            if(voidspace === undefined || (key in voidspace && voidspace[key] === undefined)){
                 extracted[key] = this.nucleus[key]
             }
         }

@@ -58,7 +58,8 @@ export abstract class Construct{
 
         let ensured = this.ensureObject(patch)
         this.applyForm(ensured.form)
-        this.patch(ensured)
+
+        this._patch(ensured)
         let primeResult = this.primeTractor?this.primeTractor.call(this.local):undefined
         return primeResult
     }
@@ -149,8 +150,12 @@ export abstract class Construct{
         modification of structure by application of a patch,
         @param: patch the value to reset
     */
-    patch(patch?:any){
+    _patch(patch?:any){
         this.nucleus = patch
+    }
+
+    patch(patch?:any){
+        return this._patch(patch)
     }
 
     notify:(patch)=>any
@@ -158,8 +163,12 @@ export abstract class Construct{
     /*
         output a representation of the construct that may be recovered to a replication
     */
-    extract(sucker?:any):any{
+    _extract(sucker?:any):any{
         return this.nucleus
+    }
+
+    extract(sucker?:any):any{
+        return this._extract(sucker)
     }
 
     fetch:(patch:any)=>any

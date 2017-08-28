@@ -4,6 +4,7 @@ import * as CS  from '../../construction/all'
 import{ShellPolicy, FreePolicy, Contact} from '../../interoperability/interfaces'
 import * as I from '../interfaces'
 import {meld} from "../../util/ogebra/operations";
+import {MetaAgent} from '../hooks/directMeta'
 
 /*
 
@@ -15,6 +16,8 @@ export class Cell extends CS.Composite implements I.CellAnchor{
     lining:IO.Membrane;
     mesh:IO.RuleMesh;
     forward:IO.Section;
+
+    meta:MetaAgent
 
     constructor(domain?:CS.Domain){
         //overridable
@@ -28,7 +31,13 @@ export class Cell extends CS.Composite implements I.CellAnchor{
         setup the parts of the cell that are contingent on specialisation
     */
     applyForm(form:any={}){
+
+        //creates state, pool and tractors from form
         super.applyForm(form)
+
+        this.meta = new MetaAgent(this.domain)
+        this.meta.init(form.meta||{})
+        this.attachChild(this.meta, 'meta')
 
         if(form.forward){
             this.forward=this.shell.createSection(form.forward)
@@ -66,6 +75,9 @@ export class Cell extends CS.Composite implements I.CellAnchor{
         undo the setup so that a new form can be applied
     */
     clearForm(){
+        // this.remove('meta')
+
+        // super.clearForm()
         //everything recreated is sufficient
     }
 

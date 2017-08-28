@@ -76,18 +76,34 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(32));
-__export(__webpack_require__(2));
+__export(__webpack_require__(33));
+__export(__webpack_require__(3));
 const debug = __webpack_require__(20);
 exports.Debug = debug;
 __export(__webpack_require__(21));
 __export(__webpack_require__(22));
 __export(__webpack_require__(23));
-__export(__webpack_require__(35));
+__export(__webpack_require__(36));
 //# sourceMappingURL=all.js.map
 
 /***/ }),
 /* 1 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+function __export(m) {
+    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+__export(__webpack_require__(24));
+__export(__webpack_require__(2));
+__export(__webpack_require__(12));
+__export(__webpack_require__(13));
+//# sourceMappingURL=all.js.map
+
+/***/ }),
+/* 2 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -103,7 +119,7 @@ class Construct {
     init(patch) {
         let ensured = this.ensureObject(patch);
         this.applyForm(ensured.form);
-        this.patch(ensured);
+        this._patch(ensured);
         let primeResult = this.primeTractor ? this.primeTractor.call(this.local) : undefined;
         return primeResult;
     }
@@ -159,11 +175,17 @@ class Construct {
         this.host = undefined;
         this.alias = undefined;
     }
-    patch(patch) {
+    _patch(patch) {
         this.nucleus = patch;
     }
-    extract(sucker) {
+    patch(patch) {
+        return this._patch(patch);
+    }
+    _extract(sucker) {
         return this.nucleus;
+    }
+    extract(sucker) {
+        return this._extract(sucker);
     }
     ensureObject(spec) {
         if (spec === undefined) {
@@ -187,7 +209,7 @@ exports.Construct = Construct;
 //# sourceMappingURL=construct.js.map
 
 /***/ }),
-/* 2 */
+/* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -305,22 +327,6 @@ function isDeepReplicaThrow(node1, node2) {
 }
 exports.isDeepReplicaThrow = isDeepReplicaThrow;
 //# sourceMappingURL=checks.js.map
-
-/***/ }),
-/* 3 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-function __export(m) {
-    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
-}
-Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(24));
-__export(__webpack_require__(1));
-__export(__webpack_require__(12));
-__export(__webpack_require__(13));
-//# sourceMappingURL=all.js.map
 
 /***/ }),
 /* 4 */
@@ -1049,7 +1055,7 @@ var negate;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const checks_1 = __webpack_require__(2);
+const checks_1 = __webpack_require__(3);
 function identity(x) {
     return x;
 }
@@ -1164,7 +1170,7 @@ exports.typeCaseSplitM = typeCaseSplitM;
 Object.defineProperty(exports, "__esModule", { value: true });
 const hierarchical_1 = __webpack_require__(9);
 const designator_1 = __webpack_require__(8);
-const construct_1 = __webpack_require__(1);
+const construct_1 = __webpack_require__(2);
 class Domain {
     constructor(init = {}, isolated = false) {
         this.isolated = isolated;
@@ -1912,8 +1918,9 @@ exports.Membrane = Membrane;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 const IO = __webpack_require__(4);
-const CS = __webpack_require__(3);
+const CS = __webpack_require__(1);
 const operations_1 = __webpack_require__(5);
+const directMeta_1 = __webpack_require__(32);
 class Cell extends CS.Composite {
     constructor(domain) {
         super(domain);
@@ -1922,6 +1929,9 @@ class Cell extends CS.Composite {
     }
     applyForm(form = {}) {
         super.applyForm(form);
+        this.meta = new directMeta_1.MetaAgent(this.domain);
+        this.meta.init(form.meta || {});
+        this.attachChild(this.meta, 'meta');
         if (form.forward) {
             this.forward = this.shell.createSection(form.forward);
         }
@@ -1995,7 +2005,7 @@ exports.DefaultCell = DefaultCell;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const checks_1 = __webpack_require__(2);
+const checks_1 = __webpack_require__(3);
 const transforms_1 = __webpack_require__(23);
 function dumpToDepthF(maxdepth, indentSym = "  ") {
     let recur = function (depth, indentation, item) {
@@ -2197,7 +2207,7 @@ exports.Crumb = Crumb;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const Modes = __webpack_require__(34);
+const Modes = __webpack_require__(35);
 var JResultNatures;
 (function (JResultNatures) {
     JResultNatures[JResultNatures["Single"] = 0] = "Single";
@@ -2498,7 +2508,7 @@ exports.range = range;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const checks_1 = __webpack_require__(2);
+const checks_1 = __webpack_require__(3);
 const typesplit_1 = __webpack_require__(11);
 function identity(x) {
     return x;
@@ -2702,7 +2712,7 @@ exports.projectObject = projectObject;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const construct_1 = __webpack_require__(1);
+const construct_1 = __webpack_require__(2);
 const all_1 = __webpack_require__(0);
 const state_1 = __webpack_require__(14);
 const agency_1 = __webpack_require__(13);
@@ -2716,7 +2726,6 @@ class Composite extends construct_1.Construct {
     init(patch) {
         super.init(patch);
         this.addStrange('domain', this.domain.getExposure());
-        this.addStrange('meta', this.getExposure());
         if (this.beginTractor) {
             this.beginTractor.call(this.local);
         }
@@ -2861,13 +2870,13 @@ class Composite extends construct_1.Construct {
         }
         let extracted = {};
         for (let key in this.subconstructs) {
-            if (voidspace === null || key in voidspace) {
+            if (voidspace === undefined || key in voidspace) {
                 let construct = this.subconstructs[key];
-                extracted[key] = construct.extract(voidspace === null ? null : voidspace[key]);
+                extracted[key] = construct.extract(voidspace === undefined ? undefined : voidspace[key]);
             }
         }
         for (let key in this.nucleus) {
-            if (voidspace === null || (key in voidspace && voidspace[key] === null)) {
+            if (voidspace === undefined || (key in voidspace && voidspace[key] === undefined)) {
                 extracted[key] = this.nucleus[key];
             }
         }
@@ -2877,7 +2886,7 @@ class Composite extends construct_1.Construct {
         return this.anchor.fetch(suction);
     }
 }
-Composite.keywords = { basis: null, domain: null, form: null, anon: null };
+Composite.keywords = { basis: null, domain: null, form: null, anon: null, meta: null };
 exports.Composite = Composite;
 //# sourceMappingURL=composite.js.map
 
@@ -3077,7 +3086,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const I = __webpack_require__(25);
 const membrane_1 = __webpack_require__(17);
 const designator_1 = __webpack_require__(8);
-const matching_1 = __webpack_require__(33);
+const matching_1 = __webpack_require__(34);
 class RuleMesh {
     constructor(membrane) {
         this.changeOccurred = membrane_1.DemuxWatchMethodsF(this);
@@ -3283,14 +3292,14 @@ const domain_1 = __webpack_require__(12);
 const _Util = __webpack_require__(0);
 const _IO = __webpack_require__(4);
 const _TRT = __webpack_require__(6);
-const _CST = __webpack_require__(3);
+const _CST = __webpack_require__(1);
 exports.Util = _Util;
 exports.IO = _IO;
 exports.TRT = _TRT;
 exports.CST = _CST;
 __export(__webpack_require__(0));
 __export(__webpack_require__(4));
-__export(__webpack_require__(3));
+__export(__webpack_require__(1));
 __export(__webpack_require__(6));
 exports.Core = new domain_1.Domain({
     media: new domain_1.Domain({
@@ -3387,7 +3396,7 @@ exports.ArrayCell = ArrayCell;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const construct_1 = __webpack_require__(1);
+const construct_1 = __webpack_require__(2);
 const op_1 = __webpack_require__(7);
 class OpConstruct extends construct_1.Construct {
     init(spec) {
@@ -3507,7 +3516,7 @@ exports.Spring = Spring;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const construct_1 = __webpack_require__(1);
+const construct_1 = __webpack_require__(2);
 class Connector extends construct_1.Construct {
     attach(anchor, label) {
         super.attach(anchor, label);
@@ -3534,8 +3543,73 @@ exports.Connector = Connector;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
+const all_1 = __webpack_require__(1);
+class MetaAgent extends all_1.Construct {
+    init(spec) {
+        super.init(spec);
+        this.spec = spec;
+    }
+    patch(spec) {
+        if (this.host !== undefined) {
+            let host = this.host, alias = this.alias;
+            this.detach(this.host, this.alias);
+            this.spec = spec;
+            this.attach(host, alias);
+        }
+    }
+    extract() {
+        return this.spec;
+    }
+    attach(host, key) {
+        super.attach(host, key);
+        this.nucleus = {
+            patch: (patch) => {
+                if (this.agency.notify instanceof Function) {
+                    return this.agency.notify(patch);
+                }
+            },
+            notify: null,
+            extract: (voidspace) => {
+                if (this.agency.fetch instanceof Function) {
+                    return this.agency.fetch(voidspace);
+                }
+            },
+            fetch: null
+        };
+        this.agency = {
+            config: this.spec,
+            patch: (patch) => {
+                if (this.nucleus.notify instanceof Function) {
+                    return this.nucleus.notify(patch);
+                }
+            },
+            notify: null,
+            extract: (voidspace) => {
+                if (this.nucleus.fetch instanceof Function) {
+                    return this.nucleus.fetch(voidspace);
+                }
+            },
+            fetch: null
+        };
+        host.pool.add(this.agency, key);
+    }
+    detach(host, key) {
+        super.detach(host, key);
+        host.pool.remove(key);
+    }
+}
+exports.MetaAgent = MetaAgent;
+//# sourceMappingURL=directMeta.js.map
+
+/***/ }),
+/* 33 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
 const typesplit_1 = __webpack_require__(11);
-const checks_1 = __webpack_require__(2);
+const checks_1 = __webpack_require__(3);
 const math_1 = __webpack_require__(22);
 function B(crown = {}, form = {}) {
     return new Blender(crown, form);
@@ -3673,7 +3747,7 @@ exports.Blender = Blender;
 //# sourceMappingURL=blender.js.map
 
 /***/ }),
-/* 33 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3749,7 +3823,7 @@ exports.transposeBindings = transposeBindings;
 //# sourceMappingURL=matching.js.map
 
 /***/ }),
-/* 34 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3908,7 +3982,7 @@ exports.ObjectMode = ObjectMode;
 //# sourceMappingURL=modes.js.map
 
 /***/ }),
-/* 35 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
