@@ -63,7 +63,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 26);
+/******/ 	return __webpack_require__(__webpack_require__.s = 28);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -76,14 +76,14 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(30));
-__export(__webpack_require__(2));
-const debug = __webpack_require__(18);
-exports.Debug = debug;
 __export(__webpack_require__(32));
-__export(__webpack_require__(19));
-__export(__webpack_require__(20));
-__export(__webpack_require__(34));
+__export(__webpack_require__(2));
+const debug = __webpack_require__(20);
+exports.Debug = debug;
+__export(__webpack_require__(21));
+__export(__webpack_require__(22));
+__export(__webpack_require__(23));
+__export(__webpack_require__(35));
 //# sourceMappingURL=all.js.map
 
 /***/ }),
@@ -94,6 +94,7 @@ __export(__webpack_require__(34));
 
 Object.defineProperty(exports, "__esModule", { value: true });
 const Util = __webpack_require__(0);
+const state_1 = __webpack_require__(14);
 class Construct {
     constructor(domain = Construct.DefaultDomain) {
         this.domain = domain;
@@ -110,25 +111,38 @@ class Construct {
         if (this.disposeTractor) {
             this.disposeTractor.call(this.local);
         }
+        this.clearForm();
     }
     applyForm(form = {}) {
         this.exposure = form.exposure || 'local';
         this.reach = form.reach || 'host';
+        this.remote = form.remote || false;
         this.primeTractor = form.prime;
         this.disposeTractor = form.dispose;
     }
-    clearForm(form = {}) {
+    clearForm() {
         this.primeTractor = undefined;
         this.disposeTractor = undefined;
     }
     attach(host, alias) {
         this.host = host;
         this.alias = alias;
-        if (this.isComposite) {
-            host.state.addSub(alias, this);
-        }
-        else {
-            let acc = host.state.createAccessory(this.reach, this.exposure, alias, this.nucleus);
+        this.fetch = (extractor) => {
+            let qualified = {};
+            qualified[alias] = extractor;
+            return host.bed.fetch(qualified);
+        };
+        this.notify = (patch) => {
+            let qualified = {};
+            qualified[alias] = patch;
+            return host.bed.notify(qualified);
+        };
+        if (!this.isComposite) {
+            let acc = new state_1.AccessoryState(this, alias, {
+                reach: this.reach,
+                exposure: this.exposure,
+                initial: this.nucleus
+            });
             this.local = acc.exposed;
             this.exposed = acc.exposed;
             Object.defineProperty(this, 'nucleus', {
@@ -148,7 +162,7 @@ class Construct {
     patch(patch) {
         this.nucleus = patch;
     }
-    extract() {
+    extract(sucker) {
         return this.nucleus;
     }
     ensureObject(spec) {
@@ -302,9 +316,10 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(21));
+__export(__webpack_require__(24));
 __export(__webpack_require__(1));
 __export(__webpack_require__(12));
+__export(__webpack_require__(13));
 //# sourceMappingURL=all.js.map
 
 /***/ }),
@@ -317,11 +332,11 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
+__export(__webpack_require__(17));
+__export(__webpack_require__(27));
+__export(__webpack_require__(16));
+__export(__webpack_require__(26));
 __export(__webpack_require__(15));
-__export(__webpack_require__(25));
-__export(__webpack_require__(14));
-__export(__webpack_require__(24));
-__export(__webpack_require__(13));
 __export(__webpack_require__(7));
 //# sourceMappingURL=all.js.map
 
@@ -408,11 +423,11 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(16));
-__export(__webpack_require__(17));
-__export(__webpack_require__(27));
+__export(__webpack_require__(18));
+__export(__webpack_require__(19));
 __export(__webpack_require__(29));
-__export(__webpack_require__(28));
+__export(__webpack_require__(31));
+__export(__webpack_require__(30));
 //# sourceMappingURL=all.js.map
 
 /***/ }),
@@ -422,8 +437,8 @@ __export(__webpack_require__(28));
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const base_1 = __webpack_require__(13);
-const Debug = __webpack_require__(18);
+const base_1 = __webpack_require__(15);
+const Debug = __webpack_require__(20);
 const all_1 = __webpack_require__(0);
 class Op extends base_1.BasicContact {
     constructor(spec) {
@@ -1319,6 +1334,256 @@ exports.Domain = Domain;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
+const junction_1 = __webpack_require__(21);
+class BedAgent {
+    constructor(home, config) {
+        this.home = home;
+        this.config = config;
+    }
+    patch(patch) {
+        return this.home._patch(patch);
+    }
+    extract(voidspace) {
+        return this.home._extract(voidspace);
+    }
+}
+exports.BedAgent = BedAgent;
+class AnchorAgent {
+    constructor(home, config) {
+        this.home = home;
+        this.config = config;
+    }
+    patch(patch) {
+        if (this.home.notify instanceof Function) {
+            let qualified = {};
+            qualified[this.home.alias] = patch;
+            return this.home.notify(patch);
+        }
+    }
+    extract(voidspace) {
+        if (this.home.fetch instanceof Function) {
+            let qualified = {};
+            qualified[this.home.alias] = voidspace;
+            return this.home.fetch(qualified);
+        }
+    }
+}
+exports.AnchorAgent = AnchorAgent;
+class AgentPool {
+    constructor(config) {
+        this.pool = {};
+    }
+    add(agent, key) {
+        agent.notify = this.notifyIn(key);
+        agent.fetch = this.fetchIn(key);
+        this.pool[key] = agent;
+    }
+    remove(key) {
+        let agent = this.pool[key];
+        agent.notify = undefined;
+        agent.fetch = undefined;
+        delete this.pool[key];
+        return agent;
+    }
+    notifyIn(key) {
+        return (data) => {
+            let junction = new junction_1.Junction().mode('last');
+            for (let k in this.pool) {
+                if (k !== key) {
+                    junction.merge(this.pool[k].patch(data));
+                }
+            }
+            return junction;
+        };
+    }
+    fetchIn(key) {
+        return (data) => {
+            let junction = new junction_1.Junction().mode('first');
+            for (let k in this.pool) {
+                if (k !== key) {
+                    junction = junction.then(data => {
+                        if (this.fetchComplete(data)) {
+                            console.log('calling into pool to key ', k);
+                            return data;
+                        }
+                        else {
+                            return this.pool[k].extract(data);
+                        }
+                    }).catch(err => {
+                    });
+                }
+            }
+            return junction;
+        };
+    }
+    fetchComplete(latestFetch) {
+        return latestFetch !== undefined;
+    }
+}
+exports.AgentPool = AgentPool;
+//# sourceMappingURL=agency.js.map
+
+/***/ }),
+/* 14 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+class AccessoryState {
+    constructor(home, accessoryKey, spec) {
+        this.home = home;
+        this.accessoryKey = accessoryKey;
+        let scope = home.host.local;
+        this.exposed = new Proxy(scope, this);
+        this.myval = spec.initial;
+    }
+    set(target, prop, value) {
+        if (prop === 'me' || prop == this.accessoryKey) {
+            this.myval = value;
+            return true;
+        }
+        else {
+            target[prop] = value;
+            return true;
+        }
+    }
+    get(target, prop) {
+        if (prop === 'me' || prop == this.accessoryKey) {
+            return this.myval;
+        }
+        else {
+            return target[prop];
+        }
+    }
+    defineProperty(oTarget, sKey, oDesc) {
+        if (sKey == 'me') {
+            return Reflect.defineProperty(this, 'myval', oDesc);
+        }
+        else {
+            Object.defineProperty(oTarget, sKey, oDesc);
+        }
+    }
+}
+exports.AccessoryState = AccessoryState;
+const exposureLevels = {
+    'public': 2,
+    'local': 1,
+    'private': 0
+};
+class HostState {
+    constructor(host, spec) {
+        this.host = host;
+        this.spec = spec;
+        this.scope = this.host.nucleus || {};
+        let outsourced = this.host.subconstructs;
+        this.outsourced = outsourced;
+        let exposedHandler = function (level) {
+            let hostLevel = exposureLevels[level];
+            return {
+                set: (target, prop, value) => {
+                    if (prop in outsourced) {
+                        let exposing = outsourced[prop];
+                        let outlevel = exposureLevels[exposing.exposure];
+                        if (outlevel >= hostLevel) {
+                            if (!exposing.isComposite) {
+                                this.setAccessory(exposing, prop, value);
+                            }
+                            else {
+                                this.setSubCell(exposing, prop, value);
+                            }
+                        }
+                        else {
+                            throw new Error(`Cannot assign, this space: ${prop} is taken by subconstruct that is closed`);
+                        }
+                    }
+                    else if (prop in target) {
+                        target[prop] = value;
+                    }
+                    else {
+                        host.add(value, prop);
+                    }
+                    let q = {};
+                    q[prop] = value;
+                    host.bed.notify(q);
+                    return true;
+                },
+                get: (target, prop) => {
+                    if (prop in outsourced) {
+                        let exposing = outsourced[prop];
+                        let outlevel = exposureLevels[exposing.exposure];
+                        if (outlevel >= hostLevel) {
+                            if (exposing.isComposite) {
+                                return exposing.exposed;
+                            }
+                            else {
+                                return exposing.exposed.me;
+                            }
+                        }
+                        else if (exposing.remote) {
+                            exposing.extract();
+                        }
+                    }
+                    else {
+                        return target[prop];
+                    }
+                },
+                deleteProperty: (oTarget, sKey) => {
+                    if (sKey in outsourced) {
+                        this.host.remove(sKey);
+                    }
+                    else {
+                        delete this.scope[sKey];
+                    }
+                },
+                ownKeys: function (oTarget, sKey) {
+                    let keycoll = {};
+                    for (let k in outsourced) {
+                        let outlevel = exposureLevels[outsourced[k].exposure];
+                        if (outlevel >= hostLevel) {
+                            keycoll[k] = null;
+                        }
+                    }
+                    for (let k in oTarget) {
+                        keycoll[k] = null;
+                    }
+                    return Object.keys(keycoll);
+                },
+                has: function (oTarget, sKey) {
+                    return sKey in oTarget || sKey in outsourced;
+                },
+            };
+        };
+        this.local = new Proxy(this.scope, exposedHandler.call(this, 'local'));
+        this.exposed = new Proxy(this.scope, exposedHandler.call(this, 'public'));
+    }
+    setAccessory(exposing, key, value) {
+        exposing.exposed[key] = value;
+    }
+    setSubCell(exposing, key, value) {
+        if (value === undefined) {
+            this.host.remove(key);
+        }
+        else if (typeof value === 'object') {
+            let p = {};
+            p[key] = value;
+            this.host._patch(p);
+        }
+        else {
+            throw new Error("A subcell cannot be reset from the context, must dispose (set undefined)");
+        }
+    }
+}
+exports.HostState = HostState;
+//# sourceMappingURL=state.js.map
+
+/***/ }),
+/* 15 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
 class BasicContact {
     constructor() {
         this.hidden = false;
@@ -1348,7 +1613,7 @@ exports.BasicContact = BasicContact;
 //# sourceMappingURL=base.js.map
 
 /***/ }),
-/* 14 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1427,7 +1692,7 @@ exports.mediaConstructors = {};
 //# sourceMappingURL=medium.js.map
 
 /***/ }),
-/* 15 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1640,7 +1905,7 @@ exports.Membrane = Membrane;
 //# sourceMappingURL=membrane.js.map
 
 /***/ }),
-/* 16 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1706,13 +1971,13 @@ exports.Cell = Cell;
 //# sourceMappingURL=cell.js.map
 
 /***/ }),
-/* 17 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const cell_1 = __webpack_require__(16);
+const cell_1 = __webpack_require__(18);
 class DefaultCell extends cell_1.Cell {
     applyForm(form = {}) {
         form.exposure = 'public';
@@ -1724,14 +1989,14 @@ exports.DefaultCell = DefaultCell;
 //# sourceMappingURL=default.js.map
 
 /***/ }),
-/* 18 */
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
 const checks_1 = __webpack_require__(2);
-const transforms_1 = __webpack_require__(20);
+const transforms_1 = __webpack_require__(23);
 function dumpToDepthF(maxdepth, indentSym = "  ") {
     let recur = function (depth, indentation, item) {
         let outstr = "\n";
@@ -1926,1474 +2191,13 @@ exports.Crumb = Crumb;
 //# sourceMappingURL=debug.js.map
 
 /***/ }),
-/* 19 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-function isSubset(seq1, seq2) {
-    for (let k of seq1) {
-        if (seq2.indexOf(k) === -1) {
-            return false;
-        }
-    }
-    return true;
-}
-exports.isSubset = isSubset;
-function isSetEqual(seq1, seq2) {
-    return isSubset(seq1, seq2) && isSubset(seq2, seq1);
-}
-exports.isSetEqual = isSetEqual;
-function weightedChoice(weights) {
-    var sum = weights.reduce(function (a, b) { return a + b; }, 0);
-    var cdfArray = weights.reduce(function (coll, next, i) {
-        var v = (coll[i - 1] || 0) + next / sum;
-        return coll.concat([v]);
-    }, []);
-    var r = Math.random();
-    var i = 0;
-    while (i < weights.length - 1 && r > cdfArray[i]) {
-        i++;
-    }
-    return i;
-}
-exports.weightedChoice = weightedChoice;
-function range(...args) {
-    var beg, end, step;
-    switch (args.length) {
-        case 1: {
-            end = args[0];
-            beg = 0;
-            step = 1;
-            break;
-        }
-        case 2: {
-            end = args[1];
-            beg = args[0];
-            step = 1;
-            break;
-        }
-        case 3: {
-            end = args[2];
-            beg = args[0];
-            step = args[1];
-            break;
-        }
-        default: {
-            end = 0;
-            beg = 0;
-            step = 1;
-            break;
-        }
-    }
-    var rng = [];
-    if (beg > end && step < 0) {
-        for (let i = beg; i > end; i += step) {
-            rng.push(i);
-        }
-    }
-    else if (beg < end && step > 0) {
-        for (let i = beg; i < end; i += step) {
-            rng.push(i);
-        }
-    }
-    else {
-        throw new Error("invalid range parameters");
-    }
-    return rng;
-}
-exports.range = range;
-//# sourceMappingURL=math.js.map
-
-/***/ }),
-/* 20 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const checks_1 = __webpack_require__(2);
-const typesplit_1 = __webpack_require__(11);
-function identity(x) {
-    return x;
-}
-exports.identity = identity;
-function collapseValues(obj) {
-    if (!checks_1.isVanillaTree(obj)) {
-        throw new Error("cant collapse circular structure");
-    }
-    let valArr = [];
-    function nodeProcess(node) {
-        valArr.push(node);
-    }
-    function recursor(node) {
-        typesplit_1.typeCaseSplitF(recursor, recursor, nodeProcess)(node);
-    }
-    recursor(obj);
-    return valArr;
-}
-exports.collapseValues = collapseValues;
-function translator(node, translation) {
-    var translated;
-    if (typeof (node) == "object" && !(node instanceof Array)) {
-        translated = {};
-        for (var k in node) {
-            var tval = translation[k];
-            if (typeof (tval) == "function") {
-                translated[tval.name] = tval(node[k]);
-            }
-            if (typeof (tval) == "string") {
-                translated[tval] = node[k];
-            }
-            else if (tval != undefined) {
-                translated[k] = translator(node[k], tval);
-            }
-            else {
-                translated[k] = node[k];
-            }
-        }
-        return translated;
-    }
-    else {
-        return node;
-    }
-}
-exports.translator = translator;
-function melder(node1, node2, merge = function (a, b) { return b; }, concatArrays = false, typeConstrain = true) {
-    if (node1 == undefined) {
-        return node2;
-    }
-    if (node2 == undefined) {
-        return node1;
-    }
-    if (typeConstrain && (typeof (node1) != typeof (node2))) {
-        var errmsg = "Expected melding nodes to be the same type \n" +
-            "type of node1: " + typeof (node1) + "\n" +
-            "type of node2: " + typeof (node2) + "\n";
-        throw TypeError(errmsg);
-    }
-    var melded;
-    if (node1 instanceof Array) {
-        return concatArrays ? node1.concat(node2) : merge(node1, node2);
-    }
-    else if (typeof (node1) == 'object') {
-        melded = {};
-        for (var k in node1) {
-            melded[k] = node1[k];
-        }
-        for (var q in node2) {
-            melded[q] = node2[q];
-        }
-        for (var k in node1) {
-            for (var q in node2) {
-                if (k == q) {
-                    if (node1[k] == node2[k]) {
-                        melded[k] = node1[k];
-                    }
-                    else {
-                        melded[k] = melder(node1[k], node2[k], merge, concatArrays);
-                    }
-                }
-            }
-        }
-    }
-    else {
-        melded = merge(node1, node2);
-    }
-    return melded;
-}
-exports.melder = melder;
-function softAssoc(from, onto) {
-    for (var k in from) {
-        onto[k] = melder(from[k], onto[k]);
-    }
-}
-exports.softAssoc = softAssoc;
-function parassoc(from, onto) {
-    for (var k in from) {
-        onto[k] = melder(onto[k], from[k], function (a, b) {
-            return [a, b];
-        }, true);
-    }
-}
-exports.parassoc = parassoc;
-function assoc(from, onto) {
-    for (var k in from) {
-        onto[k] = melder(onto[k], from[k]);
-    }
-}
-exports.assoc = assoc;
-function deepCopy(thing) {
-    return typesplit_1.typeCaseSplitF(deepCopy, deepCopy)(thing);
-}
-exports.deepCopy = deepCopy;
-function applyMixins(derivedCtor, baseCtors) {
-    baseCtors.forEach(baseCtor => {
-        Object.getOwnPropertyNames(baseCtor.prototype).forEach(name => {
-            derivedCtor.prototype[name] = baseCtor.prototype[name];
-        });
-    });
-}
-exports.applyMixins = applyMixins;
-function objectArrayTranspose(objArr, key) {
-    var invert;
-    if (typeof (key) !== 'string') {
-        throw new Error("Value error: key must be string literal");
-    }
-    if (checks_1.isVanillaArray(objArr)) {
-        invert = {};
-        objArr.forEach(function (value, index) {
-            invert[value[key]] = value;
-        });
-    }
-    else if (checks_1.isVanillaObject(objArr)) {
-        invert = [];
-        for (var k in objArr) {
-            var obj = objArr[k];
-            obj[key] = k;
-            invert.push(obj);
-        }
-    }
-    else {
-        throw new Error("Value error: can only transpose object and array literals");
-    }
-}
-exports.objectArrayTranspose = objectArrayTranspose;
-function flattenObject(obj, depth = -1, values = []) {
-    for (let k in obj) {
-        let v = obj[k];
-        if (checks_1.isVanillaObject(v) && (depth >= 0 || depth >= -1)) {
-            flattenObject(v, depth - 1, values);
-        }
-        else {
-            values.push(v);
-        }
-    }
-    return values;
-}
-exports.flattenObject = flattenObject;
-function mapObject(obj, func) {
-    let mapped = {};
-    for (let k in obj) {
-        let v = obj[k];
-        mapped[k] = func(k, v);
-    }
-    return mapped;
-}
-exports.mapObject = mapObject;
-function projectObject(obj, keys) {
-    if (obj instanceof Object) {
-        let result;
-        if (obj instanceof Array) {
-            result = [];
-            for (let k of keys) {
-                if (k in obj) {
-                    result.push(obj[k]);
-                }
-            }
-        }
-        else {
-            result = {};
-            for (let k of keys) {
-                if (k in obj) {
-                    result[k] = obj[k];
-                }
-            }
-        }
-        return result;
-    }
-    else {
-        return obj;
-    }
-}
-exports.projectObject = projectObject;
-//# sourceMappingURL=transforms.js.map
-
-/***/ }),
 /* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const construct_1 = __webpack_require__(1);
-const all_1 = __webpack_require__(0);
-const state_1 = __webpack_require__(22);
-class Composite extends construct_1.Construct {
-    constructor(domain) {
-        super(domain);
-        this.isComposite = true;
-        this.subconstructs = [];
-        this.nucleus = {};
-    }
-    init(patch) {
-        super.init(patch);
-        this.addStrange('domain', this.domain.getExposure());
-        this.addStrange('meta', this.getExposure());
-        if (this.beginTractor) {
-            this.beginTractor.call(this.local);
-        }
-    }
-    applyForm(form = {}) {
-        super.applyForm(form);
-        this.state = new state_1.HostState(this.exposure, this.nucleus);
-        this.exposed = this.state.exposed;
-        this.local = this.state.local;
-        this.beginTractor = form.begin;
-        this.endTractor = form.end;
-    }
-    clearForm() {
-        this.beginTractor = undefined;
-        this.endTractor = undefined;
-        super.clearForm();
-    }
-    patch(patch) {
-        for (let k in patch) {
-            if (!(k in Composite.keywords)) {
-                let v = patch[k];
-                this.patchChild(k, v);
-            }
-        }
-        if (patch.anon !== undefined) {
-            for (let i = 0; i < patch.anon.length; i++) {
-                this.add(patch.anon[i]);
-            }
-        }
-    }
-    reset(patch) {
-        this.dispose();
-        this.init(patch);
-    }
-    patchChild(k, v) {
-        let existing = this.subconstructs[k];
-        if (existing !== undefined) {
-            existing.patch(v);
-        }
-        else {
-            if (v === Symbol.for("DELETE")) {
-                this.remove(k);
-            }
-            else {
-                this.add(v, k);
-            }
-        }
-    }
-    add(val, key) {
-        let k = key === undefined ? this.subconstructs.length++ : key;
-        if (this.nucleus instanceof Array) {
-            this.nucleus.length = this.subconstructs.length;
-        }
-        if (all_1.isPrimative(val)) {
-            this.addPrimative(k, val);
-        }
-        else if (all_1.isVanillaObject(val)) {
-            val.basis = val.basis || 'object';
-            let recovered = this.domain.recover(val);
-            this.attachChild(recovered, k);
-        }
-        else if (all_1.isVanillaArray(val)) {
-            let patch = {
-                basis: 'array',
-                anon: val
-            };
-            let recovered = this.domain.recover(patch);
-            this.attachChild(recovered, k);
-        }
-        else {
-            this.addStrange(k, val);
-        }
-    }
-    attachChild(construct, key) {
-        this.subconstructs[key] = construct;
-        construct.attach(this, key);
-    }
-    detachChild(key) {
-        let construct = this.subconstructs[key];
-        delete this.subconstructs[key];
-        construct.detach(this, key);
-        this.state.removeSub(key);
-    }
-    addStrange(k, v) {
-        this.nucleus[k] = v;
-    }
-    addPrimative(k, v) {
-        this.nucleus[k] = v;
-    }
-    getExposure() {
-        return {
-            create: (v, k) => {
-                this.add(v, k);
-            },
-            destroy: (k) => {
-                this.remove(k);
-            }
-        };
-    }
-    remove(k) {
-        let removing = this.subconstructs[k];
-        if (removing !== undefined) {
-            this.detachChild(k);
-            let final = removing.dispose();
-            return final;
-        }
-        else if (k in this.nucleus) {
-            let removeState = this.nucleus[k];
-            delete this.nucleus;
-        }
-    }
-    dispose() {
-        if (this.endTractor) {
-            this.endTractor.call(this.state.local);
-        }
-        for (let key in this.subconstructs) {
-            let construct = this.subconstructs[key];
-            construct.dispose();
-            this.detachChild(key);
-        }
-        this.clearForm();
-        super.dispose();
-    }
-    extract() {
-        if (this.alive) {
-            let extracted = {};
-            for (let key in this.subconstructs) {
-                let construct = this.subconstructs[key];
-                extracted[key] = construct.extract();
-            }
-            for (let key in this.nucleus) {
-                if (!(key in this.subconstructs)) {
-                    if (all_1.isPrimative(this.nucleus[key])) {
-                        extracted[key] = this.nucleus[key];
-                    }
-                }
-            }
-            return extracted;
-        }
-        else {
-            return undefined;
-        }
-    }
-}
-Composite.keywords = { basis: null, domain: null, form: null, anon: null };
-exports.Composite = Composite;
-//# sourceMappingURL=composite.js.map
-
-/***/ }),
-/* 22 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-class AccessoryState {
-    constructor(exposure = 'local', accessoryKey, scope) {
-        this.exposure = exposure;
-        this.accessoryKey = accessoryKey;
-        this.scope = scope;
-        this.scope = this.scope || {};
-        this.exposed = new Proxy(this.scope, this);
-        this.myval = scope[accessoryKey];
-    }
-    set(target, prop, value) {
-        if (prop === 'me' || prop == this.accessoryKey) {
-            this.myval = value;
-            return true;
-        }
-        else {
-            target[prop] = value;
-            return true;
-        }
-    }
-    get(target, prop) {
-        if (prop === 'me' || prop == this.accessoryKey) {
-            return this.myval;
-        }
-        else {
-            return target[prop];
-        }
-    }
-    defineProperty(oTarget, sKey, oDesc) {
-        if (sKey == 'me') {
-            return Reflect.defineProperty(this, 'myval', oDesc);
-        }
-        else {
-            Object.defineProperty(this.scope, sKey, oDesc);
-        }
-    }
-}
-exports.AccessoryState = AccessoryState;
-const exposureLevels = {
-    'public': 2,
-    'local': 1,
-    'private': 0
-};
-class HostState {
-    constructor(exposure = 'local', scope) {
-        this.exposure = exposure;
-        this.scope = scope;
-        this.scope = this.scope || {};
-        let outsourced = {};
-        this.outsourced = outsourced;
-        let exposedHandler = function (level) {
-            let hostLevel = exposureLevels[level];
-            return {
-                set: (target, prop, value) => {
-                    if (prop in outsourced) {
-                        let outlevel = exposureLevels[outsourced[prop].exposure];
-                        if (outlevel >= hostLevel) {
-                            let exposing = outsourced[prop];
-                            if (exposing instanceof AccessoryState) {
-                                return exposing.exposed[prop] = value;
-                            }
-                            else {
-                                throw new Error("An child subproperty cannot be reset, must dispose");
-                            }
-                        }
-                        else {
-                            throw new Error(`Cannot assign, this space: ${prop} is taken by subconstruct that is closed`);
-                        }
-                    }
-                    else {
-                        target[prop] = value;
-                        return true;
-                    }
-                },
-                get: (target, prop) => {
-                    if (prop in outsourced) {
-                        let outlevel = exposureLevels[outsourced[prop].exposure];
-                        if (outlevel >= hostLevel) {
-                            let exposing = outsourced[prop];
-                            if (exposing instanceof AccessoryState) {
-                                return exposing.exposed.me;
-                            }
-                            else {
-                                return exposing.exposed;
-                            }
-                        }
-                    }
-                    else {
-                        return target[prop];
-                    }
-                },
-                deleteProperty: (oTarget, sKey) => {
-                    if (sKey in outsourced) {
-                        this.removeSub(sKey);
-                    }
-                    else {
-                        delete this.scope[sKey];
-                    }
-                },
-                ownKeys: function (oTarget, sKey) {
-                    let keycoll = {};
-                    for (let k in outsourced) {
-                        let outlevel = exposureLevels[outsourced[k].exposure];
-                        if (outlevel >= hostLevel) {
-                            keycoll[k] = null;
-                        }
-                    }
-                    for (let k in oTarget) {
-                        keycoll[k] = null;
-                    }
-                    return Object.keys(keycoll);
-                },
-                has: function (oTarget, sKey) {
-                    return sKey in oTarget || sKey in outsourced;
-                },
-            };
-        };
-        this.local = new Proxy(scope, exposedHandler.call(this, 'local'));
-        this.exposed = new Proxy(scope, exposedHandler.call(this, 'public'));
-    }
-    addSub(key, value) {
-        this.outsourced[key] = value;
-    }
-    removeSub(key) {
-        delete this.outsourced[key];
-    }
-    createAccessory(purview, exposure, key, initial = {}) {
-        let scope = purview == 'host' ? this.local : {};
-        if (initial)
-            scope[key] = initial;
-        let accessory = new AccessoryState(exposure, key, scope);
-        this.addSub(key, accessory);
-        return accessory;
-    }
-}
-exports.HostState = HostState;
-//# sourceMappingURL=state.js.map
-
-/***/ }),
-/* 23 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var LINK_FILTERS;
-(function (LINK_FILTERS) {
-    LINK_FILTERS[LINK_FILTERS["PROCEED"] = 0] = "PROCEED";
-    LINK_FILTERS[LINK_FILTERS["DECEED"] = 1] = "DECEED";
-    LINK_FILTERS[LINK_FILTERS["ELSEWHERE"] = 2] = "ELSEWHERE";
-    LINK_FILTERS[LINK_FILTERS["NONE"] = 3] = "NONE";
-})(LINK_FILTERS = exports.LINK_FILTERS || (exports.LINK_FILTERS = {}));
-exports.FreePolicy = {
-    fussy: false,
-    allowAddition: true,
-    allowRemoval: true
-};
-//# sourceMappingURL=interfaces.js.map
-
-/***/ }),
-/* 24 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const medium_1 = __webpack_require__(14);
-const all_1 = __webpack_require__(0);
-const op_1 = __webpack_require__(7);
-var DEMUXARG;
-(function (DEMUXARG) {
-    DEMUXARG[DEMUXARG["ONE"] = 0] = "ONE";
-    DEMUXARG[DEMUXARG["SOME"] = 1] = "SOME";
-    DEMUXARG[DEMUXARG["DONT"] = 2] = "DONT";
-    DEMUXARG[DEMUXARG["ALL"] = 3] = "ALL";
-})(DEMUXARG = exports.DEMUXARG || (exports.DEMUXARG = {}));
-var CALLTYPE;
-(function (CALLTYPE) {
-    CALLTYPE[CALLTYPE["DIRECT"] = 0] = "DIRECT";
-    CALLTYPE[CALLTYPE["BREADTH_FIRST"] = 1] = "BREADTH_FIRST";
-    CALLTYPE[CALLTYPE["DEPTH_FIRST"] = 2] = "DEPTH_FIRST";
-    CALLTYPE[CALLTYPE["SERIAL"] = 3] = "SERIAL";
-})(CALLTYPE = exports.CALLTYPE || (exports.CALLTYPE = {}));
-var MUXRESP;
-(function (MUXRESP) {
-    MUXRESP[MUXRESP["RACE"] = 0] = "RACE";
-    MUXRESP[MUXRESP["FIRST"] = 1] = "FIRST";
-    MUXRESP[MUXRESP["LAST"] = 2] = "LAST";
-    MUXRESP[MUXRESP["MAP"] = 3] = "MAP";
-    MUXRESP[MUXRESP["ORDER"] = 4] = "ORDER";
-    MUXRESP[MUXRESP["DROP"] = 5] = "DROP";
-})(MUXRESP = exports.MUXRESP || (exports.MUXRESP = {}));
-const JunctionModeKeys = {};
-JunctionModeKeys[MUXRESP.RACE] = "race";
-JunctionModeKeys[MUXRESP.FIRST] = "first";
-JunctionModeKeys[MUXRESP.LAST] = "last";
-JunctionModeKeys[MUXRESP.MAP] = "object";
-JunctionModeKeys[MUXRESP.ORDER] = "array";
-class MuxMedium extends medium_1.BaseMedium {
-    constructor(muxspec) {
-        super(muxspec);
-        this.muxspec = muxspec;
-        this.typeA = op_1.Op;
-        this.typeB = op_1.Op;
-        if (muxspec.emitCallType == CALLTYPE.DIRECT) {
-            this.multiA = false;
-            this.multiB = false;
-        }
-    }
-    emitArgProcess(inpArg, crumb, sink, link) {
-        let arg, escape;
-        let eType = this.muxspec.emitArgType;
-        if (eType === DEMUXARG.DONT) {
-            arg = inpArg;
-        }
-        else {
-            if (eType == DEMUXARG.ONE) {
-                if (this.emitScope.oneDone) {
-                    crumb.raise(`Incoming packet breaches single target constraint`);
-                    return;
-                }
-                else {
-                    this.emitScope.oneDone = true;
-                }
-            }
-            let packet = inpArg;
-            for (let symk in this.muxspec.symbols) {
-                let sym = this.muxspec.symbols[symk];
-                if (sym in link.bindings) {
-                    let bound = link.bindings[sym];
-                    if (!(packet instanceof Object)) {
-                        crumb.raise(`incoming packet must be object to be demuxed`);
-                    }
-                    if (bound in packet) {
-                        packet = packet[bound];
-                    }
-                    else {
-                        if (eType === DEMUXARG.ALL) {
-                            crumb.raise(`Incoming packet must include key: ${bound}, but only has ${Object.getOwnPropertyNames(packet)}`);
-                        }
-                    }
-                }
-                else {
-                }
-            }
-            arg = packet;
-        }
-        return arg;
-    }
-    emitResponse(putResp, crumb, link) {
-        let Rtype = this.muxspec.emitRetType;
-        let emitResp = putResp;
-        if (Rtype == MUXRESP.DROP) {
-            return null;
-        }
-        else if (Rtype == MUXRESP.MAP) {
-            let demuxterms = [];
-            for (let symk in this.muxspec.symbols) {
-                let sym = this.muxspec.symbols[symk];
-                if (sym in link.bindings) {
-                    let term = link.bindings[sym];
-                    demuxterms.push(term);
-                }
-            }
-            this.emitScope.junction.merge(putResp, demuxterms);
-        }
-        else if (Rtype == MUXRESP.FIRST || Rtype === MUXRESP.LAST || Rtype === MUXRESP.RACE) {
-            this.emitScope.junction.merge(putResp);
-        }
-    }
-    emitter(sourceToken, data, crumb) {
-        let allFromA = this.matrix.to[sourceToken];
-        this.beginEmit();
-        for (let sinkToken in allFromA) {
-            let link = allFromA[sinkToken];
-            let sink = link.contactB;
-            let arg = this.emitArgProcess(data, crumb, sink, link);
-            let putResp = sink.put(arg, crumb);
-            this.emitResponse(putResp, crumb, link);
-        }
-        return this.endEmit();
-    }
-    beginEmit() {
-        this.emitScope = {};
-        this.emitScope.junction = new all_1.Junction();
-        if (this.muxspec.emitRetType in JunctionModeKeys) {
-            this.emitScope.junction.mode(JunctionModeKeys[this.muxspec.emitRetType]);
-        }
-        if (this.muxspec.emitArgType == DEMUXARG.ONE) {
-            this.emitScope.oneDone = false;
-        }
-        this.emitScope.packet = {};
-    }
-    endEmit() {
-        let junc = this.emitScope.junction;
-        this.emitScope = undefined;
-        return junc;
-    }
-    inductA(token, a) {
-        if (this.muxspec.emitCallType !== CALLTYPE.DIRECT) {
-            a.emit = this.emitter.bind(this, token);
-        }
-    }
-    inductB(token, b) {
-    }
-    connect(link) {
-        if (this.muxspec.emitCallType == CALLTYPE.DIRECT) {
-            link.contactA.emit = link.contactB.put;
-        }
-    }
-    check(link) {
-        let superok = super.check(link);
-        let out = link.contactA.hasOutput;
-        let inp = link.contactB.hasInput;
-        return superok && out && inp;
-    }
-    disconnect(link) {
-        super.disconnect(link);
-        link.contactA.emit = undefined;
-    }
-}
-exports.MuxMedium = MuxMedium;
-//# sourceMappingURL=multiplexing.js.map
-
-/***/ }),
-/* 25 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const I = __webpack_require__(23);
-const membrane_1 = __webpack_require__(15);
-const designator_1 = __webpack_require__(8);
-const matching_1 = __webpack_require__(31);
-class RuleMesh {
-    constructor(membrane) {
-        this.changeOccurred = membrane_1.DemuxWatchMethodsF(this);
-        this.primary = membrane;
-        this.primary.addWatch(this);
-        this.rules = {};
-        this.media = {};
-        this.locations = {};
-    }
-    addMedium(key, medium) {
-        this.rules[key] = [];
-        this.media[key] = medium;
-    }
-    parseRules(ruleset, mediumkey) {
-        for (let link of ruleset) {
-            let linkIR = this.parseLink(link);
-            this.addRule(linkIR, mediumkey);
-        }
-    }
-    parseLink(link) {
-        let m = link.match(/^([\w\*\:\.#]+)(\|?)(<?)([\+\-\!]?)([=\-])(>?)(\|?)([\w\*\:\.#]+)/);
-        if (!m) {
-            throw new Error(`Unable to parse link description, expression ${link} did not match regex`);
-        }
-        ;
-        let [match, srcDesig, srcClose, backward, filter, matching, forward, snkClose, snkDesig] = m;
-        let ruleIR = {
-            designatorA: new designator_1.Designator('subranes', 'contacts', srcDesig),
-            designatorB: new designator_1.Designator('subranes', 'contacts', snkDesig),
-            closeA: srcClose === '|',
-            closeB: snkClose === '|',
-            forward: forward === '>',
-            backward: backward === '<',
-            matching: matching === "=",
-            propogation: filter !== '' ? { '+': I.LINK_FILTERS.PROCEED, '-': I.LINK_FILTERS.DECEED, '!': I.LINK_FILTERS.ELSEWHERE }[filter] : I.LINK_FILTERS.NONE
-        };
-        return ruleIR;
-    }
-    addRule(rule, mediumkey, ruleID) {
-        if (this.rules[mediumkey] === undefined) {
-            throw new Error(`Unable to create rule ${mediumkey} is not a recognised media type`);
-        }
-        if (typeof rule === 'string') {
-            this.addRule(this.parseLink(rule), mediumkey, ruleID);
-        }
-        else if (typeof rule === 'object') {
-            if (ruleID !== undefined) {
-                this.rules[mediumkey][ruleID] = rule;
-            }
-            else {
-                this.rules[mediumkey].push(rule);
-            }
-            let dA = rule.designatorA.tokenDesignate(this.primary);
-            let dB = rule.designatorB.tokenDesignate(this.primary);
-            this.balanceSquare(rule, dA, dB, mediumkey, false);
-        }
-    }
-    removeRule(mediumID, ruleID) {
-        let rule = this.rules[mediumID][ruleID];
-        if (rule === undefined) {
-            throw new Error(`The rule: ${rule} being removed does not exist in medium ${mediumID}`);
-        }
-        let dA = rule.designatorA.tokenDesignate(this.primary);
-        let dB = rule.designatorB.tokenDesignate(this.primary);
-        this.balanceSquare(rule, dA, dB, mediumID, true);
-    }
-    balanceSquare(rule, dA, dB, mediumkey, destructive) {
-        let op = destructive ? this.unsquare : this.square;
-        if (rule.forward) {
-            op.call(this, rule, dA, dB, mediumkey);
-        }
-        if (rule.backward) {
-            op.call(this, rule, dB, dA, mediumkey);
-        }
-    }
-    unsquare(rule, desigA, desigB, mediumkey) {
-        let pairs = matching_1.pairByBinding(desigA, desigB, rule.matching);
-        for (let pair of pairs) {
-            let tokenA = pair.tokenA;
-            let tokenB = pair.tokenB;
-            let contactA = desigA[tokenA];
-            let contactB = desigB[tokenB];
-            let medium = this.media[mediumkey];
-            let link = {
-                tokenA: tokenA,
-                tokenB: tokenB,
-                contactA: contactA,
-                contactB: contactB,
-                bindings: pair.bindings
-            };
-            if (medium.hasLink(link)) {
-                medium.disconnect(link);
-                if (!medium.hasToken(tokenA)) {
-                    delete this.locations[tokenA][mediumkey];
-                }
-                if (!medium.hasToken(tokenA)) {
-                    delete this.locations[tokenB][mediumkey];
-                }
-            }
-        }
-    }
-    square(rule, desigA, desigB, mediumkey) {
-        let firstGlove = false;
-        let pairs = matching_1.pairByBinding(desigA, desigB, rule.matching);
-        for (let pair of pairs) {
-            let tokenA = pair.tokenA;
-            let tokenB = pair.tokenB;
-            let contactA = desigA[tokenA];
-            let contactB = desigB[tokenB];
-            let medium = this.media[mediumkey];
-            let link = {
-                bindings: pair.bindings,
-                tokenA: tokenA,
-                tokenB: tokenB,
-                contactA: contactA,
-                contactB: contactB
-            };
-            for (let mk in this.media) {
-                let claimer = this.media[mk];
-                if (mk !== mediumkey && claimer.hasClaim(link)) {
-                    throw new Error('Unable to suppose link when another medium has claimed the token');
-                }
-            }
-            let supposeResult = medium.suppose(link);
-            if (supposeResult) {
-                this.locations[tokenA] = this.locations[tokenA] || {};
-                this.locations[tokenB] = this.locations[tokenB] || {};
-                this.locations[tokenA][mediumkey] = medium;
-                this.locations[tokenB][mediumkey] = medium;
-            }
-        }
-    }
-    onAddContact(contact, token) {
-        for (let mediumkey in this.media) {
-            let medium = this.media[mediumkey];
-            let linkRules = this.rules[mediumkey];
-            for (let ruleID in linkRules) {
-                let rule = linkRules[ruleID];
-                let matchA = rule.designatorA.matches(token);
-                let matchB = rule.designatorB.matches(token);
-                if (matchA) {
-                    let dB = rule.designatorB.tokenDesignate(this.primary);
-                    let dA = {};
-                    dA[token] = contact;
-                    this.balanceSquare(rule, dA, dB, mediumkey, false);
-                }
-                if (matchB) {
-                    let dA = rule.designatorA.tokenDesignate(this.primary);
-                    let dB = {};
-                    dB[token] = contact;
-                    this.balanceSquare(rule, dA, dB, mediumkey, false);
-                }
-            }
-        }
-    }
-    onRemoveContact(contact, token) {
-        for (let loc in this.locations[token]) {
-            let location = this.locations[token][loc];
-            if (contact instanceof location.typeA) {
-                location.breakA(token, contact);
-            }
-            if (contact instanceof location.typeB) {
-                location.breakB(token, contact);
-            }
-        }
-    }
-    onAddMembrane(membrane, token) {
-    }
-    onRemoveMembrane(membrane, token) {
-    }
-    hasLinked(tokenA, tokenB, directed = true) {
-        let mediaWithA = this.locations[tokenA];
-        for (let mediakey in mediaWithA) {
-            let medium = this.media[mediakey];
-            let aToMap = medium.matrix.to[tokenA];
-            let bFromMap = medium.matrix.from[tokenB];
-            let aToB = aToMap !== undefined && aToMap[tokenB] !== undefined;
-            let bFromA = bFromMap !== undefined && bFromMap[tokenA] !== undefined;
-            if (directed && (aToB && bFromA)) {
-                return true;
-            }
-            else if (!directed && (aToB || bFromA)) {
-                return true;
-            }
-        }
-        return false;
-    }
-}
-exports.RuleMesh = RuleMesh;
-//# sourceMappingURL=ruleMesh.js.map
-
-/***/ }),
-/* 26 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-function __export(m) {
-    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
-}
-Object.defineProperty(exports, "__esModule", { value: true });
-const domain_1 = __webpack_require__(12);
-const _Util = __webpack_require__(0);
-const _IO = __webpack_require__(4);
-const _TRT = __webpack_require__(6);
-const _CST = __webpack_require__(3);
-exports.Util = _Util;
-exports.IO = _IO;
-exports.TRT = _TRT;
-exports.CST = _CST;
-__export(__webpack_require__(0));
-__export(__webpack_require__(4));
-__export(__webpack_require__(3));
-__export(__webpack_require__(6));
-exports.Core = new domain_1.Domain({
-    media: new domain_1.Domain({
-        direct: {
-            nature: _IO.MuxMedium,
-            patch: {
-                symbols: [],
-                emitArgType: _IO.DEMUXARG.ONE,
-                emitRetType: _IO.MUXRESP.LAST,
-                emitCallType: _IO.CALLTYPE.DIRECT
-            }
-        },
-        smear: {
-            nature: _IO.MuxMedium,
-            patch: {
-                symbols: [],
-                emitArgType: _IO.DEMUXARG.DONT,
-                emitRetType: _IO.MUXRESP.LAST,
-                emitCallType: _IO.CALLTYPE.BREADTH_FIRST
-            }
-        },
-        split: {
-            nature: _IO.MuxMedium,
-            patch: {
-                symbols: [],
-                emitArgType: _IO.DEMUXARG.SOME,
-                emitRetType: _IO.MUXRESP.MAP,
-                emitCallType: _IO.CALLTYPE.BREADTH_FIRST
-            }
-        },
-        compose: {
-            nature: _IO.MuxMedium,
-            patch: {
-                symbols: [],
-                emitArgType: _IO.DEMUXARG.DONT,
-                emitRetType: _IO.MUXRESP.MAP,
-                emitCallType: _IO.CALLTYPE.BREADTH_FIRST
-            }
-        },
-        race: {
-            nature: _IO.MuxMedium,
-            patch: {
-                symbols: [],
-                emitArgType: _IO.DEMUXARG.DONT,
-                emitRetType: _IO.MUXRESP.RACE,
-                emitCallType: _IO.CALLTYPE.BREADTH_FIRST
-            }
-        }
-    }),
-    cell: exports.TRT.Cell,
-    object: exports.TRT.DefaultCell,
-    array: exports.TRT.ArrayCell,
-    link: exports.TRT.Connector,
-    contact: new domain_1.Domain({
-        op: exports.TRT.StandardOp,
-        outof: {
-            nature: exports.TRT.StandardOp,
-            patch: {
-                carry_out: true
-            }
-        },
-        into: {
-            nature: exports.TRT.StandardOp,
-            patch: {
-                carry_in: true
-            }
-        }
-    })
-});
-exports.CST.Construct.DefaultDomain = exports.Core;
-//# sourceMappingURL=jungle.js.map
-
-/***/ }),
-/* 27 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const default_1 = __webpack_require__(17);
-class ArrayCell extends default_1.DefaultCell {
-    constructor(domain) {
-        super(domain);
-        this.nucleus = [];
-    }
-}
-exports.ArrayCell = ArrayCell;
-//# sourceMappingURL=array.js.map
-
-/***/ }),
-/* 28 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const construct_1 = __webpack_require__(1);
-const op_1 = __webpack_require__(7);
-class OpConstruct extends construct_1.Construct {
-    init(spec) {
-        super.init(spec);
-    }
-    attach(host, key) {
-        super.attach(host, key);
-        let op = new op_1.Op({
-            context: this.local,
-            major_op: this.nucleus.major_op,
-            major_arg1: this.nucleus.major_arg1,
-            major_arg2: this.nucleus.major_arg2,
-            major_return: this.nucleus.major_return,
-            minor_op: this.nucleus.minor_op,
-            minor_arg1: this.nucleus.minor_arg1,
-            minor_arg2: this.nucleus.minor_arg2,
-            minor_return: this.nucleus.minor_return,
-            hook_op: this.nucleus.hook_op,
-            hook_arg1: this.nucleus.hook_arg1,
-            hook_arg2: this.nucleus.hook_arg2,
-            hook_name: key,
-        });
-        this.nucleus = this.nucleus.default;
-        host.lining.addContact(op, key);
-    }
-    detach(host, key) {
-        host.lining.removeContact(key);
-    }
-}
-exports.OpConstruct = OpConstruct;
-const mutexes = [['resolve_out', 'carry_out', 'reflex_out'], ['resolve_in', 'carry_in', 'reflex_in']];
-const fnameToReturnTarget = {
-    'resolve_out': 'resolve',
-    'resolve_in': 'resolve',
-    'carry_out': 'carry',
-    'carry_in': 'carry',
-    'reflex_out': 'reflex',
-    'reflex_in': 'reflex',
-};
-class StandardOp extends OpConstruct {
-    init(spec) {
-        let chosen = [];
-        for (let i = 0; i < mutexes.length; i++) {
-            let m = mutexes[i];
-            for (let n of m) {
-                if (n in spec) {
-                    if (!chosen[i]) {
-                        chosen[i] = n;
-                    }
-                    else {
-                        throw new Error("Cannot specify mulitiple call sources for each side");
-                    }
-                }
-            }
-        }
-        super.init({
-            form: spec.form,
-            default: spec.default,
-            major_op: spec[chosen[0]],
-            major_arg1: spec.arg1,
-            major_arg2: spec.arg2,
-            major_return: fnameToReturnTarget[chosen[0]],
-            minor_op: spec[chosen[1]],
-            minor_arg1: spec.arg1,
-            minor_arg2: spec.arg2,
-            minor_return: fnameToReturnTarget[chosen[1]],
-        });
-    }
-    attach(host, key) {
-        super.attach(host, key);
-    }
-}
-exports.StandardOp = StandardOp;
-class Drain extends OpConstruct {
-    init(spec) {
-        spec.open_in = spec.open_in === undefined ? true : spec.open_in;
-        spec.open_out = spec.open_out === undefined ? true : spec.open_out;
-        super.init({
-            form: spec.form,
-            major_op: spec.open_out ? spec.drain : undefined,
-            major_return: 'resolve',
-            minor_op: spec.open_in ? spec.drain : undefined,
-            minor_return: 'resolve',
-        });
-    }
-}
-exports.Drain = Drain;
-class Spring extends OpConstruct {
-    init(spec) {
-        let springF = function (data, carry, reflex) {
-            if (spec.open_in) {
-                carry(data);
-            }
-            if (spec.open_out) {
-                reflex(data);
-            }
-        };
-        super.init({
-            form: spec.form,
-            hook_op: springF,
-            hook_arg1: 'carry',
-            hook_arg2: 'reflex'
-        });
-    }
-}
-exports.Spring = Spring;
-//# sourceMappingURL=OpAccessory.js.map
-
-/***/ }),
-/* 29 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const construct_1 = __webpack_require__(1);
-class Connector extends construct_1.Construct {
-    attach(anchor, label) {
-        super.attach(anchor, label);
-        if (!(this.nucleus.medium in anchor.mesh.media)) {
-            anchor.mesh.addMedium(this.nucleus.medium, this.domain.recover({
-                basis: 'media:' + this.nucleus.medium,
-                label: this.nucleus.medium,
-                exposed: this.nucleus
-            }));
-        }
-        anchor.mesh.addRule(this.nucleus.rule, this.nucleus.medium, label);
-    }
-    detach(anchor, label) {
-        anchor.mesh.removeRule(this.nucleus.medium, label);
-    }
-}
-exports.Connector = Connector;
-//# sourceMappingURL=connector.js.map
-
-/***/ }),
-/* 30 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const typesplit_1 = __webpack_require__(11);
-const checks_1 = __webpack_require__(2);
-const math_1 = __webpack_require__(19);
-function B(crown = {}, form = {}) {
-    return new Blender(crown, form);
-}
-exports.B = B;
-class Blender {
-    constructor(crown, form = {}) {
-        this.crown = crown;
-        if (form instanceof Function) {
-            this.reducer = form;
-        }
-        else if (form.reducer instanceof Function) {
-            this.reducer = form.reducer;
-        }
-        else {
-            this.reducer = Blender.defaultReduce;
-        }
-        this.block = form.block || false;
-        this.term = form.term || false;
-        this.mapper = form.mapper || Blender.defaultMap;
-    }
-    static defaultReduce(a, b) {
-        if (Blender.strictTypeReduce && (typeof (a) != typeof (b))) {
-            var errmsg = "Expected melding to be the same type \n" +
-                "existing: " + a + "\n" +
-                "incoming: " + b + "\n";
-            throw TypeError(errmsg);
-        }
-        return b === undefined ? a : b;
-    }
-    ;
-    static defaultMap(x) {
-        return x;
-    }
-    init(obj) {
-        if (this.term === false) {
-            this.crown = typesplit_1.typeCaseSplitF(this.initChurn.bind(this))(obj);
-        }
-        else {
-            this.crown = obj;
-        }
-        return this;
-    }
-    initChurn(inner, k) {
-        var result;
-        if (k === undefined && checks_1.isPrimative(inner)) {
-            result = inner;
-            this.term = inner !== undefined;
-        }
-        else if (k in this.crown) {
-            let val = this.crown[k];
-            if (val instanceof Blender) {
-                result = val.init(inner);
-            }
-            else if (val instanceof Function) {
-                result = B(undefined, val).init(inner);
-            }
-            else {
-                result = B(this.crown[k], { mapper: this.mapper, reducer: this.reducer }).init(inner);
-            }
-        }
-        else {
-            result = B(undefined, { mapper: this.mapper, reducer: this.reducer }).init(inner);
-        }
-        return result;
-    }
-    dump() {
-        if (this.term) {
-            return this.crown;
-        }
-        else {
-            return typesplit_1.typeCaseSplitF(function (child) {
-                return child !== undefined ? child.dump() : undefined;
-            })(this.crown);
-        }
-    }
-    blend(obj) {
-        this._blend(obj);
-        return this;
-    }
-    _blend(obj) {
-        let mapped = this.mapper(obj);
-        let reduced;
-        if (this.term) {
-            reduced = this.reducer(this.crown, mapped);
-            this.crown = reduced;
-        }
-        else {
-            reduced = this.merge(mapped);
-        }
-        return reduced;
-    }
-    merge(income) {
-        let result, superkeys;
-        if (this.crown === undefined && income !== undefined) {
-            this.init(income);
-            return income;
-        }
-        else if (income !== undefined) {
-            if (this.crown instanceof Array) {
-                result = [];
-                superkeys = math_1.range(Math.max((income || []).length || 0, this.crown.length));
-            }
-            else {
-                result = {};
-                superkeys = Object.keys(this.crown || {});
-                Object.keys(income || {}).forEach(key => {
-                    if (superkeys.indexOf(key) === -1) {
-                        superkeys.push(key);
-                    }
-                });
-            }
-            for (let key of superkeys) {
-                if (key in income) {
-                    if (key in this.crown) {
-                        result[key] = this.crown[key]._blend(income[key]);
-                    }
-                    else {
-                        this.crown[key] = B(undefined, { mapper: this.mapper, reducer: this.reducer }).init(income[key]);
-                        result[key] = this.crown[key].dump();
-                    }
-                }
-                else if (key in this.crown) {
-                    result[key] = this.crown[key].dump();
-                }
-                else {
-                }
-            }
-            return result;
-        }
-    }
-}
-Blender.strictTypeReduce = false;
-exports.Blender = Blender;
-//# sourceMappingURL=blender.js.map
-
-/***/ }),
-/* 31 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-function pairByBinding(result1, result2, hard = false) {
-    let transA = transposeBindings(result1);
-    let transB = transposeBindings(result2);
-    let collection = [];
-    for (let tokenA in transA) {
-        for (let tokenB in transB) {
-            let breakpair = false;
-            let bindingsA = transA[tokenA];
-            let bindingsB = transB[tokenB];
-            let merged = {};
-            for (let symInA in bindingsA) {
-                let termInA = bindingsA[symInA];
-                if (symInA in bindingsB && termInA !== bindingsB[symInA] || (!(symInA in bindingsB) && hard)) {
-                    breakpair = true;
-                }
-                else {
-                    merged[symInA] = termInA;
-                }
-            }
-            for (let symInB in bindingsB) {
-                let termInB = bindingsB[symInB];
-                if (!(symInB in bindingsA)) {
-                    if (hard) {
-                        breakpair = true;
-                    }
-                    else {
-                        merged[symInB] = termInB;
-                    }
-                }
-            }
-            if (breakpair)
-                continue;
-            collection.push({
-                tokenA: tokenA,
-                tokenB: tokenB,
-                bindings: merged
-            });
-        }
-    }
-    return collection;
-}
-exports.pairByBinding = pairByBinding;
-function transposeBindings(bindings) {
-    function recur(bindingTree, collected, current) {
-        for (let token in bindingTree) {
-            collected[token] = current;
-        }
-        for (let sym of Object.getOwnPropertySymbols(bindingTree)) {
-            let terms = bindingTree[sym];
-            for (let term in terms) {
-                let upBind = {};
-                if (Symbol.keyFor(sym) in current && current[Symbol.keyFor(sym)] !== term) {
-                    continue;
-                }
-                for (let bsym in current) {
-                    upBind[bsym] = current[bsym];
-                }
-                upBind[Symbol.keyFor(sym)] = term;
-                let tokens = terms[term];
-                recur(tokens, collected, upBind);
-            }
-        }
-        return collected;
-    }
-    return recur(bindings, {}, {});
-}
-exports.transposeBindings = transposeBindings;
-//# sourceMappingURL=matching.js.map
-
-/***/ }),
-/* 32 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const Modes = __webpack_require__(33);
+const Modes = __webpack_require__(34);
 var JResultNatures;
 (function (JResultNatures) {
     JResultNatures[JResultNatures["Single"] = 0] = "Single";
@@ -3607,7 +2411,1345 @@ exports.Junction = Junction;
 //# sourceMappingURL=junction.js.map
 
 /***/ }),
+/* 22 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+function isSubset(seq1, seq2) {
+    for (let k of seq1) {
+        if (seq2.indexOf(k) === -1) {
+            return false;
+        }
+    }
+    return true;
+}
+exports.isSubset = isSubset;
+function isSetEqual(seq1, seq2) {
+    return isSubset(seq1, seq2) && isSubset(seq2, seq1);
+}
+exports.isSetEqual = isSetEqual;
+function weightedChoice(weights) {
+    var sum = weights.reduce(function (a, b) { return a + b; }, 0);
+    var cdfArray = weights.reduce(function (coll, next, i) {
+        var v = (coll[i - 1] || 0) + next / sum;
+        return coll.concat([v]);
+    }, []);
+    var r = Math.random();
+    var i = 0;
+    while (i < weights.length - 1 && r > cdfArray[i]) {
+        i++;
+    }
+    return i;
+}
+exports.weightedChoice = weightedChoice;
+function range(...args) {
+    var beg, end, step;
+    switch (args.length) {
+        case 1: {
+            end = args[0];
+            beg = 0;
+            step = 1;
+            break;
+        }
+        case 2: {
+            end = args[1];
+            beg = args[0];
+            step = 1;
+            break;
+        }
+        case 3: {
+            end = args[2];
+            beg = args[0];
+            step = args[1];
+            break;
+        }
+        default: {
+            end = 0;
+            beg = 0;
+            step = 1;
+            break;
+        }
+    }
+    var rng = [];
+    if (beg > end && step < 0) {
+        for (let i = beg; i > end; i += step) {
+            rng.push(i);
+        }
+    }
+    else if (beg < end && step > 0) {
+        for (let i = beg; i < end; i += step) {
+            rng.push(i);
+        }
+    }
+    else {
+        throw new Error("invalid range parameters");
+    }
+    return rng;
+}
+exports.range = range;
+//# sourceMappingURL=math.js.map
+
+/***/ }),
+/* 23 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const checks_1 = __webpack_require__(2);
+const typesplit_1 = __webpack_require__(11);
+function identity(x) {
+    return x;
+}
+exports.identity = identity;
+function collapseValues(obj) {
+    if (!checks_1.isVanillaTree(obj)) {
+        throw new Error("cant collapse circular structure");
+    }
+    let valArr = [];
+    function nodeProcess(node) {
+        valArr.push(node);
+    }
+    function recursor(node) {
+        typesplit_1.typeCaseSplitF(recursor, recursor, nodeProcess)(node);
+    }
+    recursor(obj);
+    return valArr;
+}
+exports.collapseValues = collapseValues;
+function translator(node, translation) {
+    var translated;
+    if (typeof (node) == "object" && !(node instanceof Array)) {
+        translated = {};
+        for (var k in node) {
+            var tval = translation[k];
+            if (typeof (tval) == "function") {
+                translated[tval.name] = tval(node[k]);
+            }
+            if (typeof (tval) == "string") {
+                translated[tval] = node[k];
+            }
+            else if (tval != undefined) {
+                translated[k] = translator(node[k], tval);
+            }
+            else {
+                translated[k] = node[k];
+            }
+        }
+        return translated;
+    }
+    else {
+        return node;
+    }
+}
+exports.translator = translator;
+function melder(node1, node2, merge = function (a, b) { return b; }, concatArrays = false, typeConstrain = true) {
+    if (node1 == undefined) {
+        return node2;
+    }
+    if (node2 == undefined) {
+        return node1;
+    }
+    if (typeConstrain && (typeof (node1) != typeof (node2))) {
+        var errmsg = "Expected melding nodes to be the same type \n" +
+            "type of node1: " + typeof (node1) + "\n" +
+            "type of node2: " + typeof (node2) + "\n";
+        throw TypeError(errmsg);
+    }
+    var melded;
+    if (node1 instanceof Array) {
+        return concatArrays ? node1.concat(node2) : merge(node1, node2);
+    }
+    else if (typeof (node1) == 'object') {
+        melded = {};
+        for (var k in node1) {
+            melded[k] = node1[k];
+        }
+        for (var q in node2) {
+            melded[q] = node2[q];
+        }
+        for (var k in node1) {
+            for (var q in node2) {
+                if (k == q) {
+                    if (node1[k] == node2[k]) {
+                        melded[k] = node1[k];
+                    }
+                    else {
+                        melded[k] = melder(node1[k], node2[k], merge, concatArrays);
+                    }
+                }
+            }
+        }
+    }
+    else {
+        melded = merge(node1, node2);
+    }
+    return melded;
+}
+exports.melder = melder;
+function softAssoc(from, onto) {
+    for (var k in from) {
+        onto[k] = melder(from[k], onto[k]);
+    }
+}
+exports.softAssoc = softAssoc;
+function parassoc(from, onto) {
+    for (var k in from) {
+        onto[k] = melder(onto[k], from[k], function (a, b) {
+            return [a, b];
+        }, true);
+    }
+}
+exports.parassoc = parassoc;
+function assoc(from, onto) {
+    for (var k in from) {
+        onto[k] = melder(onto[k], from[k]);
+    }
+}
+exports.assoc = assoc;
+function deepCopy(thing) {
+    return typesplit_1.typeCaseSplitF(deepCopy, deepCopy)(thing);
+}
+exports.deepCopy = deepCopy;
+function applyMixins(derivedCtor, baseCtors) {
+    baseCtors.forEach(baseCtor => {
+        Object.getOwnPropertyNames(baseCtor.prototype).forEach(name => {
+            derivedCtor.prototype[name] = baseCtor.prototype[name];
+        });
+    });
+}
+exports.applyMixins = applyMixins;
+function objectArrayTranspose(objArr, key) {
+    var invert;
+    if (typeof (key) !== 'string') {
+        throw new Error("Value error: key must be string literal");
+    }
+    if (checks_1.isVanillaArray(objArr)) {
+        invert = {};
+        objArr.forEach(function (value, index) {
+            invert[value[key]] = value;
+        });
+    }
+    else if (checks_1.isVanillaObject(objArr)) {
+        invert = [];
+        for (var k in objArr) {
+            var obj = objArr[k];
+            obj[key] = k;
+            invert.push(obj);
+        }
+    }
+    else {
+        throw new Error("Value error: can only transpose object and array literals");
+    }
+}
+exports.objectArrayTranspose = objectArrayTranspose;
+function flattenObject(obj, depth = -1, values = []) {
+    for (let k in obj) {
+        let v = obj[k];
+        if (checks_1.isVanillaObject(v) && (depth >= 0 || depth >= -1)) {
+            flattenObject(v, depth - 1, values);
+        }
+        else {
+            values.push(v);
+        }
+    }
+    return values;
+}
+exports.flattenObject = flattenObject;
+function mapObject(obj, func) {
+    let mapped = {};
+    for (let k in obj) {
+        let v = obj[k];
+        mapped[k] = func(k, v);
+    }
+    return mapped;
+}
+exports.mapObject = mapObject;
+function projectObject(obj, keys) {
+    if (obj instanceof Object) {
+        let result;
+        if (obj instanceof Array) {
+            result = [];
+            for (let k of keys) {
+                if (k in obj) {
+                    result.push(obj[k]);
+                }
+            }
+        }
+        else {
+            result = {};
+            for (let k of keys) {
+                if (k in obj) {
+                    result[k] = obj[k];
+                }
+            }
+        }
+        return result;
+    }
+    else {
+        return obj;
+    }
+}
+exports.projectObject = projectObject;
+//# sourceMappingURL=transforms.js.map
+
+/***/ }),
+/* 24 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const construct_1 = __webpack_require__(1);
+const all_1 = __webpack_require__(0);
+const state_1 = __webpack_require__(14);
+const agency_1 = __webpack_require__(13);
+class Composite extends construct_1.Construct {
+    constructor(domain) {
+        super(domain);
+        this.isComposite = true;
+        this.subconstructs = [];
+        this.nucleus = {};
+    }
+    init(patch) {
+        super.init(patch);
+        this.addStrange('domain', this.domain.getExposure());
+        this.addStrange('meta', this.getExposure());
+        if (this.beginTractor) {
+            this.beginTractor.call(this.local);
+        }
+    }
+    applyForm(form = {}) {
+        super.applyForm(form);
+        this.state = new state_1.HostState(this, form.state);
+        this.exposed = this.state.exposed;
+        this.local = this.state.local;
+        this.beginTractor = form.begin;
+        this.endTractor = form.end;
+        this.bed = new agency_1.BedAgent(this, form.bed);
+        this.anchor = new agency_1.AnchorAgent(this, form.anchor);
+        this.pool = new agency_1.AgentPool(form.pool);
+        this.pool.add(this.bed, 'bed');
+        this.pool.add(this.anchor, 'anchor');
+    }
+    clearForm() {
+        this.beginTractor = undefined;
+        this.endTractor = undefined;
+        super.clearForm();
+    }
+    _patch(patch) {
+        for (let k in patch) {
+            if (!(k in Composite.keywords)) {
+                let v = patch[k];
+                this.patchChild(k, v);
+            }
+        }
+        if (patch.anon !== undefined) {
+            for (let i = 0; i < patch.anon.length; i++) {
+                this.add(patch.anon[i]);
+            }
+        }
+    }
+    patch(patch) {
+        return this.anchor.notify(patch);
+    }
+    reset(patch) {
+        this.dispose();
+        this.init(patch);
+    }
+    patchChild(k, v) {
+        let existing = this.subconstructs[k];
+        if (existing !== undefined) {
+            existing.patch(v);
+        }
+        else {
+            if (v === undefined) {
+                this.remove(k);
+            }
+            else {
+                this.add(v, k);
+            }
+        }
+    }
+    add(val, key) {
+        let k = key === undefined ? this.subconstructs.length++ : key;
+        if (this.nucleus instanceof Array) {
+            this.nucleus.length = this.subconstructs.length;
+        }
+        if (all_1.isPrimative(val)) {
+            this.addPrimative(k, val);
+        }
+        else if (all_1.isVanillaObject(val)) {
+            val.basis = val.basis || 'object';
+            let recovered = this.domain.recover(val);
+            this.attachChild(recovered, k);
+        }
+        else if (all_1.isVanillaArray(val)) {
+            let patch = {
+                basis: 'array',
+                anon: val
+            };
+            let recovered = this.domain.recover(patch);
+            this.attachChild(recovered, k);
+        }
+        else {
+            this.addStrange(k, val);
+        }
+    }
+    attachChild(construct, key) {
+        this.subconstructs[key] = construct;
+        construct.attach(this, key);
+    }
+    detachChild(key) {
+        let construct = this.subconstructs[key];
+        delete this.subconstructs[key];
+        construct.detach(this, key);
+    }
+    addStrange(k, v) {
+        this.nucleus[k] = v;
+    }
+    addPrimative(k, v) {
+        this.nucleus[k] = v;
+    }
+    getExposure() {
+        return {
+            create: (v, k) => {
+                this.add(v, k);
+            },
+            destroy: (k) => {
+                this.remove(k);
+            }
+        };
+    }
+    remove(k) {
+        let removing = this.subconstructs[k];
+        if (removing !== undefined) {
+            this.detachChild(k);
+            let final = removing.dispose();
+            return final;
+        }
+        else if (k in this.nucleus) {
+            let removeState = this.nucleus[k];
+            delete this.nucleus;
+        }
+    }
+    dispose() {
+        if (this.endTractor) {
+            this.endTractor.call(this.state.local);
+        }
+        for (let key in this.subconstructs) {
+            let construct = this.subconstructs[key];
+            construct.dispose();
+            this.detachChild(key);
+        }
+        this.clearForm();
+        super.dispose();
+    }
+    _extract(suction) {
+        let voidspace;
+        if (suction === undefined || typeof suction === 'object') {
+            voidspace = suction;
+        }
+        else if (typeof suction === 'string') {
+            voidspace = {};
+            voidspace[suction] = null;
+        }
+        else {
+            throw new Error('Invalid extractor suction argument');
+        }
+        let extracted = {};
+        for (let key in this.subconstructs) {
+            if (voidspace === null || key in voidspace) {
+                let construct = this.subconstructs[key];
+                extracted[key] = construct.extract(voidspace === null ? null : voidspace[key]);
+            }
+        }
+        for (let key in this.nucleus) {
+            if (voidspace === null || (key in voidspace && voidspace[key] === null)) {
+                extracted[key] = this.nucleus[key];
+            }
+        }
+        return extracted;
+    }
+    extract(suction) {
+        return this.anchor.fetch(suction);
+    }
+}
+Composite.keywords = { basis: null, domain: null, form: null, anon: null };
+exports.Composite = Composite;
+//# sourceMappingURL=composite.js.map
+
+/***/ }),
+/* 25 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var LINK_FILTERS;
+(function (LINK_FILTERS) {
+    LINK_FILTERS[LINK_FILTERS["PROCEED"] = 0] = "PROCEED";
+    LINK_FILTERS[LINK_FILTERS["DECEED"] = 1] = "DECEED";
+    LINK_FILTERS[LINK_FILTERS["ELSEWHERE"] = 2] = "ELSEWHERE";
+    LINK_FILTERS[LINK_FILTERS["NONE"] = 3] = "NONE";
+})(LINK_FILTERS = exports.LINK_FILTERS || (exports.LINK_FILTERS = {}));
+exports.FreePolicy = {
+    fussy: false,
+    allowAddition: true,
+    allowRemoval: true
+};
+//# sourceMappingURL=interfaces.js.map
+
+/***/ }),
+/* 26 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const medium_1 = __webpack_require__(16);
+const all_1 = __webpack_require__(0);
+const op_1 = __webpack_require__(7);
+var DEMUXARG;
+(function (DEMUXARG) {
+    DEMUXARG[DEMUXARG["ONE"] = 0] = "ONE";
+    DEMUXARG[DEMUXARG["SOME"] = 1] = "SOME";
+    DEMUXARG[DEMUXARG["DONT"] = 2] = "DONT";
+    DEMUXARG[DEMUXARG["ALL"] = 3] = "ALL";
+})(DEMUXARG = exports.DEMUXARG || (exports.DEMUXARG = {}));
+var CALLTYPE;
+(function (CALLTYPE) {
+    CALLTYPE[CALLTYPE["DIRECT"] = 0] = "DIRECT";
+    CALLTYPE[CALLTYPE["BREADTH_FIRST"] = 1] = "BREADTH_FIRST";
+    CALLTYPE[CALLTYPE["DEPTH_FIRST"] = 2] = "DEPTH_FIRST";
+    CALLTYPE[CALLTYPE["SERIAL"] = 3] = "SERIAL";
+})(CALLTYPE = exports.CALLTYPE || (exports.CALLTYPE = {}));
+var MUXRESP;
+(function (MUXRESP) {
+    MUXRESP[MUXRESP["RACE"] = 0] = "RACE";
+    MUXRESP[MUXRESP["FIRST"] = 1] = "FIRST";
+    MUXRESP[MUXRESP["LAST"] = 2] = "LAST";
+    MUXRESP[MUXRESP["MAP"] = 3] = "MAP";
+    MUXRESP[MUXRESP["ORDER"] = 4] = "ORDER";
+    MUXRESP[MUXRESP["DROP"] = 5] = "DROP";
+})(MUXRESP = exports.MUXRESP || (exports.MUXRESP = {}));
+const JunctionModeKeys = {};
+JunctionModeKeys[MUXRESP.RACE] = "race";
+JunctionModeKeys[MUXRESP.FIRST] = "first";
+JunctionModeKeys[MUXRESP.LAST] = "last";
+JunctionModeKeys[MUXRESP.MAP] = "object";
+JunctionModeKeys[MUXRESP.ORDER] = "array";
+class MuxMedium extends medium_1.BaseMedium {
+    constructor(muxspec) {
+        super(muxspec);
+        this.muxspec = muxspec;
+        this.typeA = op_1.Op;
+        this.typeB = op_1.Op;
+        if (muxspec.emitCallType == CALLTYPE.DIRECT) {
+            this.multiA = false;
+            this.multiB = false;
+        }
+    }
+    emitArgProcess(inpArg, crumb, sink, link) {
+        let arg, escape;
+        let eType = this.muxspec.emitArgType;
+        if (eType === DEMUXARG.DONT) {
+            arg = inpArg;
+        }
+        else {
+            if (eType == DEMUXARG.ONE) {
+                if (this.emitScope.oneDone) {
+                    crumb.raise(`Incoming packet breaches single target constraint`);
+                    return;
+                }
+                else {
+                    this.emitScope.oneDone = true;
+                }
+            }
+            let packet = inpArg;
+            for (let symk in this.muxspec.symbols) {
+                let sym = this.muxspec.symbols[symk];
+                if (sym in link.bindings) {
+                    let bound = link.bindings[sym];
+                    if (!(packet instanceof Object)) {
+                        crumb.raise(`incoming packet must be object to be demuxed`);
+                    }
+                    if (bound in packet) {
+                        packet = packet[bound];
+                    }
+                    else {
+                        if (eType === DEMUXARG.ALL) {
+                            crumb.raise(`Incoming packet must include key: ${bound}, but only has ${Object.getOwnPropertyNames(packet)}`);
+                        }
+                    }
+                }
+                else {
+                }
+            }
+            arg = packet;
+        }
+        return arg;
+    }
+    emitResponse(putResp, crumb, link) {
+        let Rtype = this.muxspec.emitRetType;
+        let emitResp = putResp;
+        if (Rtype == MUXRESP.DROP) {
+            return null;
+        }
+        else if (Rtype == MUXRESP.MAP) {
+            let demuxterms = [];
+            for (let symk in this.muxspec.symbols) {
+                let sym = this.muxspec.symbols[symk];
+                if (sym in link.bindings) {
+                    let term = link.bindings[sym];
+                    demuxterms.push(term);
+                }
+            }
+            this.emitScope.junction.merge(putResp, demuxterms);
+        }
+        else if (Rtype == MUXRESP.FIRST || Rtype === MUXRESP.LAST || Rtype === MUXRESP.RACE) {
+            this.emitScope.junction.merge(putResp);
+        }
+    }
+    emitter(sourceToken, data, crumb) {
+        let allFromA = this.matrix.to[sourceToken];
+        this.beginEmit();
+        for (let sinkToken in allFromA) {
+            let link = allFromA[sinkToken];
+            let sink = link.contactB;
+            let arg = this.emitArgProcess(data, crumb, sink, link);
+            let putResp = sink.put(arg, crumb);
+            this.emitResponse(putResp, crumb, link);
+        }
+        return this.endEmit();
+    }
+    beginEmit() {
+        this.emitScope = {};
+        this.emitScope.junction = new all_1.Junction();
+        if (this.muxspec.emitRetType in JunctionModeKeys) {
+            this.emitScope.junction.mode(JunctionModeKeys[this.muxspec.emitRetType]);
+        }
+        if (this.muxspec.emitArgType == DEMUXARG.ONE) {
+            this.emitScope.oneDone = false;
+        }
+        this.emitScope.packet = {};
+    }
+    endEmit() {
+        let junc = this.emitScope.junction;
+        this.emitScope = undefined;
+        return junc;
+    }
+    inductA(token, a) {
+        if (this.muxspec.emitCallType !== CALLTYPE.DIRECT) {
+            a.emit = this.emitter.bind(this, token);
+        }
+    }
+    inductB(token, b) {
+    }
+    connect(link) {
+        if (this.muxspec.emitCallType == CALLTYPE.DIRECT) {
+            link.contactA.emit = link.contactB.put;
+        }
+    }
+    check(link) {
+        let superok = super.check(link);
+        let out = link.contactA.hasOutput;
+        let inp = link.contactB.hasInput;
+        return superok && out && inp;
+    }
+    disconnect(link) {
+        super.disconnect(link);
+        link.contactA.emit = undefined;
+    }
+}
+exports.MuxMedium = MuxMedium;
+//# sourceMappingURL=multiplexing.js.map
+
+/***/ }),
+/* 27 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const I = __webpack_require__(25);
+const membrane_1 = __webpack_require__(17);
+const designator_1 = __webpack_require__(8);
+const matching_1 = __webpack_require__(33);
+class RuleMesh {
+    constructor(membrane) {
+        this.changeOccurred = membrane_1.DemuxWatchMethodsF(this);
+        this.primary = membrane;
+        this.primary.addWatch(this);
+        this.rules = {};
+        this.media = {};
+        this.locations = {};
+    }
+    addMedium(key, medium) {
+        this.rules[key] = [];
+        this.media[key] = medium;
+    }
+    parseRules(ruleset, mediumkey) {
+        for (let link of ruleset) {
+            let linkIR = this.parseLink(link);
+            this.addRule(linkIR, mediumkey);
+        }
+    }
+    parseLink(link) {
+        let m = link.match(/^([\w\*\:\.#]+)(\|?)(<?)([\+\-\!]?)([=\-])(>?)(\|?)([\w\*\:\.#]+)/);
+        if (!m) {
+            throw new Error(`Unable to parse link description, expression ${link} did not match regex`);
+        }
+        ;
+        let [match, srcDesig, srcClose, backward, filter, matching, forward, snkClose, snkDesig] = m;
+        let ruleIR = {
+            designatorA: new designator_1.Designator('subranes', 'contacts', srcDesig),
+            designatorB: new designator_1.Designator('subranes', 'contacts', snkDesig),
+            closeA: srcClose === '|',
+            closeB: snkClose === '|',
+            forward: forward === '>',
+            backward: backward === '<',
+            matching: matching === "=",
+            propogation: filter !== '' ? { '+': I.LINK_FILTERS.PROCEED, '-': I.LINK_FILTERS.DECEED, '!': I.LINK_FILTERS.ELSEWHERE }[filter] : I.LINK_FILTERS.NONE
+        };
+        return ruleIR;
+    }
+    addRule(rule, mediumkey, ruleID) {
+        if (this.rules[mediumkey] === undefined) {
+            throw new Error(`Unable to create rule ${mediumkey} is not a recognised media type`);
+        }
+        if (typeof rule === 'string') {
+            this.addRule(this.parseLink(rule), mediumkey, ruleID);
+        }
+        else if (typeof rule === 'object') {
+            if (ruleID !== undefined) {
+                this.rules[mediumkey][ruleID] = rule;
+            }
+            else {
+                this.rules[mediumkey].push(rule);
+            }
+            let dA = rule.designatorA.tokenDesignate(this.primary);
+            let dB = rule.designatorB.tokenDesignate(this.primary);
+            this.balanceSquare(rule, dA, dB, mediumkey, false);
+        }
+    }
+    removeRule(mediumID, ruleID) {
+        let rule = this.rules[mediumID][ruleID];
+        if (rule === undefined) {
+            throw new Error(`The rule: ${rule} being removed does not exist in medium ${mediumID}`);
+        }
+        let dA = rule.designatorA.tokenDesignate(this.primary);
+        let dB = rule.designatorB.tokenDesignate(this.primary);
+        this.balanceSquare(rule, dA, dB, mediumID, true);
+    }
+    balanceSquare(rule, dA, dB, mediumkey, destructive) {
+        let op = destructive ? this.unsquare : this.square;
+        if (rule.forward) {
+            op.call(this, rule, dA, dB, mediumkey);
+        }
+        if (rule.backward) {
+            op.call(this, rule, dB, dA, mediumkey);
+        }
+    }
+    unsquare(rule, desigA, desigB, mediumkey) {
+        let pairs = matching_1.pairByBinding(desigA, desigB, rule.matching);
+        for (let pair of pairs) {
+            let tokenA = pair.tokenA;
+            let tokenB = pair.tokenB;
+            let contactA = desigA[tokenA];
+            let contactB = desigB[tokenB];
+            let medium = this.media[mediumkey];
+            let link = {
+                tokenA: tokenA,
+                tokenB: tokenB,
+                contactA: contactA,
+                contactB: contactB,
+                bindings: pair.bindings
+            };
+            if (medium.hasLink(link)) {
+                medium.disconnect(link);
+                if (!medium.hasToken(tokenA)) {
+                    delete this.locations[tokenA][mediumkey];
+                }
+                if (!medium.hasToken(tokenA)) {
+                    delete this.locations[tokenB][mediumkey];
+                }
+            }
+        }
+    }
+    square(rule, desigA, desigB, mediumkey) {
+        let firstGlove = false;
+        let pairs = matching_1.pairByBinding(desigA, desigB, rule.matching);
+        for (let pair of pairs) {
+            let tokenA = pair.tokenA;
+            let tokenB = pair.tokenB;
+            let contactA = desigA[tokenA];
+            let contactB = desigB[tokenB];
+            let medium = this.media[mediumkey];
+            let link = {
+                bindings: pair.bindings,
+                tokenA: tokenA,
+                tokenB: tokenB,
+                contactA: contactA,
+                contactB: contactB
+            };
+            for (let mk in this.media) {
+                let claimer = this.media[mk];
+                if (mk !== mediumkey && claimer.hasClaim(link)) {
+                    throw new Error('Unable to suppose link when another medium has claimed the token');
+                }
+            }
+            let supposeResult = medium.suppose(link);
+            if (supposeResult) {
+                this.locations[tokenA] = this.locations[tokenA] || {};
+                this.locations[tokenB] = this.locations[tokenB] || {};
+                this.locations[tokenA][mediumkey] = medium;
+                this.locations[tokenB][mediumkey] = medium;
+            }
+        }
+    }
+    onAddContact(contact, token) {
+        for (let mediumkey in this.media) {
+            let medium = this.media[mediumkey];
+            let linkRules = this.rules[mediumkey];
+            for (let ruleID in linkRules) {
+                let rule = linkRules[ruleID];
+                let matchA = rule.designatorA.matches(token);
+                let matchB = rule.designatorB.matches(token);
+                if (matchA) {
+                    let dB = rule.designatorB.tokenDesignate(this.primary);
+                    let dA = {};
+                    dA[token] = contact;
+                    this.balanceSquare(rule, dA, dB, mediumkey, false);
+                }
+                if (matchB) {
+                    let dA = rule.designatorA.tokenDesignate(this.primary);
+                    let dB = {};
+                    dB[token] = contact;
+                    this.balanceSquare(rule, dA, dB, mediumkey, false);
+                }
+            }
+        }
+    }
+    onRemoveContact(contact, token) {
+        for (let loc in this.locations[token]) {
+            let location = this.locations[token][loc];
+            if (contact instanceof location.typeA) {
+                location.breakA(token, contact);
+            }
+            if (contact instanceof location.typeB) {
+                location.breakB(token, contact);
+            }
+        }
+    }
+    onAddMembrane(membrane, token) {
+    }
+    onRemoveMembrane(membrane, token) {
+    }
+    hasLinked(tokenA, tokenB, directed = true) {
+        let mediaWithA = this.locations[tokenA];
+        for (let mediakey in mediaWithA) {
+            let medium = this.media[mediakey];
+            let aToMap = medium.matrix.to[tokenA];
+            let bFromMap = medium.matrix.from[tokenB];
+            let aToB = aToMap !== undefined && aToMap[tokenB] !== undefined;
+            let bFromA = bFromMap !== undefined && bFromMap[tokenA] !== undefined;
+            if (directed && (aToB && bFromA)) {
+                return true;
+            }
+            else if (!directed && (aToB || bFromA)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+exports.RuleMesh = RuleMesh;
+//# sourceMappingURL=ruleMesh.js.map
+
+/***/ }),
+/* 28 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+function __export(m) {
+    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+const domain_1 = __webpack_require__(12);
+const _Util = __webpack_require__(0);
+const _IO = __webpack_require__(4);
+const _TRT = __webpack_require__(6);
+const _CST = __webpack_require__(3);
+exports.Util = _Util;
+exports.IO = _IO;
+exports.TRT = _TRT;
+exports.CST = _CST;
+__export(__webpack_require__(0));
+__export(__webpack_require__(4));
+__export(__webpack_require__(3));
+__export(__webpack_require__(6));
+exports.Core = new domain_1.Domain({
+    media: new domain_1.Domain({
+        direct: {
+            nature: _IO.MuxMedium,
+            patch: {
+                symbols: [],
+                emitArgType: _IO.DEMUXARG.ONE,
+                emitRetType: _IO.MUXRESP.LAST,
+                emitCallType: _IO.CALLTYPE.DIRECT
+            }
+        },
+        smear: {
+            nature: _IO.MuxMedium,
+            patch: {
+                symbols: [],
+                emitArgType: _IO.DEMUXARG.DONT,
+                emitRetType: _IO.MUXRESP.LAST,
+                emitCallType: _IO.CALLTYPE.BREADTH_FIRST
+            }
+        },
+        split: {
+            nature: _IO.MuxMedium,
+            patch: {
+                symbols: [],
+                emitArgType: _IO.DEMUXARG.SOME,
+                emitRetType: _IO.MUXRESP.MAP,
+                emitCallType: _IO.CALLTYPE.BREADTH_FIRST
+            }
+        },
+        compose: {
+            nature: _IO.MuxMedium,
+            patch: {
+                symbols: [],
+                emitArgType: _IO.DEMUXARG.DONT,
+                emitRetType: _IO.MUXRESP.MAP,
+                emitCallType: _IO.CALLTYPE.BREADTH_FIRST
+            }
+        },
+        race: {
+            nature: _IO.MuxMedium,
+            patch: {
+                symbols: [],
+                emitArgType: _IO.DEMUXARG.DONT,
+                emitRetType: _IO.MUXRESP.RACE,
+                emitCallType: _IO.CALLTYPE.BREADTH_FIRST
+            }
+        }
+    }),
+    cell: exports.TRT.Cell,
+    object: exports.TRT.DefaultCell,
+    array: exports.TRT.ArrayCell,
+    link: exports.TRT.Connector,
+    contact: new domain_1.Domain({
+        op: exports.TRT.StandardOp,
+        outof: {
+            nature: exports.TRT.StandardOp,
+            patch: {
+                carry_out: true
+            }
+        },
+        into: {
+            nature: exports.TRT.StandardOp,
+            patch: {
+                carry_in: true
+            }
+        }
+    })
+});
+exports.CST.Construct.DefaultDomain = exports.Core;
+//# sourceMappingURL=jungle.js.map
+
+/***/ }),
+/* 29 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const default_1 = __webpack_require__(19);
+class ArrayCell extends default_1.DefaultCell {
+    constructor(domain) {
+        super(domain);
+        this.nucleus = [];
+    }
+}
+exports.ArrayCell = ArrayCell;
+//# sourceMappingURL=array.js.map
+
+/***/ }),
+/* 30 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const construct_1 = __webpack_require__(1);
+const op_1 = __webpack_require__(7);
+class OpConstruct extends construct_1.Construct {
+    init(spec) {
+        super.init(spec);
+    }
+    attach(host, key) {
+        super.attach(host, key);
+        let op = new op_1.Op({
+            context: this.local,
+            major_op: this.nucleus.major_op,
+            major_arg1: this.nucleus.major_arg1,
+            major_arg2: this.nucleus.major_arg2,
+            major_return: this.nucleus.major_return,
+            minor_op: this.nucleus.minor_op,
+            minor_arg1: this.nucleus.minor_arg1,
+            minor_arg2: this.nucleus.minor_arg2,
+            minor_return: this.nucleus.minor_return,
+            hook_op: this.nucleus.hook_op,
+            hook_arg1: this.nucleus.hook_arg1,
+            hook_arg2: this.nucleus.hook_arg2,
+            hook_name: key,
+        });
+        this.spec = this.nucleus;
+        this.nucleus = this.nucleus.default;
+        host.lining.addContact(op, key);
+    }
+    detach(host, key) {
+        host.lining.removeContact(key);
+    }
+    extract() {
+        return this.spec;
+    }
+}
+exports.OpConstruct = OpConstruct;
+const mutexes = [['resolve_out', 'carry_out', 'reflex_out'], ['resolve_in', 'carry_in', 'reflex_in']];
+const fnameToReturnTarget = {
+    'resolve_out': 'resolve',
+    'resolve_in': 'resolve',
+    'carry_out': 'carry',
+    'carry_in': 'carry',
+    'reflex_out': 'reflex',
+    'reflex_in': 'reflex',
+};
+class StandardOp extends OpConstruct {
+    init(spec) {
+        let chosen = [];
+        for (let i = 0; i < mutexes.length; i++) {
+            let m = mutexes[i];
+            for (let n of m) {
+                if (n in spec) {
+                    if (!chosen[i]) {
+                        chosen[i] = n;
+                    }
+                    else {
+                        throw new Error("Cannot specify mulitiple call sources for each side");
+                    }
+                }
+            }
+        }
+        super.init({
+            form: spec.form,
+            default: spec.default,
+            major_op: spec[chosen[0]],
+            major_arg1: spec.arg1,
+            major_arg2: spec.arg2,
+            major_return: fnameToReturnTarget[chosen[0]],
+            minor_op: spec[chosen[1]],
+            minor_arg1: spec.arg1,
+            minor_arg2: spec.arg2,
+            minor_return: fnameToReturnTarget[chosen[1]],
+        });
+    }
+    attach(host, key) {
+        super.attach(host, key);
+    }
+}
+exports.StandardOp = StandardOp;
+class Drain extends OpConstruct {
+    init(spec) {
+        spec.open_in = spec.open_in === undefined ? true : spec.open_in;
+        spec.open_out = spec.open_out === undefined ? true : spec.open_out;
+        super.init({
+            form: spec.form,
+            major_op: spec.open_out ? spec.drain : undefined,
+            major_return: 'resolve',
+            minor_op: spec.open_in ? spec.drain : undefined,
+            minor_return: 'resolve',
+        });
+    }
+}
+exports.Drain = Drain;
+class Spring extends OpConstruct {
+    init(spec) {
+        let springF = function (data, carry, reflex) {
+            if (spec.open_in) {
+                carry(data);
+            }
+            if (spec.open_out) {
+                reflex(data);
+            }
+        };
+        super.init({
+            form: spec.form,
+            hook_op: springF,
+            hook_arg1: 'carry',
+            hook_arg2: 'reflex'
+        });
+    }
+}
+exports.Spring = Spring;
+//# sourceMappingURL=OpAccessory.js.map
+
+/***/ }),
+/* 31 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const construct_1 = __webpack_require__(1);
+class Connector extends construct_1.Construct {
+    attach(anchor, label) {
+        super.attach(anchor, label);
+        if (!(this.nucleus.medium in anchor.mesh.media)) {
+            anchor.mesh.addMedium(this.nucleus.medium, this.domain.recover({
+                basis: 'media:' + this.nucleus.medium,
+                label: this.nucleus.medium,
+                exposed: this.nucleus
+            }));
+        }
+        anchor.mesh.addRule(this.nucleus.rule, this.nucleus.medium, label);
+    }
+    detach(anchor, label) {
+        anchor.mesh.removeRule(this.nucleus.medium, label);
+    }
+}
+exports.Connector = Connector;
+//# sourceMappingURL=connector.js.map
+
+/***/ }),
+/* 32 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const typesplit_1 = __webpack_require__(11);
+const checks_1 = __webpack_require__(2);
+const math_1 = __webpack_require__(22);
+function B(crown = {}, form = {}) {
+    return new Blender(crown, form);
+}
+exports.B = B;
+class Blender {
+    constructor(crown, form = {}) {
+        this.crown = crown;
+        if (form instanceof Function) {
+            this.reducer = form;
+        }
+        else if (form.reducer instanceof Function) {
+            this.reducer = form.reducer;
+        }
+        else {
+            this.reducer = Blender.defaultReduce;
+        }
+        this.block = form.block || false;
+        this.term = form.term || false;
+        this.mapper = form.mapper || Blender.defaultMap;
+    }
+    static defaultReduce(a, b) {
+        if (Blender.strictTypeReduce && (typeof (a) != typeof (b))) {
+            var errmsg = "Expected melding to be the same type \n" +
+                "existing: " + a + "\n" +
+                "incoming: " + b + "\n";
+            throw TypeError(errmsg);
+        }
+        return b === undefined ? a : b;
+    }
+    ;
+    static defaultMap(x) {
+        return x;
+    }
+    init(obj) {
+        if (this.term === false) {
+            this.crown = typesplit_1.typeCaseSplitF(this.initChurn.bind(this))(obj);
+        }
+        else {
+            this.crown = obj;
+        }
+        return this;
+    }
+    initChurn(inner, k) {
+        var result;
+        if (k === undefined && checks_1.isPrimative(inner)) {
+            result = inner;
+            this.term = inner !== undefined;
+        }
+        else if (k in this.crown) {
+            let val = this.crown[k];
+            if (val instanceof Blender) {
+                result = val.init(inner);
+            }
+            else if (val instanceof Function) {
+                result = B(undefined, val).init(inner);
+            }
+            else {
+                result = B(this.crown[k], { mapper: this.mapper, reducer: this.reducer }).init(inner);
+            }
+        }
+        else {
+            result = B(undefined, { mapper: this.mapper, reducer: this.reducer }).init(inner);
+        }
+        return result;
+    }
+    dump() {
+        if (this.term) {
+            return this.crown;
+        }
+        else {
+            return typesplit_1.typeCaseSplitF(function (child) {
+                return child !== undefined ? child.dump() : undefined;
+            })(this.crown);
+        }
+    }
+    blend(obj) {
+        this._blend(obj);
+        return this;
+    }
+    _blend(obj) {
+        let mapped = this.mapper(obj);
+        let reduced;
+        if (this.term) {
+            reduced = this.reducer(this.crown, mapped);
+            this.crown = reduced;
+        }
+        else {
+            reduced = this.merge(mapped);
+        }
+        return reduced;
+    }
+    merge(income) {
+        let result, superkeys;
+        if (this.crown === undefined && income !== undefined) {
+            this.init(income);
+            return income;
+        }
+        else if (income !== undefined) {
+            if (this.crown instanceof Array) {
+                result = [];
+                superkeys = math_1.range(Math.max((income || []).length || 0, this.crown.length));
+            }
+            else {
+                result = {};
+                superkeys = Object.keys(this.crown || {});
+                Object.keys(income || {}).forEach(key => {
+                    if (superkeys.indexOf(key) === -1) {
+                        superkeys.push(key);
+                    }
+                });
+            }
+            for (let key of superkeys) {
+                if (key in income) {
+                    if (key in this.crown) {
+                        result[key] = this.crown[key]._blend(income[key]);
+                    }
+                    else {
+                        this.crown[key] = B(undefined, { mapper: this.mapper, reducer: this.reducer }).init(income[key]);
+                        result[key] = this.crown[key].dump();
+                    }
+                }
+                else if (key in this.crown) {
+                    result[key] = this.crown[key].dump();
+                }
+                else {
+                }
+            }
+            return result;
+        }
+    }
+}
+Blender.strictTypeReduce = false;
+exports.Blender = Blender;
+//# sourceMappingURL=blender.js.map
+
+/***/ }),
 /* 33 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+function pairByBinding(result1, result2, hard = false) {
+    let transA = transposeBindings(result1);
+    let transB = transposeBindings(result2);
+    let collection = [];
+    for (let tokenA in transA) {
+        for (let tokenB in transB) {
+            let breakpair = false;
+            let bindingsA = transA[tokenA];
+            let bindingsB = transB[tokenB];
+            let merged = {};
+            for (let symInA in bindingsA) {
+                let termInA = bindingsA[symInA];
+                if (symInA in bindingsB && termInA !== bindingsB[symInA] || (!(symInA in bindingsB) && hard)) {
+                    breakpair = true;
+                }
+                else {
+                    merged[symInA] = termInA;
+                }
+            }
+            for (let symInB in bindingsB) {
+                let termInB = bindingsB[symInB];
+                if (!(symInB in bindingsA)) {
+                    if (hard) {
+                        breakpair = true;
+                    }
+                    else {
+                        merged[symInB] = termInB;
+                    }
+                }
+            }
+            if (breakpair)
+                continue;
+            collection.push({
+                tokenA: tokenA,
+                tokenB: tokenB,
+                bindings: merged
+            });
+        }
+    }
+    return collection;
+}
+exports.pairByBinding = pairByBinding;
+function transposeBindings(bindings) {
+    function recur(bindingTree, collected, current) {
+        for (let token in bindingTree) {
+            collected[token] = current;
+        }
+        for (let sym of Object.getOwnPropertySymbols(bindingTree)) {
+            let terms = bindingTree[sym];
+            for (let term in terms) {
+                let upBind = {};
+                if (Symbol.keyFor(sym) in current && current[Symbol.keyFor(sym)] !== term) {
+                    continue;
+                }
+                for (let bsym in current) {
+                    upBind[bsym] = current[bsym];
+                }
+                upBind[Symbol.keyFor(sym)] = term;
+                let tokens = terms[term];
+                recur(tokens, collected, upBind);
+            }
+        }
+        return collected;
+    }
+    return recur(bindings, {}, {});
+}
+exports.transposeBindings = transposeBindings;
+//# sourceMappingURL=matching.js.map
+
+/***/ }),
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3766,7 +3908,7 @@ exports.ObjectMode = ObjectMode;
 //# sourceMappingURL=modes.js.map
 
 /***/ }),
-/* 34 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";

@@ -5,7 +5,11 @@ import * as Util from '../util/all'
 import {deepMeldF} from '../util/ogebra/hierarchical';
 import {meld} from '../util/ogebra/operations'
 
-import {ExposureLevel, ReachLevel} from './state'
+import {Junction} from '../util/junction/junction'
+
+import {ExposureLevel, ReachLevel, AccessoryState} from './state'
+
+import {AnchorAgent, BedAgent} from './agency'
 /*
 
     The construct is a foundational interface that defines all the requirements to being a part of the jungle system.
@@ -42,7 +46,8 @@ export abstract class Construct{
     disposeTractor:()=>void;
 
     exposure:ExposureLevel;
-    reach:ReachLevel
+    reach:ReachLevel;
+    remote:boolean;
 
     constructor(protected domain:Domain = Construct.DefaultDomain){}
 
@@ -65,6 +70,7 @@ export abstract class Construct{
     */
     dispose(){
         if(this.disposeTractor){ this.disposeTractor.call(this.local) }
+        this.clearForm()
     }
 
     /**
@@ -73,6 +79,7 @@ export abstract class Construct{
     protected applyForm(form:any={}){
         this.exposure = form.exposure     || 'local'
         this.reach = form.reach           || 'host'
+        this.remote = form.remote         || false
         this.primeTractor = form.prime
         this.disposeTractor = form.dispose
     }
@@ -80,7 +87,7 @@ export abstract class Construct{
     /**
      * Clear the form, returning to the basic nature of the
      */
-    protected clearForm(form:any = {}){
+    protected clearForm(){
         this.primeTractor = undefined
         this.disposeTractor = undefined
     }
@@ -93,10 +100,26 @@ export abstract class Construct{
         this.host = host;
         this.alias = alias;
 
-        if(this.isComposite){
-            host.state.addSub(alias, this)
-        }else{
-            let acc = host.state.createAccessory(this.reach, this.exposure, alias, this.nucleus)
+        this.fetch = (extractor)=>{
+            let qualified = {};
+            qualified[alias] = extractor;
+            return (<BedAgent>host.bed).fetch(qualified)
+        }
+
+        this.notify = (patch)=>{
+            let qualified = {};
+            qualified[alias] = patch;
+            return (<BedAgent>host.bed).notify(qualified)
+        }
+
+        if(!this.isComposite){
+            //composites have state setup in the form application
+
+            let acc = new AccessoryState(this, alias, {
+                reach:this.reach,
+                exposure:this.exposure,
+                initial:this.nucleus
+            })
 
             this.local = acc.exposed
             this.exposed = acc.exposed
@@ -110,6 +133,7 @@ export abstract class Construct{
                     return this.local.me = value
                 }
             })
+
         }
     }
 
@@ -125,16 +149,20 @@ export abstract class Construct{
         modification of structure by application of a patch,
         @param: patch the value to reset
     */
-    patch(patch:any){
+    patch(patch?:any){
         this.nucleus = patch
     }
+
+    notify:(patch)=>any
 
     /*
         output a representation of the construct that may be recovered to a replication
     */
-    extract():any{
+    extract(sucker?:any):any{
         return this.nucleus
     }
+
+    fetch:(patch:any)=>any
 
     /**
      * Ensure that argument is an object

@@ -5,40 +5,6 @@ import {AccessoryState, HostState} from '../../../construction/state'
 
 describe('state model', function (){
 
-    describe('proxies',function(){
-        let privateAccessory, publicAccessory, localAccessory
-        let hostInternal
-        let localHost
-
-        beforeEach(function(){
-            privateAccessory = new AccessoryState('private', 'mrthing', {})
-            hostInternal = {}
-            localHost = new HostState('local', hostInternal)
-            localHost.addSub('mrthing', privateAccessory)
-            localAccessory = localHost.createAccessory('self','local','sgtstuff', 'attention!')
-            publicAccessory = localHost.createAccessory('host','public','majorjamble', 'strike!')
-        })
-
-        it('should not be able to get at the private from the local or external scopes', function (){
-            privateAccessory.exposed.me = 'hello'
-            expect(localHost.local['mrthing']).toBeUndefined()
-            expect(localHost.exposed['mrthing']).toBeUndefined()
-            expect(privateAccessory.exposed.mrthing).toBe('hello')
-        })
-
-        it('should not be able to get at the local from the extenal host scope', function(){
-            expect(localHost.local.sgtstuff).toBe('attention!')
-            expect(localHost.exposed.sgtstuff).toBeUndefined()
-        })
-
-        it('with a host purview an accessory can get from a local other', function(){
-            expect(localHost.exposed.majorjamble).toBe('strike!')
-            expect(publicAccessory.exposed.sgtstuff).toBe('attention!')
-            expect(localAccessory.exposed.majorjamble).toBeUndefined()
-        })
-
-    })
-
     describe('integrated', function(){
 
         let domain = new Domain({
@@ -64,7 +30,10 @@ describe('state model', function (){
                 }
             })
 
-            expect(composite.subconstructs['publicacc'].exposed.me).toBe(composite.local['publicacc'])
+            expect(composite.subconstructs.publicacc.exposure).toBe('public')
+            let accval = composite.subconstructs.publicacc.nucleus
+
+            expect(accval).toBe(composite.local['publicacc'])
             expect(composite.subconstructs['publichost'].exposed).toBe(composite.exposed['publichost'])
 
         })
@@ -140,5 +109,7 @@ describe('state model', function (){
 
 
     })
+
+    
 
 })

@@ -25,7 +25,6 @@ export default class TestApp extends Cell{
 
     debug:boolean;
 
-
     applyForm(form:any={}){
         Crumb.defaultOptions.log = console
         Crumb.defaultOptions.debug = true
@@ -34,6 +33,8 @@ export default class TestApp extends Cell{
 
         super.applyForm(form);
         this.debug = form.debug;
+
+
     }
 
     call(contact:string, data:any){

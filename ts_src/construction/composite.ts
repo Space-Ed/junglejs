@@ -2,6 +2,7 @@
 import {isPrimative, isVanillaObject, isVanillaArray, B, meld} from '../util/all'
 import {Domain} from './domain'
 import {HostState, AccessoryState, ExposureLevel} from './state'
+import {BedAgent, AnchorAgent, AgentPool} from './agency'
 
 export class Composite extends Construct{
 
@@ -16,6 +17,9 @@ export class Composite extends Construct{
 
     isComposite = true
 
+    anchor:AnchorAgent
+    bed:BedAgent
+    pool:AgentPool
 
     constructor(domain?:Domain){
         super(domain); //cache
@@ -41,12 +45,20 @@ export class Composite extends Construct{
     applyForm(form:any={}){
         super.applyForm(form)
 
-        this.state = new HostState(this.exposure, this.nucleus)
+        this.state = new HostState(this, form.state)
         this.exposed = this.state.exposed
         this.local = this.state.local
 
         this.beginTractor = form.begin;
         this.endTractor = form.end;
+
+        this.bed = new BedAgent(this, form.bed)
+        this.anchor = new AnchorAgent(this, form.anchor)
+        this.pool = new AgentPool(form.pool)
+
+        this.pool.add(this.bed, 'bed')
+        this.pool.add(this.anchor, 'anchor')
+
     }
 
     /*
@@ -63,7 +75,7 @@ export class Composite extends Construct{
         modification of structure by application of a patch,
         when alive and being reformed it will kill it first and then apply a recursive patching
     */
-    patch(patch:any){
+    _patch(patch:any):any{
         //incrementally apply the patch, ignoring keywords.
         //console.log("Composite patch: ", patch)
 
@@ -82,6 +94,11 @@ export class Composite extends Construct{
         }
     }
 
+    patch(patch:any):any{
+        //external patching is considered to be from the host
+        return this.anchor.notify(patch)
+    }
+
     reset(patch){
         this.dispose()
         this.init(patch)
@@ -93,7 +110,7 @@ export class Composite extends Construct{
         if(existing !== undefined){
             existing.patch(v);
         }else{
-            if(v === Symbol.for("DELETE")){
+            if(v === undefined){
                 this.remove(k)
             }else{
                 this.add(v , k);
@@ -142,8 +159,6 @@ export class Composite extends Construct{
         delete this.subconstructs[key]
 
         construct.detach(this, key)
-
-        this.state.removeSub(key)
     }
 
 
@@ -215,27 +230,37 @@ export class Composite extends Construct{
     /*
         output a representation of the construct that may be recovered to a replication
     */
-    extract():any {
+    _extract(suction:any):any {
+        let voidspace
 
-        if(this.alive){
-            let extracted = {}
-            for (let key in this.subconstructs) {
-                let construct = this.subconstructs[key]
-                extracted[key] = construct.extract();
-            }
-
-            for (let key in this.nucleus){
-                if(!(key in this.subconstructs)){
-                    if(isPrimative(this.nucleus[key])){
-                        extracted[key] = this.nucleus[key]
-                    }
-                }
-            }
-
-            return extracted
-
+        if(suction === undefined || typeof suction === 'object'){
+            voidspace = suction
+        }else if (typeof suction === 'string'){
+            voidspace = {};
+            voidspace[suction] = null;
         }else{
-            return undefined
+            throw new Error('Invalid extractor suction argument')
         }
+
+        let extracted = {}
+        for (let key in this.subconstructs) {
+            if(voidspace === null || key in voidspace){
+                let construct = this.subconstructs[key]
+                extracted[key] = construct.extract(voidspace===null?null:voidspace[key]);
+            }
+        }
+
+        for (let key in this.nucleus){
+            if(voidspace === null || (key in voidspace && voidspace[key] === null)){
+                extracted[key] = this.nucleus[key]
+            }
+        }
+
+        return extracted
+
+    }
+
+    extract(suction:any):any{
+        return this.anchor.fetch(suction)
     }
 }

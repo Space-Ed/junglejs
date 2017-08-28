@@ -21,7 +21,9 @@ export interface OpConstructSpec {
 
 export class OpConstruct extends Construct{
 
-    init(spec){
+    private spec:OpConstructSpec
+
+    init(spec:OpConstructSpec){
         super.init(spec)
     }
 
@@ -44,12 +46,17 @@ export class OpConstruct extends Construct{
             hook_name:key,
         })
 
+        this.spec = this.nucleus
         this.nucleus = this.nucleus.default
         host.lining.addContact(op, key)
     }
 
     detach(host:Cell, key:string){
         host.lining.removeContact(key)
+    }
+
+    extract(){
+        return this.spec
     }
 }
 
@@ -128,7 +135,7 @@ export interface DrainSpec {
 
 export class Drain extends OpConstruct {
 
-    init(spec:DrainSpec){
+    init(spec:any){
 
         spec.open_in = spec.open_in===undefined? true:spec.open_in;
         spec.open_out = spec.open_out===undefined? true:spec.open_out;
@@ -151,7 +158,7 @@ export interface SpringSpec{
 
 export class Spring extends OpConstruct {
 
-    init(spec:SpringSpec){
+    init(spec:any){
 
         let springF = function(data, carry, reflex){
             if(spec.open_in){

@@ -5,6 +5,10 @@ import {Reset, Get} from '../../../aliases/all'
 
 describe('anonymisation',function(){
 
+
+    pending('Full review of anonymisation')
+
+
     it('should parse anonymous array members of a Cell', function(){
 
         let app = new TestApp()
@@ -44,6 +48,7 @@ describe('anonymisation',function(){
     })
 
     it('should have an array typed nucleus and exposed when created under array basis ', function(){
+
         let app = new ArrayCell()
 
         let spy = jasmine.createSpy("hiyo");
@@ -51,6 +56,11 @@ describe('anonymisation',function(){
         app.init([
             0,1, {}
         ])
+
+        expect(app.exposed instanceof Array).toBe(true)
+        expect(Object.getPrototypeOf(app.exposed)).toBe(Array.prototype);
+
+        //for(let i=0 ;i<app.exposed.length; i++)
 
         app.exposed.forEach((x)=>{
             spy(x)
