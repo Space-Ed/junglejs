@@ -212,7 +212,6 @@ export class Membrane extends Section{
 
         }else{
 
-            contact.attach(this, label)
             this.contacts[label] = contact
 
             if(this.inverted !== undefined){
@@ -236,7 +235,6 @@ export class Membrane extends Section{
         let removing:BasicContact<any> = this.contacts[label];
 
         if(removing !== undefined){
-            removing.detach();
             delete this.contacts[label];
 
             if(this.inverted && removing.invertable){

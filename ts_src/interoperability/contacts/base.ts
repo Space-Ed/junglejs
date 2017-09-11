@@ -9,24 +9,14 @@ export namespace I {
 
 export abstract class BasicContact<Partner extends BasicContact<any>> {
 
-    //exclusion flags
+    //exclusion flags used by mesh
     public hidden = false;  //does not appear in designations.
     public plugged = false; //no further links allowed
     public gloved = false;  //no further rules allowed
     public claimed = false; //no further media allowed
     public inverted = false;
 
-    protected host:I.ContactHost;
     protected partner:Partner;
-
-    attach(host:I.ContactHost, name:string){
-        this.host = host;
-    }
-
-    detach(){
-        this.host = undefined;
-        this.partner = undefined;
-    }
 
     /**
      * if possible create the partner that will appear on the other side and put it there.
@@ -47,39 +37,20 @@ export abstract class BasicContact<Partner extends BasicContact<any>> {
 
     //---------------Copy to Implement-------------
 
-    //capability flags must be decided
-    public abstract symmetric:boolean;
+    //Is the contact appearing on both sides of the membrane?
     public abstract invertable:boolean;
 
-    // partner integration
+    //after super.invert() this.partner to refer to the opposite side
     // invert():Partner{
     //      super.invert()
     // }
 
-    // membrane integration
-    // attach(host:I.ContactHost, name:string){
-    //     super.attach(host, name)
-    // }
-    //
-    // detach(){
-    //    super.detach()
-    // }
-
-
-    abstract createPartner():Partner
-    //   return new Partner()
+    //must return the partner contact if invertable is true
+    createPartner():Partner{
+        return undefined
+    }
 
     //--------------End Copy-----------------------
 
-    // /**
-    //  * Forward this contact across a void
-    //  * this action should only be enacted in formation, and should preceed any situation that it is exposed
-    //  */
-    // forward():Partner{
-    //     this.hidden = true;
-    //     this.createBridge();
-    // };
-    //
-    // abstract createBridge():Partner
 
 }

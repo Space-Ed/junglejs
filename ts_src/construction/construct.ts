@@ -86,11 +86,14 @@ export abstract class Construct{
     }
 
     /**
-     * Clear the form, returning to the basic nature of the
+     *Restore the object so preformed state
      */
     protected clearForm(){
         this.primeTractor = undefined
         this.disposeTractor = undefined
+        this.exposure =undefined
+        this.reach = undefined
+        this.remote = undefined
     }
 
     /**

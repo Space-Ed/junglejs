@@ -52,17 +52,24 @@ export function Get(defaultValue){
 //     }
 // }
 
-
-export function Cell(patch){
-    return deepMeldF()({
-        basis:'cell'
-    },patch)
-}
-
 export function Connect(rule:string, medium:string){
     return {
         basis:'link',
         rule:rule,
         medium:medium
     }
+}
+
+export function j(basis, patch?){
+    if(patch === undefined){
+        return {basis:basis}
+    }else if (Object.getPrototypeOf(patch) === Object.prototype){
+        patch.basis = basis;
+        return patch
+    }else{
+        return {
+            basis: basis,
+            default: patch
+        }
+        }
 }

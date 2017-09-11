@@ -8,8 +8,9 @@ import * as Debug from '../../util/debug'
 
 import {BasicContact} from '../contacts/base'
 import {Op} from '../contacts/op'
+import {Call} from '../contacts/call'
 
-export type CallContact = Op
+export type CallContact = Call<any>
 export type CallIn = CallContact
 export type CallOut = CallContact
 
@@ -67,8 +68,8 @@ export interface MuxMediumSpec extends I.MediumSpec{
 
 export class MuxMedium extends BaseMedium <CallOut, CallIn> {
 
-    typeA = Op;
-    typeB  = Op;
+    typeA = Call;
+    typeB  = Call;
 
     emitScope:any;
 
@@ -219,6 +220,8 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
         let superok =  super.check(link)
         let out = link.contactA.hasOutput
         let inp = link.contactB.hasInput
+
+        // console.log(`check connection ${superok}, input ${inp}, output ${out}`)
 
         return superok && out && inp
     }

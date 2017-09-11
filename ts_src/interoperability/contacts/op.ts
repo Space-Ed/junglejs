@@ -2,6 +2,7 @@
 import {BasicContact} from './base'
 import * as Debug from '../../util/debug'
 import {Junction} from '../../util/all'
+import {Call} from './call'
 
 export type OpCallTarget = 'carry'|'resolve'|'reflex'
 
@@ -25,22 +26,35 @@ export interface OpSpec {
 
 }
 
-export class Op extends BasicContact<Op> {
+export class Op extends Call<Op> {
 
     //capability flags must be decided
-    public symmetric = true;
     public invertable = true;
-
-    public hasInput:boolean;
-    public hasOutput:boolean
-
-    put:(data?:any, crumb?:Debug.Crumb)=>Junction;
-    emit:(data?:any, crumb?:Debug.Crumb)=>any;
 
     constructor(public spec: OpSpec){
         super()
-        this.hasInput = false;
-        this.hasOutput = false
+    }
+
+    // partner integration
+    invert():Op {
+        let inverted = super.invert()
+
+        this.attachInput()
+        inverted.attachInput()
+
+        this.attachHook()
+
+        return inverted
+    }
+
+    createPartner():Op {
+        return new Op({
+            context:this.spec.context,
+            major_op:this.spec.minor_op,
+            major_arg1:this.spec.minor_arg1,
+            major_arg2:this.spec.minor_arg2,
+            major_return:this.spec.minor_return
+        })
     }
 
     attachInput(){
@@ -149,26 +163,6 @@ export class Op extends BasicContact<Op> {
         }
     }
 
-    // partner integration
-    invert():Op {
-        let inverted = super.invert()
 
-        this.attachInput()
-        inverted.attachInput()
-
-        this.attachHook()
-
-        return inverted
-    }
-
-    createPartner():Op {
-        return new Op({
-            context:this.spec.context,
-            major_op:this.spec.minor_op,
-            major_arg1:this.spec.minor_arg1,
-            major_arg2:this.spec.minor_arg2,
-            major_return:this.spec.minor_return
-        })
-    }
 
 }
