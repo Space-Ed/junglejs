@@ -5,7 +5,7 @@ import RuleAdapter from '../../helpers/meshAdapter'
 import TestHost from '../../helpers/testHost'
 import {Input, Output} from '../../helpers/testContacts'
 
-let Debug = Jungle.Util.Debug;
+let Debug = Jungle.Debug;
 Debug.Crumb.defaultOptions.debug = true;
 Debug.Crumb.defaultOptions.log = console;
 

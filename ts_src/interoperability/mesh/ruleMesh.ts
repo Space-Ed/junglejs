@@ -4,6 +4,8 @@ import {Membrane, MembraneEvents,DemuxWatchMethodsF} from '../membranes/membrane
 import {mediaConstructors, BaseMedium} from '../media/medium'
 import {Designator} from '../../util/designator'
 import {pairByBinding} from "../../util/designation/matching";
+import {LawIR, parseLawExpression} from '../law'
+
 /**
  * A multimedia connections manager with updating
  */
@@ -38,29 +40,25 @@ export class RuleMesh implements I.MembraneWatcher {
 
     protected parseRules(ruleset:string[], mediumkey:string){
         for(let link of ruleset){
-            let linkIR = this.parseLink(link);
-            this.addRule(linkIR, mediumkey)
+
+            let irs = parseLawExpression(link, mediumkey)
+            for (let law of irs) {
+                this.addLaw(law)
+            }
         }
     }
 
-    protected parseLink(link:string):I.LinkRule{
-        let m = link.match(/^([\w\*\:\.#]+)(\|?)(<?)([\+\-\!]?)([=\-])(>?)(\|?)([\w\*\:\.#]+)/)
-
-        if(!m){throw new Error(`Unable to parse link description, expression ${link} did not match regex`)};
-        let [match, srcDesig, srcClose, backward, filter, matching, forward, snkClose, snkDesig] = m;
-
-        let ruleIR  =  {
-            designatorA:new Designator('subranes','contacts', srcDesig),
-            designatorB:new Designator('subranes','contacts', snkDesig),
-            closeA:srcClose==='|',
-            closeB:snkClose==='|',
-            forward:forward==='>',
-            backward:backward==='<',
-            matching:matching==="=",
-            propogation:filter !== ''?{'+':I.LINK_FILTERS.PROCEED,'-':I.LINK_FILTERS.DECEED, '!':I.LINK_FILTERS.ELSEWHERE}[filter]:I.LINK_FILTERS.NONE
-        }
-
-        return ruleIR
+    addLaw(law:LawIR){
+        this.addRule({
+            designatorA:new Designator('subranes', 'contacts', law.designatorA),
+            designatorB:new Designator('subranes', 'contacts', law.designatorB),
+            closeA:false,
+            closeB:false,
+            matching:law.matching,
+            backward:false,
+            forward:true,
+            propogation:0
+        }, law.medium)
     }
 
     /**
@@ -73,7 +71,10 @@ export class RuleMesh implements I.MembraneWatcher {
 
         if(typeof rule === 'string'){
             //parse and add by IR
-            this.addRule(this.parseLink(rule), mediumkey, ruleID)
+            let irs = parseLawExpression(rule, mediumkey)
+            for(let law of irs){
+                this.addLaw(law)
+            }
         }else if(typeof rule === 'object'){
             //add by IR
 

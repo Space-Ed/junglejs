@@ -1,96 +1,157 @@
 
-import {Domain} from './construction/domain'
+import {Domain, isConstruct} from './construction/domain'
 
-import * as _Util from './util/all'
-import * as _IO  from './interoperability/all'
-import * as _TRT from './tertiary/all'
-import * as _CST from './construction/all'
-
-export const Util = _Util
-export const IO = _IO;
-export const TRT = _TRT;
-export const CST = _CST
+import * as Util from './util/all'
+import * as IO  from './interoperability/all'
+import * as TRT from './tertiary/all'
+import * as CST from './construction/all'
 
 export * from './util/all'
 export * from './interoperability/all'
 export * from './construction/all'
 export * from './tertiary/all'
 
-export const Core = new Domain({
-    media:new Domain({
-        direct:{
-            nature:_IO.MuxMedium,
-            patch:{
-                symbols:[],
-                emitArgType: _IO.DEMUXARG.ONE,
-                emitRetType: _IO.MUXRESP.LAST,
-                emitCallType:_IO.CALLTYPE.DIRECT
+export interface JDescription {
+    basis: string,
+    head: any,
+    body: any
+}
+
+/**
+ * @param basis: the existing domain entry from which to start
+ * @param body:  the deeply merged patch 
+*/
+export function j(basis: string, body?): JDescription
+export function j(obj: Object): { basis: 'object', head: any, body: any }
+export function j(arr: Array<any>): { basis: 'array', head: any, body: any }
+export function j(nature:Function, body?):JDescription
+/**
+ * normalize javascript types to the standard jungle description format that is compatible with domain definition and composition
+ * 
+ * @param basis a starting point for the description
+ * @param patch  the overlaid patch on the description
+ */
+export function j(basis: any, patch?: any) {
+
+    if (typeof basis === 'string' || isConstruct(basis)) {
+        if (patch === undefined) {
+            return { basis: basis }
+        } else if (Util.isVanillaObject(patch)) { //("",{})
+            //body is the baseline, head is 
+
+            let head = patch.head || {};
+            if (patch.heart) head.heart = patch.heart;
+            let domain = patch.domain
+
+            delete patch.head;
+            delete patch.heart;
+            delete patch.domain;
+
+            return {
+                domain:domain,
+                basis: basis,
+                head: head,
+                body: patch
             }
-        },
-        smear:{
-            nature:_IO.MuxMedium,
-            patch:{
-                symbols:[],
-                emitArgType: _IO.DEMUXARG.DONT,
-                emitRetType: _IO.MUXRESP.LAST,
-                emitCallType:_IO.CALLTYPE.BREADTH_FIRST
+        } else if (Util.isVanillaArray(patch)) { //("",[])
+            return {
+                basis: basis,
+                anon: patch
             }
-        },
-
-        split:{
-            nature:_IO.MuxMedium,
-            patch:{
-                symbols:[],
-                emitArgType: _IO.DEMUXARG.SOME,
-                emitRetType: _IO.MUXRESP.MAP,
-                emitCallType:_IO.CALLTYPE.BREADTH_FIRST
-            }
-        },
-
-        compose:{
-            nature:_IO.MuxMedium,
-            patch:{
-                symbols:[],
-                emitArgType: _IO.DEMUXARG.DONT,
-                emitRetType: _IO.MUXRESP.MAP,
-                emitCallType:_IO.CALLTYPE.BREADTH_FIRST
-            }
-        },
-
-        race:{
-            nature:_IO.MuxMedium,
-            patch:{
-                symbols:[],
-                emitArgType: _IO.DEMUXARG.DONT,
-                emitRetType: _IO.MUXRESP.RACE,
-                emitCallType:_IO.CALLTYPE.BREADTH_FIRST
-            }
-        }
-
-    }),
-
-    cell:TRT.Cell,
-    object:TRT.DefaultCell,
-    array:TRT.ArrayCell,
-
-    link:TRT.Connector,
-
-    contact:new Domain({
-        op:TRT.StandardOp,
-        outof:{
-            nature:TRT.StandardOp,
-            patch:{
-                carry_out:true
-            }
-        },
-        into:{
-            nature:TRT.StandardOp,
-            patch:{
-                carry_in:true
+        } else { //("", any)
+            return {
+                basis: basis,
+                body: patch
             }
         }
-    })
-})
+    } else if (Util.isVanillaObject(basis)) { //({})
+        return {
+            basis: 'object',
+            head: basis.head,
+            body: basis
+        }
+    } else if (Util.isVanillaArray(basis)) { //([])
+        return {
+            basis: 'array',
+            anon: basis
+        }
+    } else if (Util.isPrimative(basis)) { //(string|number|boolean|symbol)
+        return {
+            basis: typeof basis,
+            body: basis
+        }
+    } else { //(any)
+        return {
+            basis: 'strange',
+            body: basis
+        }
+    }
+}
 
-//full circle
-CST.Construct.DefaultDomain = Core
+export const J = new Domain()
+J  .sub('agent')
+        .define('context' , TRT.ContextAgent)
+        .define('contact' , TRT.ContactAgent)
+        .define('membrane', TRT.SubraneAgent)
+    .up()
+
+    .sub('media')
+        .define('multiplexer', j(TRT.MediumConstruct, {
+            head: {
+                medium: IO.MuxMedium,
+            }
+        }))
+
+        .define('direct',j('multiplexer', {
+            symbols:[],
+            emitArgType: IO.DEMUXARG.ONE,
+            emitRetType: IO.MUXRESP.LAST,
+            emitCallType:IO.CALLTYPE.DIRECT
+        }))
+
+        .define('cast', j('multiplexer', {
+            symbols: [],
+            emitArgType: IO.DEMUXARG.DONT,
+            emitRetType: IO.MUXRESP.LAST,
+            emitCallType: IO.CALLTYPE.BREADTH_FIRST
+        }))
+        
+        .define('switch', j('multiplexer', {
+            symbols: [],
+            emitArgType: IO.DEMUXARG.SOME,
+            emitRetType: IO.MUXRESP.MAP,
+            emitCallType: IO.CALLTYPE.BREADTH_FIRST
+        }))
+
+        .define('compose', j('multiplexer', {
+            symbols: [],
+            emitArgType: IO.DEMUXARG.DONT,
+            emitRetType: IO.MUXRESP.MAP,
+            emitCallType: IO.CALLTYPE.BREADTH_FIRST
+        }))
+
+        .define('race', j('multiplexer', {
+            symbols: [],
+            emitArgType: IO.DEMUXARG.DONT,
+            emitRetType: IO.MUXRESP.RACE,
+            emitCallType: IO.CALLTYPE.BREADTH_FIRST
+        }))
+    .up()
+
+    .define('cell',TRT.Cell)
+
+    .define('object',TRT.ObjectCell)
+
+    .define('array',TRT.ArrayCell)
+
+    .define('law',TRT.LawConstruct)
+
+    .define('op', TRT.StandardOp)
+
+    .define('outward', j('op', {
+        carry_out:true
+    }))
+
+    .define('inward', j('op', {
+        carry_in:true
+    }))

@@ -1,7 +1,7 @@
-import {Connect} from '../../../aliases/all'
 import TestApp from '../../helpers/testApp'
 import * as Debug from '../../../util/debug'
 
+import {j} from '../../../jungle'
 
 import Jasmine = require('jasmine')
 
@@ -13,14 +13,11 @@ describe('rule connector constructs', function(){
 
         app.init({
             form:{
-                debug:true,
-                media:['direct'],
-                laws:{
-                    //  direct:[':ghost->:child']
-                }
+                debug:true
             },
+            direct:j('media:direct'),
+            haunts:j('law',':ghost-(direct)->:child'),
 
-            haunts:Connect(':ghost->:child','direct'),
             ghost:{
                 basis:'contact:into'
             },

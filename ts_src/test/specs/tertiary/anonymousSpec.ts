@@ -1,7 +1,6 @@
-import Jasmine = require('jasmine')
-import {Cell, DefaultCell, ArrayCell} from '../../../tertiary/all'
+import {Cell, ObjectCell, ArrayCell} from '../../../tertiary/all'
 import TestApp from '../../helpers/testApp'
-import {Reset, Get} from '../../../aliases/all'
+import {j, J} from '../../../jungle'
 
 describe('anonymisation',function(){
 
@@ -11,13 +10,13 @@ describe('anonymisation',function(){
 
     it('should parse anonymous array members of a Cell', function(){
 
-        let app = new TestApp()
+        let app = new TestApp(J)
 
-        app.init({
-            ohmynon:[
+        app.init(j('test',{
+            ohmynon:j([
                 "what", "the", "sequence"
-            ]
-        })
+            ])
+        }))
 
         expect(app.exposed.ohmynon[0]).toBe("what")
 
@@ -25,21 +24,21 @@ describe('anonymisation',function(){
 
     it('should create anonymous from cell directly', function(){
 
-        let app = new DefaultCell()
+        let app = new ObjectCell(J)
 
-        app.init([
+        app.init(j([
             'how', 'the', 'list'
-        ]);
+        ]));
 
         expect(app.exposed[0]).toBe('how')
 
     })
 
     it('additions without a given name are pushed to the anonymous', function(){
-        let app = new TestApp()
+        let app = new TestApp(J)
 
         app.add("anon1")
-        app.init({})
+        app.init(j('test', {}))
         app.add('anon2')
 
         expect(app.nucleus[0]).toBe('anon1')
@@ -49,13 +48,13 @@ describe('anonymisation',function(){
 
     it('should have an array typed nucleus and exposed when created under array basis ', function(){
 
-        let app = new ArrayCell()
+        let app = new ArrayCell(J)
 
         let spy = jasmine.createSpy("hiyo");
 
-        app.init([
+        app.init(j([
             0,1, {}
-        ])
+        ]))
 
         expect(app.exposed instanceof Array).toBe(true)
         expect(Object.getPrototypeOf(app.exposed)).toBe(Array.prototype);
@@ -78,7 +77,7 @@ describe('anonymisation',function(){
         let app = new TestApp()
 
         app.init({
-            form:{
+            head:{
                 debug:true
             },
 
@@ -108,7 +107,7 @@ describe('anonymisation',function(){
         let app = new TestApp()
 
         app.init({
-            form:{
+            head:{
                 debug:true
             },
 

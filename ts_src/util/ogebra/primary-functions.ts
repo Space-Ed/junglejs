@@ -13,6 +13,18 @@ export namespace reduce {
     export function latest(a, b){
         return b
     }
+
+    export function foremost(a, b){
+        return a
+    }
+
+    export function negateEqual(a, b){
+        if(a === b){
+            return Symbol.for('delete')
+        }else{
+            return a
+        }
+    }
 }
 
 export namespace scan {
@@ -32,7 +44,7 @@ export namespace terminate {
 }
 
 export namespace negate {
-    export function existential(some){
+    export function existential(some, key?){
         return Symbol.for("delete")
     }
 }

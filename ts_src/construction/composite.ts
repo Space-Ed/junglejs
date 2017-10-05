@@ -6,23 +6,23 @@ import {BedAgent, AnchorAgent, AgentPool} from './agency'
 
 export class Composite extends Construct{
 
-    static keywords = {basis:null, domain:null, form:null, anon:null, meta:null}
-    subconstructs:any;
+    static keywords = {basis:null, domain:null, head:null, anon:null}
+    
+    subconstructs:any
 
     state:HostState
-    nucleus:any
-
-    beginTractor:()=>void;
-    endTractor:()=>void;
-
+    
     isComposite = true
 
     anchor:AnchorAgent
     bed:BedAgent
     pool:AgentPool
 
-    constructor(domain?:Domain){
-        super(domain); //cache
+    beginTractor:()=>void;
+    endTractor:()=>void;
+
+    constructor(public domain:Domain){
+        super(); //cache
 
         this.subconstructs = [];
         this.nucleus = {}
@@ -41,19 +41,19 @@ export class Composite extends Construct{
     /*
         essential configuration to occur before constructions
     */
-    applyForm(form:any={}){
-        super.applyForm(form)
+    applyHead(head:any={}){
+        super.applyHead(head)
 
-        this.state = new HostState(this, form.state)
+        this.state = new HostState(this, head.state)
         this.exposed = this.state.exposed
         this.local = this.state.local
 
-        this.beginTractor = form.begin;
-        this.endTractor = form.end;
+        this.beginTractor = head.begin;
+        this.endTractor = head.end;
 
-        this.bed = new BedAgent(this, form.bed)
-        this.anchor = new AnchorAgent(this, form.anchor)
-        this.pool = new AgentPool(form.pool)
+        this.bed = new BedAgent(this, head.bed)
+        this.anchor = new AnchorAgent(this, head.anchor)
+        this.pool = new AgentPool(head.pool)
 
         this.pool.add(this.bed, 'bed')
         this.pool.add(this.anchor, 'anchor')
@@ -61,12 +61,12 @@ export class Composite extends Construct{
     }
 
     /*
-        undo the setup so that a new form can be applied
+        undo the setup so that a new head can be applied
     */
-    clearForm(){
+    clearHead(){
         this.beginTractor = undefined;
         this.endTractor = undefined;
-        super.clearForm()
+        super.clearHead()
     }
 
 
@@ -129,19 +129,14 @@ export class Composite extends Construct{
             this.nucleus.length = this.subconstructs.length
         }
 
-        if(isPrimative(val)){
-            this.addPrimative(k, val)
-        }else if(isVanillaObject(val)){
-            val.basis = val.basis||'object';
-            let recovered = this.domain.recover(val);
-            this.attachChild(recovered, k);
-        }else if(isVanillaArray(val)){
-            let patch = {
-                basis:'array',
-                anon:val
+        if (val instanceof Object && 'basis' in val){
+            let construct = this.domain.recover(val)
+            if(construct instanceof Construct){
+                this.attachChild(construct, k)
+            }else{
+                //domain emits strange value
+                this.addStrange(k, construct)
             }
-            let recovered = this.domain.recover(patch);
-            this.attachChild(recovered, k);
         }else{
             this.addStrange(k, val)
         }
@@ -175,9 +170,6 @@ export class Composite extends Construct{
     addPrimative(k, v){
         this.nucleus[k] = v
     }
-
-
-
 
     getExposure():any{
         return {
@@ -221,7 +213,7 @@ export class Composite extends Construct{
             this.detachChild(key)
         }
 
-        this.clearForm()
+        this.clearHead()
 
         super.dispose();
     }

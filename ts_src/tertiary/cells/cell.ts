@@ -4,7 +4,7 @@ import * as CS  from '../../construction/all'
 import{ShellPolicy, FreePolicy, Contact} from '../../interoperability/interfaces'
 import * as I from '../interfaces'
 import {meld} from "../../util/ogebra/operations";
-import {MetaAgent} from '../hooks/directMeta'
+import {ContextAgent} from '../agents/contextMeta'
 
 /*
 
@@ -17,67 +17,47 @@ export class Cell extends CS.Composite implements I.CellAnchor{
     mesh:IO.RuleMesh;
     forward:IO.Section;
 
-    meta:MetaAgent
+    meta:ContextAgent
 
     constructor(domain?:CS.Domain){
-        //overridable
         super(domain)
 
         this.shell = new IO.Membrane();
         this.lining = this.shell.invert();
+
+        //the internal interlinking mechanism
+        this.mesh = new IO.RuleMesh(this.lining)
+
     }
 
     /*
         setup the parts of the cell that are contingent on specialisation
     */
-    applyForm(form:any={}){
+    applyHead(head:any={}){
 
-        //creates state, pool and tractors from form
-        super.applyForm(form)
+        //creates state, pool and tractors from head
+        super.applyHead(head)
 
-        this.meta = new MetaAgent(this.domain)
-        this.meta.init(form.meta||{})
-        this.attachChild(this.meta, 'meta')
+        // //meta method exposure
+        // this.meta = new ContextAgent(this.domain)
+        // this.meta.init(head.meta||{})
+        // this.attachChild(this.meta, 'meta')
 
-        if(form.forward){
-            this.forward=this.shell.createSection(form.forward)
+        //create 
+
+        if(head.forward){
+            this.forward=this.shell.createSection(head.forward)
         }
-
-        //the internal interlinking mechanism
-        this.mesh = new IO.RuleMesh(this.lining)
-
-        if(form.media instanceof Array){
-            for (let mediumBasis of form.media||[]){
-                this.mesh.addMedium(mediumBasis, this.domain.recover({
-                    basis:'media:'+mediumBasis,
-                    label:mediumBasis,
-                    exposed:this.local
-                }))
-            }
-        }else if(form.media instanceof Object){
-            for (let mediumBasis in form.media){
-                this.mesh.addMedium(mediumBasis, this.domain.recover(meld((a, b)=>{return b})({
-                    basis:'media:'+mediumBasis,
-                    label:mediumBasis,
-                    exposed:this.local
-                },form.media[mediumBasis])))
-            }
-        }
-
-        for(let lawmedium in form.laws||{}){
-            for (let law of form.laws[lawmedium]){
-                this.mesh.addRule(law, lawmedium)
-            }
-        }
+      
     }
 
     /*
-        undo the setup so that a new form can be applied
+        undo the setup so that a new head can be applied
     */
-    clearForm(){
+    clearHead(){
         // this.remove('meta')
 
-        // super.clearForm()
+        // super.clearHead()
         //everything recreated is sufficient
     }
 
@@ -98,5 +78,14 @@ export class Cell extends CS.Composite implements I.CellAnchor{
         if(this.forward){
             anchor.shell.removeSubrane(alias)
         }
+    }
+
+    scan(designator:string){
+        return this.shell.designate(designator)
+    }
+
+    seek(designator:string){
+        let all = this.scan(designator)
+        return all[Object.keys(all)[0]]
     }
 }

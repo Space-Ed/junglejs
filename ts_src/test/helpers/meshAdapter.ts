@@ -21,19 +21,16 @@ export default class MeshAdapter extends RuleMesh {
 
         if(init.media instanceof Array){
             for (let mediumBasis of init.media||[]){
-                this.addMedium(mediumBasis, Core.recover({
-                    basis:'media:'+mediumBasis,
-                    label:mediumBasis,
-                    exposed:init.exposed
-                }))
+
+                let {constructorF, args, name } = mediumBasis
+                let medium = new constructorF(args)
+                this.addMedium(name, medium)
             }
         }else if(init.media instanceof Object){
             for (let mediumBasis in init.media){
-                this.addMedium(mediumBasis, Core.recover(meld((a, b)=>{return b})({
-                    basis:'media:'+mediumBasis,
-                    label:mediumBasis,
-                    exposed:init.exposed
-                },init.media[mediumBasis])))
+                let { constructorF, args} = init.media[mediumBasis]
+                let medium = new constructorF(args)
+                this.addMedium(mediumBasis, medium)
             }
         }
 

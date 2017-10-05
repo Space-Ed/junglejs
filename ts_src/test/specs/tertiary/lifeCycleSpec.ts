@@ -1,7 +1,7 @@
 import Jasmine = require('jasmine')
 import TestApp from "../../helpers/testApp";
 import * as Jungle from '../../../jungle'
-
+import {j} from '../../../jungle'
 
 describe('life cycle', function(){
 
@@ -16,8 +16,8 @@ describe('life cycle', function(){
 
             let app = new TestApp()
 
-            app.init({
-                form:{
+            app.init(j({
+                head:{
                     prime:primespy,
                     dispose:disposespy,
                     begin:beginspy,
@@ -25,7 +25,7 @@ describe('life cycle', function(){
                 },
 
                 hello:"something"
-            })
+            }))
 
             expect(primespy).toHaveBeenCalledTimes(1)
             expect(primespy.calls.first().object.hello).toBe("something")
@@ -45,22 +45,19 @@ describe('life cycle', function(){
         })
 
         it('should have base properties exposed to prime when extended', function(){
-            let subd = Jungle.Core.branch("pollute")
-            Jungle.Core.extend('object', 'pollute:object', {
-                form:{
-                    dispose(){
-                        pspy('backwater')
+            let subd = Jungle.J.sub("pollute")
+                .define('object', j({
+                    head:{
+                        dispose(){
+                            pspy('backwater')
+                        }
                     }
-                }
-            })
+                }))
 
             let pspy = jasmine.createSpy("pspy")
 
-            let app = subd.recover({
-                basis:'object',
-                domain:'pollute',
-                form:{
-
+            let app = subd.recover(j({
+                head:{
                     prime(){
                         pspy(this.trash.fiend);
                     },
@@ -79,9 +76,8 @@ describe('life cycle', function(){
 
                 trash:{
                     fiend:'gargoyle'
-                },
-
-            })
+                }
+            }))
 
             expect(pspy.calls.first().args[0]).toBe("gargoyle")
             expect(pspy.calls.mostRecent().args[0]).toBe("garbage")

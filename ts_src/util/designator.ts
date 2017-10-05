@@ -21,8 +21,9 @@ export const DSymBindingParse = `(?:(\\w+)#(${DSetExp}))`
 
 export const DTermExp = `(?:\\w+|\\*|${DSymBindingExp})`
 export const DGroupExp = `(?:\\w+|\\*{1,2}|${DSymBindingExp})`
+export const DFullExp = `(${DGroupExp}(?:\\.${DGroupExp})*)?\\:(${DTermExp})`
 
-export const DTotalExp = new RegExp(`^(${DGroupExp}(?:\\.${DGroupExp})*)?\\:(${DTermExp})$`);
+export const DTotalExp = new RegExp(`^${DFullExp}$`);
 
 export function parseDesignatorString(desigstr:string):DesignatorIR{
 

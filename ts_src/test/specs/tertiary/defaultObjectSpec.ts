@@ -1,6 +1,6 @@
 
 
-import {DefaultCell} from "../../../tertiary/cells/default";
+import {ObjectCell} from "../../../tertiary/cells/default";
 import {Cell} from "../../../tertiary/cells/cell";
 import * as A from '../../../aliases/all'
 
@@ -10,14 +10,14 @@ describe('defaults of objects', function(){
 
         it('should construct and prime with exposed accessor',function(){
 
-            let defaultCell = new DefaultCell()
+            let ObjectCell = new ObjectCell()
 
-            defaultCell.init({
+            ObjectCell.init({
                 one:1,
                 two:2
             })
 
-            expect(defaultCell.exposed.one).toBe(1)
+            expect(ObjectCell.exposed.one).toBe(1)
         })
 
 
@@ -41,7 +41,7 @@ describe('defaults of objects', function(){
                 }
             })
 
-            expect(aCell.subconstructs.obj instanceof DefaultCell).toBe(true, 'must be a default cell')
+            expect(aCell.subconstructs.obj instanceof ObjectCell).toBe(true, 'must be a default cell')
             expect(aCell.subconstructs.obj.exposed.one).toBe('default primative')
             expect(aCell.subconstructs.obj.exposure).toBe('public')
 
@@ -56,7 +56,7 @@ describe('defaults of objects', function(){
 
         it('should be able to have other cells within', function(){
 
-            let defLep = new DefaultCell()
+            let defLep = new ObjectCell()
 
             defLep.init({
                 subcell:{

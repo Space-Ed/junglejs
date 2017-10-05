@@ -1,6 +1,6 @@
-import {DefaultCell} from "./default";
+import {ObjectCell} from "./object";
 
-export class ArrayCell extends DefaultCell{
+export class ArrayCell extends ObjectCell{
 
     nucleus:Array<any>
 

@@ -1,11 +1,11 @@
 
 import * as Jungle from '../../../jungle'
-const {Construct, Composite, Domain} = Jungle.CST;
-const Cell = Jungle.TRT.Cell;
+const {Construct, Composite, Domain, Cell, j, J} = Jungle;
+
 
 import * as Debug from '../../../util/debug'
 
-describe("A Cell", function () {
+fdescribe("A Cell", function () {
 
     Debug.Crumb.defaultOptions.log = console;
     Debug.Crumb.defaultOptions.debug = true;
@@ -14,22 +14,20 @@ describe("A Cell", function () {
 
     beforeEach(function(){
 
-        cell = new Cell();
+        cell = new Cell(J);
 
-        cell.init({
-
-            form:{
-                media:['direct'],
-                laws:{
-                    'direct':[
-                        'mouth->stomach:oesophagus',
-                        'stomach:fullness->fullness'
-                    ]
-                }
+        cell.init(j({
+            head:{
             },
 
+            oesophagus:j('media:direct', {
+                law:[
+                    ':mouth->stomach:swallow'
+                ]
+            }),
+
             mouth:{
-                basis:'contact:op',
+                basis:'op',
                 carry_in:true
             },
 
@@ -39,8 +37,8 @@ describe("A Cell", function () {
                     exposure:'public'
                 },
 
-                oesophagus :{
-                    basis:'contact:op',
+                swallow :{
+                    basis:'op',
                     form:{
                         exposure:'private'
                     },
@@ -54,12 +52,14 @@ describe("A Cell", function () {
                 hungry:true
             },
 
-        });
+        }))
     })
 
-    it('should not be hungry when it has been fed', function () {
+    fit('should not be hungry when it has been fed', function () {
         expect(cell.shell.contacts.mouth).not.toBeUndefined();
         let crumb = new Debug.Crumb("Beginning")
+
+        console.log('contact ', cell.shell.contacts.mouth)
 
         cell.shell.contacts.mouth.put("Nachos", crumb);
         expect(cell.exposed.stomach.hungry).toBe(false);

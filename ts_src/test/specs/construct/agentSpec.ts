@@ -2,7 +2,7 @@
 import {AgentPool} from '../../../construction/agency'
 import {MockAgent} from '../../helpers/mockAgent'
 import TestApp from '../../helpers/testApp'
-import {Core, Domain, Composite, Construct, Junction} from '../../../jungle'
+import {J, Domain, Composite, Construct, Junction} from '../../../jungle'
 
 
 describe('agency', function(){

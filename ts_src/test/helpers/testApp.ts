@@ -25,14 +25,14 @@ export default class TestApp extends Cell{
 
     debug:boolean;
 
-    applyForm(form:any={}){
+    applyHead(head:any={}){
         Crumb.defaultOptions.log = console
         Crumb.defaultOptions.debug = true
 
-        this.exposure = form.exposure || 'public'
+        this.exposure = head.exposure || 'public'
 
-        super.applyForm(form);
-        this.debug = form.debug;
+        super.applyHead(head);
+        this.debug = head.debug;
 
 
     }

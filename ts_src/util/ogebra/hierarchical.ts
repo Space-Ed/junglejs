@@ -1,6 +1,5 @@
 import * as f from './primary-functions'
 import * as op from './operations'
-import * as mnd from './monads'
 import * as T from './types'
 
 
@@ -8,14 +7,15 @@ function mustTerminate(obj1, obj2, q){
     obj1 instanceof Object
 }
 
+
 export function deepMeldF(terminator:T.Terminator=f.terminate.isPrimative, reduce:T.Reducer=f.reduce.latest):(obj1, obj2)=>any{
 
     function recur(obj1, obj2, q?){
 
-        if(terminator(obj1, obj2, q)){
-            return reduce(obj1, obj2, q) //collision
+        if(terminator(obj1, obj2, q)){        //is mergeable
+            return reduce(obj1, obj2, q)      //collision
         }else{
-            return op.meld(recur)(obj1, obj2)
+            return op.meld(recur)(obj1, obj2) //merge recur
         }
     }
 
@@ -40,7 +40,7 @@ export function deepMaskF(terminator:T.Terminator, reduce:T.Reducer):(obj1, obj2
 }
 
 
-export function deepInvertF(terminator, negater):(obj:Object)=>any{
+export function deepInvertF(terminator = f.terminate.isPrimative, negater=f.negate.existential):(obj:Object)=>any{
     function recur(obj, q?){
 
         return op.invert((innerObj, k) => {

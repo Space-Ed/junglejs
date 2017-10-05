@@ -1,21 +1,21 @@
 import {MuxMedium,CALLTYPE} from "../../../interoperability/media/multiplexing";
 import TestApp from '../../helpers/testApp'
 
+import {j, J} from '../../../jungle'
+
 describe("multiplex medium", function(){
 
     it('should transport data across the cell', function(done){
-        let app = new TestApp();
+        let app = new TestApp(J);
 
         app.init({
-            form:{
-                debug:true,
-                media:['smear'],
-                laws:{
-                    'smear':[
-                        ':a->:b'
-                    ],
-                }
+            head:{
+                debug:true
             },
+
+            smear:j('media:direct',{
+                law:':a~>:b'
+            }),
 
             a:{basis:'contact:op', carry_in:true},
             b:{basis:'contact:op', carry_out:true}
@@ -43,38 +43,19 @@ describe("multiplex medium", function(){
             app= new TestApp();
 
             app.init({
-                form:{
+                head:{
                     debug:true,
-
-                    prime(){
-                        // this.addMedium('compose', {
-                        //     symbols:['outer', 'inner']
-                        // })
-                        //
-                        // this.addMedium('split', {
-                        //     symbols:['outer', 'inner']
-                        // })
-                        //
-                        // this.addRule('compose', ':entry->outer#:inner#')
-                        // this.addRule('split', ':split->outer#:inner#')
-                    },
-
-                    media:{
-                        'compose':{
-                            symbols:['outer', 'inner']
-                        },'split':{
-                            symbols:['outer', 'inner']
-                        }
-                    },
-                    laws:{
-                        'compose':[
-                            ':entry->outer#:inner#'
-                        ],
-                        'split':[
-                            ':split->outer#:inner#'
-                        ]
-                    }
                 },
+
+                composer:j('media:compose', {
+                    symbols:['outer','inner'],
+                    law:':entry->outer#:inner#'
+                }),
+
+                switcher:j('media:switch', {
+                    symbols:['outer', 'inner'],
+                    law:'split->outer#:inner#'
+                }),
 
                 a:{
                     basis:'cell',

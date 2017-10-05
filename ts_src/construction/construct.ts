@@ -1,5 +1,5 @@
 
-import {Domain} from './domain'
+import {Domain, Description} from './domain'
 import * as Util from '../util/all'
 
 import {deepMeldF} from '../util/ogebra/hierarchical';
@@ -28,67 +28,69 @@ import {AnchorAgent, BedAgent} from './agency'
 
 export abstract class Construct{
 
-    static DefaultDomain:Domain;
+    origins:string[];
+    basis:string;
+    head:any;
 
-    /* fundamentally composites need to know if the construct is a living one */
-    alive:boolean;
-
+    //attachment primatives
     alias:string;
     host:any;
+    isComposite = false;
 
-    isComposite =false;
-
+    //state
     nucleus:any;
     local:any;
     exposed:any;
-
-    primeTractor:()=>void;
-    disposeTractor:()=>void;
 
     exposure:ExposureLevel;
     reach:ReachLevel;
     remote:boolean;
 
-    constructor(protected domain:Domain = Construct.DefaultDomain){}
+    //tractors
+    primeTractor:()=>void;
+    disposeTractor:()=>void;
+
+    constructor(){}
 
     /*
         bring the the construct to life
     */
-    init(patch){
+    init(desc:Description){
+        this.origins = desc.origins;
+        this.basis = desc.basis;
 
-        let ensured = this.ensureObject(patch)
-        this.applyForm(ensured.form)
-
-        this._patch(ensured)
-        let primeResult = this.primeTractor?this.primeTractor.call(this.local):undefined
+        this.applyHead(desc.head)
+        this._patch(desc.body)
+        let primeResult = this.primeTractor?this.primeTractor.call(this.nucleus):undefined
         return primeResult
     }
 
     /*
         end the life of the construct.
-        should return it's final form, and also return to being a pattern
+        should return it's final description, and also return to being a pattern
         it should retract any changes it enacted on the parent.
     */
     dispose(){
-        if(this.disposeTractor){ this.disposeTractor.call(this.local) }
-        this.clearForm()
+        if(this.disposeTractor){ this.disposeTractor.call(this.nucleus) }
+        this.clearHead()
     }
 
     /**
      * Apply the essential characteristics of the Construct, that will be immutable over its lifetime.
      */
-    protected applyForm(form:any={}){
-        this.exposure = form.exposure     || 'local'
-        this.reach = form.reach           || 'host'
-        this.remote = form.remote         || false
-        this.primeTractor = form.prime
-        this.disposeTractor = form.dispose
+    protected applyHead(head:any={}){
+        this.head = head;
+        this.exposure = head.exposure     || 'local'
+        this.reach = head.reach           || 'host'
+        this.remote = head.remote         || false
+        this.primeTractor = head.prime
+        this.disposeTractor = head.dispose
     }
 
     /**
-     *Restore the object so preformed state
+     *Restore the object so preheaded state
      */
-    protected clearForm(){
+    protected clearHead(){
         this.primeTractor = undefined
         this.disposeTractor = undefined
         this.exposure =undefined
@@ -97,7 +99,7 @@ export abstract class Construct{
     }
 
     /**
-     * Called by the host with the host to allow the construct to use it as a platform
+     * Called by the host with the host to allow the construct to use it as a plathead
      * Extending: Always call super, and provide your own interface,
      */
     attach(host:any, alias:string){
@@ -117,7 +119,7 @@ export abstract class Construct{
         }
 
         if(!this.isComposite){
-            //composites have state setup in the form application
+            //composites have state setup in the head application
 
             let acc = new AccessoryState(this, alias, {
                 reach:this.reach,

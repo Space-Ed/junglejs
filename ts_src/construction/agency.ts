@@ -114,6 +114,9 @@ export class AgentPool {
         return agent
     }
 
+    /**
+        notify all other members of the pool
+     */
     notifyIn(key){
         return (data)=>{
             let junction = new Junction().mode('last')
@@ -158,7 +161,7 @@ export class AgentPool {
      * check that the latest fetch is fully complete
      */
     fetchComplete(latestFetch):boolean{
-        return latestFetch !== undefined
+        return  latestFetch !== undefined
     }
 
 }

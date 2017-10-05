@@ -1,8 +1,5 @@
 import * as Jungle from '../../jungle'
-
-import Jasmine = require('jasmine')
-
-let {Membrane, DemuxWatchMethodsF, Op} = Jungle.IO;
+let {Membrane, DemuxWatchMethodsF, Op} = Jungle;
 
 import {Input, Output, Duplex} from './testContacts'
 

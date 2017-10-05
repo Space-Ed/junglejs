@@ -1,6 +1,6 @@
 import * as Jungle from '../../../jungle'
 
-let {Membrane} = Jungle.IO;
+let Membrane = Jungle.Membrane;
 import TestHost from '../../helpers/testHost'
 import {Input, Output} from '../../helpers/testContacts'
 
