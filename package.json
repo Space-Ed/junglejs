@@ -1,6 +1,6 @@
 {
   "name": "jungle-core",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "The organic programming framework",
   "main": "./build/jungle",
   "types": "./build/jungle",
