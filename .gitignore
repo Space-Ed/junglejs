@@ -44,4 +44,3 @@ typings
 script/deploy
 repl/*
 .vscode
-package-lock.json
