@@ -2,7 +2,7 @@ import {isVanillaTree, isVanillaArray, isVanillaObject} from './checks'
 import {typeCaseSplitF} from './typesplit'
 
 export function ensureArray(sometimes){
-    return (sometimes instanceof Array)?sometimes:[sometimes]
+    return (sometimes instanceof Array)? sometimes: (sometimes != undefined ? [sometimes]: [])
 }
 
 export function identity(x){

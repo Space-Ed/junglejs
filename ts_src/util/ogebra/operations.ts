@@ -29,7 +29,33 @@ export function meld(reduce:T.Reducer):(obj1:Object, obj2:Object)=>Object{
 
         return melded
     }
+}
 
+export function safeMeld(reduce: T.Reducer): (obj1: any, obj2: any) => any {
+
+    const omeld = meld(reduce)
+
+    return function (obj1: any, obj2: any): any {
+        if (obj1 instanceof Object && obj2 instanceof Object){
+            return omeld(obj1,obj2)
+        }else{
+            if(obj1 == undefined){  //absolute pull of void
+                return obj2
+            }
+
+            if(obj2 == undefined){  //obj1 is undisturbed
+                return obj1
+            }
+
+            if(obj1 == Symbol.for('delete')){ //the only obj1 trump
+                return obj1
+            }else{
+                return obj2 //the otherwise override
+            }
+        }
+
+
+    }
 }
 
 export function mask(reduce:T.Reducer):(obj1:Object, obj2:Object)=>Object{

@@ -1,8 +1,5 @@
 
-
-import {ObjectCell} from "../../../tertiary/cells/default";
-import {Cell} from "../../../tertiary/cells/cell";
-import * as A from '../../../aliases/all'
+import {J, j, Cell, ObjectCell}   from '../../../jungle'
 
 describe('defaults of objects', function(){
 
@@ -10,36 +7,31 @@ describe('defaults of objects', function(){
 
         it('should construct and prime with exposed accessor',function(){
 
-            let ObjectCell = new ObjectCell()
-
-            ObjectCell.init({
+            let o1 = J.recover(j({
                 one:1,
                 two:2
-            })
+            }))
 
-            expect(ObjectCell.exposed.one).toBe(1)
+            expect(o1.exposed.one).toBe(1)
         })
-
-
 
     })
 
     describe('as child', function(){
 
         it('should be implicitly accessible from parent state', function(){
-            let aCell = new Cell()
 
-            aCell.init({
-                form:{
+            let aCell:Cell = <Cell>J.recover(j('cell', {
+                head:{
                     exposure:'public'
                 },
-                obj:{
-                    form:{
+                obj:j({
+                    head:{
                         exposure:'public'
                     },
                     one:"default primative"
-                }
-            })
+                })
+            }))
 
             expect(aCell.subconstructs.obj instanceof ObjectCell).toBe(true, 'must be a default cell')
             expect(aCell.subconstructs.obj.exposed.one).toBe('default primative')
@@ -56,18 +48,15 @@ describe('defaults of objects', function(){
 
         it('should be able to have other cells within', function(){
 
-            let defLep = new ObjectCell()
-
-            defLep.init({
-                subcell:{
-                    basis:'cell',
+            let defLep = J.recover(j({
+                subcell:j('cell',{
                     laughs:'hahaha'
-                },
+                }),
 
-                subdef:{
+                subdef:j({
                     ok:'great'
-                }
-            });
+                })
+            }))
 
             //default accessor of object cell
             expect(defLep.exposed.subdef.ok).toBe('great')

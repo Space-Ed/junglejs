@@ -51,7 +51,8 @@
     "source-map-support": "^0.4.15",
     "ts-loader": "^2.1.0",
     "tsify": "^1.0.1",
-    "typescript": "^1.8.10",
+    "tslint": "^5.7.0",
+    "typescript": "^2.5.2",
     "uuid": "^2.0.3",
     "webpack": "^2.6.1"
   },

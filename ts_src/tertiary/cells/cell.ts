@@ -4,7 +4,6 @@ import * as CS  from '../../construction/all'
 import{ShellPolicy, FreePolicy, Contact} from '../../interoperability/interfaces'
 import * as I from '../interfaces'
 import {meld} from "../../util/ogebra/operations";
-import {ContextAgent} from '../agents/contextMeta'
 
 /*
 
@@ -16,8 +15,6 @@ export class Cell extends CS.Composite implements I.CellAnchor{
     lining:IO.Membrane;
     mesh:IO.RuleMesh;
     forward:IO.Section;
-
-    meta:ContextAgent
 
     constructor(domain?:CS.Domain){
         super(domain)
@@ -34,16 +31,8 @@ export class Cell extends CS.Composite implements I.CellAnchor{
         setup the parts of the cell that are contingent on specialisation
     */
     applyHead(head:any={}){
-
         //creates state, pool and tractors from head
         super.applyHead(head)
-
-        // //meta method exposure
-        // this.meta = new ContextAgent(this.domain)
-        // this.meta.init(head.meta||{})
-        // this.attachChild(this.meta, 'meta')
-
-        //create 
 
         if(head.forward){
             this.forward=this.shell.createSection(head.forward)
@@ -55,7 +44,7 @@ export class Cell extends CS.Composite implements I.CellAnchor{
         undo the setup so that a new head can be applied
     */
     clearHead(){
-        // this.remove('meta')
+        // this.remove('heart')
 
         // super.clearHead()
         //everything recreated is sufficient
@@ -64,10 +53,10 @@ export class Cell extends CS.Composite implements I.CellAnchor{
 
     attach(anchor:Cell, alias){
         super.attach(anchor, alias)
-        this.host.lining.addSubrane(this.shell, alias)
+        anchor.lining.addSubrane(this.shell, alias)
 
         if(this.forward){
-            this.host.shell.addSubrane(this.forward, alias)
+            anchor.shell.addSubrane(this.forward, alias)
         }
     }
 

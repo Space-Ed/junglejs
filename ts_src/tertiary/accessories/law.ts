@@ -8,18 +8,27 @@ import {parseLawExpression} from '../../interoperability/law'
 export class LawConstruct extends Construct {
 
     nucleus:string;
-    handle:LawHandle;
+    handles:any;
 
     attach(anchor: I.CellAnchor, label:string){
         super.attach(anchor, label)
 
+        this.handles = []
+
         let lawIRS = parseLawExpression(this.nucleus)
 
-        this.handle = anchor.mesh.addLaw(lawIRS)
+        
+        for (let i = 0; i<lawIRS.length; i++){
+            let law = lawIRS[i]
+            law.key = label+i
+            this.handles.push(anchor.mesh.addLaw(law))
+        }
     }
 
     detach(anchor:I.CellAnchor, label:string){
-        this.handle.retract()
+        for(let handle of this.handles){
+            handle.retract()
+        }
     }
 
 }

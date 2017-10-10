@@ -40,7 +40,7 @@ export function deepMaskF(terminator:T.Terminator, reduce:T.Reducer):(obj1, obj2
 }
 
 
-export function deepInvertF(terminator = f.terminate.isPrimative, negater=f.negate.existential):(obj:Object)=>any{
+export function deepInvertF(terminator:any = f.terminate.isPrimative, negater:any=f.negate.existential):(obj:Object)=>any{
     function recur(obj, q?){
 
         return op.invert((innerObj, k) => {

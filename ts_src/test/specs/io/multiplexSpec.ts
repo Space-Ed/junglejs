@@ -8,7 +8,7 @@ describe("multiplex medium", function(){
     it('should transport data across the cell', function(done){
         let app = new TestApp(J);
 
-        app.init({
+        app.init(j({
             head:{
                 debug:true
             },
@@ -17,10 +17,9 @@ describe("multiplex medium", function(){
                 law:':a~>:b'
             }),
 
-            a:{basis:'contact:op', carry_in:true},
-            b:{basis:'contact:op', carry_out:true}
-
-        });
+            a:j('inward'),
+            b:j('outward')
+        }));
 
         // expect(app.mesh.media.smear.muxspec.emitCallType).toBe(CALLTYPE.BREADTH_FIRST)
 
@@ -40,9 +39,9 @@ describe("multiplex medium", function(){
         let app
 
         beforeAll(function(){
-            app= new TestApp();
+            app = new TestApp(J);
 
-            app.init({
+            app.init(j({
                 head:{
                     debug:true,
                 },
@@ -54,26 +53,25 @@ describe("multiplex medium", function(){
 
                 switcher:j('media:switch', {
                     symbols:['outer', 'inner'],
-                    law:'split->outer#:inner#'
+                    law:':split->outer#:inner#'
                 }),
 
-                a:{
-                    basis:'cell',
-                    receptorA:{basis:'contact:op', resolve_in(val){return "receptorA in cell a got "+val}},
-                    receptorB:{basis:'contact:op', resolve_in(val){return "receptorB in cell a got "+val}}
-                },
+                a:j('cell',{
+                    receptorA:j('op', { resolve_in(val){return "receptorA in cell a got "+val}}),
+                    receptorB:j('op', { resolve_in(val){return "receptorB in cell a got "+val}})
+                }),
 
-                b:{
-                    basis:'cell',
-                    receptorA:{basis:'contact:op', resolve_in(val){return "receptorA in cell b got "+val}},
-                    receptorB:{basis:'contact:op', resolve_in(val){return "receptorB in cell b got "+val}}
-                },
+                b:j('cell',{
+                    receptorA:j('op',{resolve_in(val){return "receptorA in cell b got "+val}}),
+                    receptorB:j('op', { resolve_in(val){return "receptorB in cell b got "+val}})
+                }),
 
-                entry:{basis:'contact:op', carry_in:true},
-                split:{basis:'contact:op', carry_in:true}
+                entry:j('inward'),
+                split:j('inward')
 
-            });
+            }));
         })
+
         it('should perform recomposition the cell', function(done){
 
             app.callReturnTest({

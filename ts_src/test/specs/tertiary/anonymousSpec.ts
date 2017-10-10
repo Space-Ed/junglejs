@@ -76,7 +76,7 @@ describe('anonymisation',function(){
 
         let app = new TestApp()
 
-        app.init({
+        app.init(j({
             head:{
                 debug:true
             },
@@ -92,7 +92,7 @@ describe('anonymisation',function(){
                     return this.level[x[0]][x[1]]
                 }
             }
-        })
+        }))
 
         app.callReturnTest({
             label:'Multiple Array Nesting',
@@ -106,12 +106,12 @@ describe('anonymisation',function(){
 
         let app = new TestApp()
 
-        app.init({
+        app.init(j({
             head:{
                 debug:true
             },
 
-            brave: [Reset('defaultA'), Get('defaultB')],
+            brave: [j('defaultA'), j('defaultB')],
 
             drop:{
                 basis:'contact:op',
@@ -122,7 +122,7 @@ describe('anonymisation',function(){
                 basis:'contact:op',
                 resolve_in(x){return this.brave[x]}
             }
-        })
+        }))
 
         expect(app.shell.subranes.brave.contacts['0']).not.toBeUndefined()
 

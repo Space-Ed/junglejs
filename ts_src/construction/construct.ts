@@ -32,11 +32,6 @@ export abstract class Construct{
     basis:string;
     head:any;
 
-    //attachment primatives
-    alias:string;
-    host:any;
-    isComposite = false;
-
     //state
     nucleus:any;
     local:any;
@@ -47,10 +42,14 @@ export abstract class Construct{
     remote:boolean;
 
     //tractors
-    primeTractor:()=>void;
-    disposeTractor:()=>void;
 
-    constructor(){}
+    beginTractor: () => void;
+    endTractor: () => void;
+    primeTractor: () => void;
+    disposeTractor: () => void;
+
+    constructor(public domain: Domain) {
+    }
 
     /*
         bring the the construct to life
@@ -60,9 +59,11 @@ export abstract class Construct{
         this.basis = desc.basis;
 
         this.applyHead(desc.head)
+        
         this._patch(desc.body)
-        let primeResult = this.primeTractor?this.primeTractor.call(this.nucleus):undefined
-        return primeResult
+
+        let primeResult = this.primeTractor ? this.primeTractor.call(this.nucleus) : undefined
+
     }
 
     /*
@@ -71,7 +72,9 @@ export abstract class Construct{
         it should retract any changes it enacted on the parent.
     */
     dispose(){
-        if(this.disposeTractor){ this.disposeTractor.call(this.nucleus) }
+
+        if (this.disposeTractor) { this.disposeTractor.call(this.nucleus) }
+
         this.clearHead()
     }
 
@@ -83,8 +86,13 @@ export abstract class Construct{
         this.exposure = head.exposure     || 'local'
         this.reach = head.reach           || 'host'
         this.remote = head.remote         || false
+
+        this.beginTractor = head.begin;
+        this.endTractor = head.end;
         this.primeTractor = head.prime
         this.disposeTractor = head.dispose
+
+
     }
 
     /**
@@ -102,53 +110,74 @@ export abstract class Construct{
      * Called by the host with the host to allow the construct to use it as a plathead
      * Extending: Always call super, and provide your own interface,
      */
-    attach(host:any, alias:string){
-        this.host = host;
-        this.alias = alias;
+    attach(host:any, id:string){
 
-        this.fetch = (extractor)=>{
+        this.attachHostAgent(host, id)
+        
+        this.attachHostState(host,id)
+
+        if (this.beginTractor) { this.beginTractor.call(this.local) }
+
+    }
+
+    private  attachHostState(host, id){
+        let acc = new AccessoryState(this, id, host.local, {
+            reach: this.reach,
+            exposure: this.exposure,
+            initial: this.nucleus
+        })
+
+        this.local = acc.exposed
+        this.exposed = acc.exposed
+
+        //setting the nucleus proxies to setting the exposed value
+        Object.defineProperty(this, 'nucleus', {
+            get: () => {
+                return this.local.me
+            },
+            set: (value) => {
+                return this.local.me = value
+            }
+        })
+    }
+
+    protected  attachHostAgent(host, id){
+        this.fetch = (extractor) => {
             let qualified = {};
-            qualified[alias] = extractor;
+            qualified[id] = extractor;
             return (<BedAgent>host.bed).fetch(qualified)
         }
 
-        this.notify = (patch)=>{
+        this.notify = (patch) => {
             let qualified = {};
-            qualified[alias] = patch;
+            qualified[id] = patch;
             return (<BedAgent>host.bed).notify(qualified)
         }
+    }
 
-        if(!this.isComposite){
-            //composites have state setup in the head application
+    detachHostState(){
+        this.local = undefined;
+        this.exposed = undefined;
+        
+        //what? // undoing get/set proxy to local
+        Object.defineProperty(this, 'nucleus', {
+            value:this.nucleus
+        })
+    }
 
-            let acc = new AccessoryState(this, alias, {
-                reach:this.reach,
-                exposure:this.exposure,
-                initial:this.nucleus
-            })
-
-            this.local = acc.exposed
-            this.exposed = acc.exposed
-
-            //setting the nucleus proxies to setting the exposed value
-            Object.defineProperty(this, 'nucleus',{
-                get:()=>{
-                    return this.local.me
-                },
-                set:(value)=>{
-                    return this.local.me = value
-                }
-            })
-
-        }
+    detachHostAgent(){
+        this.fetch = undefined;
+        this.notify = undefined;
     }
 
     /**
      * remove any trace of this construct from the parent and vice versa
      */
-    detach(host:any, alias:string){
-        this.host = undefined;
-        this.alias = undefined;
+    detach(host:any, id:string){
+        if (this.endTractor) { this.endTractor.call(this.local) }
+
+        this.detachHostState();
+        this.detachHostAgent();
     }
 
     /**
@@ -178,21 +207,4 @@ export abstract class Construct{
 
     fetch:(patch:any)=>any
 
-    /**
-     * Ensure that argument is an object
-     */
-    private ensureObject(spec:any){
-        if(spec === undefined){
-            return {}
-        }else if (Util.isVanillaArray(spec)){
-            return {
-                basis:'array',
-                anon:spec
-            }
-        }else if(Util.isVanillaObject(spec)){
-            return spec
-        }else{
-            throw new Error("Invalid Specification for base Construct, must be object or undefined")
-        }
-    }
 }

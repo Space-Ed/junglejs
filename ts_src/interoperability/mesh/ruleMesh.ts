@@ -48,7 +48,7 @@ export class RuleMesh implements I.MembraneWatcher {
         }
     }
 
-    addLaw(law:LawIR){
+    addLaw(law:LawIR){  
         this.addRule({
             designatorA:new Designator('subranes', 'contacts', law.designatorA),
             designatorB:new Designator('subranes', 'contacts', law.designatorB),
@@ -58,7 +58,13 @@ export class RuleMesh implements I.MembraneWatcher {
             backward:false,
             forward:true,
             propogation:0
-        }, law.medium)
+        }, law.medium, law.key)
+
+        return {
+            retract:()=>{
+                this.removeRule(law.medium, law.key)
+            }
+        }
     }
 
     /**
@@ -73,7 +79,11 @@ export class RuleMesh implements I.MembraneWatcher {
             //parse and add by IR
             let irs = parseLawExpression(rule, mediumkey)
             for(let law of irs){
+                if (ruleID !== undefined) {
+                    law.key = ruleID
+                }
                 this.addLaw(law)
+
             }
         }else if(typeof rule === 'object'){
             //add by IR
@@ -95,11 +105,11 @@ export class RuleMesh implements I.MembraneWatcher {
         }
     }
 
-    removeRule(mediumID:string, ruleID:string){
+    removeRule(mediumID:string, ruleID:string|symbol){
         let rule:I.LinkRule = this.rules[mediumID][ruleID]
 
         if(rule === undefined){
-            throw new Error(`The rule: ${rule} being removed does not exist in medium ${mediumID}`)
+            throw new Error(`The rule: '${ruleID}' being removed does not exist in medium '${mediumID}'`)
         }
 
         let dA = rule.designatorA.tokenDesignate(this.primary);
@@ -201,15 +211,15 @@ export class RuleMesh implements I.MembraneWatcher {
         //introduce to medium
         for(let mediumkey in this.media){
             let medium:I.Medium<any,any> = this.media[mediumkey];
-            let linkRules = <I.LinkRule[]>this.rules[mediumkey];
+            let linkRuleKeys = this.rules[mediumkey];
 
             /**
             *   a contact could be elegable for either or both positions
                 we must ensure that if it is in both positions
              */
 
-             for(let ruleID in linkRules){
-                 let rule:I.LinkRule = linkRules[ruleID]
+             for(let rulekey in linkRuleKeys){
+                 let rule = this.rules[mediumkey][rulekey]
                  let matchA = rule.designatorA.matches(token);
                  let matchB = rule.designatorB.matches(token);
 

@@ -9,11 +9,15 @@ export interface Agent {
     extract(voidspace:any):Junction,
     fetch(voidspace:any):Junction,
 
-    config:AgentConfig
+    config?:AgentConfig
 }
 
 export interface AgentConfig {
-
+    priority?:number,
+    patch?:boolean,
+    notify?:boolean,
+    extract?:boolean,
+    fetch?:boolean
 }
 
 export class BedAgent implements Agent {
@@ -55,8 +59,8 @@ export class AnchorAgent implements Agent{
      */
     patch(patch:any):Junction{
         if(this.home.notify instanceof Function){
-            let qualified = {}
-            qualified[this.home.alias] = patch
+            // let qualified = {}
+            // qualified[this.home.alias] = patch
             return this.home.notify(patch)
         }
     }
@@ -71,10 +75,10 @@ export class AnchorAgent implements Agent{
      */
     extract(voidspace:any):Junction{
         if(this.home.fetch instanceof Function){
-            let qualified = {}
-            qualified[this.home.alias] = voidspace
+            // let qualified = {}
+            // qualified[this.home.alias] = voidspace
 
-            return this.home.fetch(qualified)
+            return this.home.fetch(voidspace)
         }
     }
 

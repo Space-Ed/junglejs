@@ -53,11 +53,7 @@ export interface LawIR {
     designatorB:string,
     matching:boolean,
     medium:string,
-}
-
-export interface TapLaw {
-    designator, 
-    medium,
+    key?:string
 }
 
 const linktype = '[-=~]'

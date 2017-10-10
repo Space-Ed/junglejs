@@ -1,5 +1,5 @@
 
-import {deepMeldF, deepInvertF, meld, negate, reduce, terminate} from '../util/ogebra/all'
+import {deepMeldF, deepInvertF, safeMeld, negate, reduce, terminate} from '../util/ogebra/all'
 import {Designator} from "../util/designator";
 import {Construct} from './construct'
 import {isVanillaObject, isVanillaArray} from '../util/checks'
@@ -20,7 +20,7 @@ export interface Description {
     origins?: string[]
 }
 
-export interface GDescription<H=any,B=any>{
+export interface GDescription<H,B>{
     basis: any,
     head?: H,
     body?: B,
@@ -67,7 +67,7 @@ export function descmeld(entry, desc, k?) {
     return {
         basis: entry.basis,
         head: headmeld(entry.head||{}, desc.head||{}),
-        body: meld(bodyMeldItem)(entry.body||{}, desc.body||{}),
+        body: safeMeld(bodyMeldItem)(entry.body||{}, desc.body||{}),
         anon: desc.anon || [] //must take topmost collection
     }
 }
@@ -102,7 +102,7 @@ function descdebase(desc, base) {
     let debased:Description = {
         basis: base.basis,
         head: deepMeldF(terminate.isPrimative, reduce.negateEqual)(desc.head||{}, base.head||{}),
-        body: meld(debaseBodyItem)(desc.body||{}, base.body||{})
+        body: safeMeld(debaseBodyItem)(desc.body||{}, base.body||{})
     }
 
     if(desc.origins){
@@ -221,6 +221,8 @@ export class Domain {
 
         _desc.origins = [];
 
+        // console.log('initial description', _desc)
+
         //reduce the description to a final one
         let final = this.collapse(_desc);
 
@@ -228,7 +230,7 @@ export class Domain {
         let nature = <any>final.basis
         let recovered = new nature(final.domain);
 
-        console.log('final description', final)
+        // console.log('final description', final)
 
         recovered.init(final)
         return recovered
@@ -244,8 +246,21 @@ export class Domain {
         } else if (typeof desc.basis === 'string') {
             //collapse case - locate the new base, meld and recover
 
+            //handling the redfine case if the origin is the same as the desc we will go up a level 
+            let sresult;
+            if(desc.basis === desc.origins[0]){
+                desc.origins = desc.origins.slice(1)
+                
+                if(this.parent && !this.isolated){
+                    sresult = this.parent.seek(desc.basis, true);
+                }
+            }else{
+                sresult = this.seek(desc.basis, true)
+            }
+
             //find entry 
-            let {domain, entry} = this.seek(desc.basis, true);
+            let {domain, entry} = sresult;
+
 
             let melded = descmeld(entry, desc)
             melded.origins = [desc.basis, ...desc.origins] //<--base level--   --top level
@@ -429,7 +444,6 @@ export class Domain {
 
     addStatic(name, value){
         this.exposed[name] = value
-        console.log(this.exposed)
     }
 
     getExposure(){

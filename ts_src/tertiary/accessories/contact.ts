@@ -34,8 +34,6 @@ export class OpConstruct<Body=OpConstructBody> extends Construct{
         this.spec = this.nucleus
         this.nucleus = this.spec.default;
 
-        console.log('op spec ', this.spec)
-
         let op = new Op({
             context:this.local,
             major_op:this.spec.major_op,

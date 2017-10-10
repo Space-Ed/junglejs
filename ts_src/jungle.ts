@@ -89,13 +89,7 @@ export function j(basis: any, patch?: any) {
 }
 
 export const J = new Domain()
-J  .sub('agent')
-        .define('context' , TRT.ContextAgent)
-        .define('contact' , TRT.ContactAgent)
-        .define('membrane', TRT.SubraneAgent)
-    .up()
-
-    .sub('media')
+J   .sub('media')
         .define('multiplexer', j(TRT.MediumConstruct, {
             head: {
                 medium: IO.MuxMedium,

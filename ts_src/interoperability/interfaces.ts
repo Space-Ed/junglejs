@@ -43,7 +43,7 @@ export interface MediumSpec {
     label:string;
 }
 
-export interface Medium<A extends Contact=any, B extends Contact=any>{
+export interface Medium<A extends Contact, B extends Contact>{
     typeA:Function;
     typeB:Function;
 

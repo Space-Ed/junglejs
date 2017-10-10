@@ -22,8 +22,7 @@ export class AccessoryState implements ProxyHandler<any> {
      * @param exposure: the level of exposure that this item has if it is private, the exposed object will
      * @param scope: the scope which the accessory will be embedded, will be new object if undefined
      */
-    constructor(private home:Construct, private accessoryKey,  spec:AccessoryStateSpec){
-        let scope = home.host.local// spec.reach=='host'?home.host.local:{}
+    constructor(private home:Construct, private accessoryKey, scope,  spec:AccessoryStateSpec){
         this.exposed = new Proxy(scope, this);
         this.myval = spec.initial
     }
@@ -87,10 +86,10 @@ export class HostState {
                         let outlevel = exposureLevels[exposing.exposure]
 
                         if(outlevel >= hostLevel){
-                            if(!exposing.isComposite){
-                                this.setAccessory(exposing, prop, value)
-                            }else {
+                            if(exposing instanceof Composite){
                                 this.setSubCell(exposing, prop, value)
+                            }else {
+                                this.setAccessory(exposing, prop, value)
                             }
                         }else{
                             throw new Error(`Cannot assign, this space: ${prop} is taken by subconstruct that is closed`)
@@ -112,7 +111,7 @@ export class HostState {
                         let exposing:Construct = outsourced[prop]
                         let outlevel = exposureLevels[exposing.exposure]
                         if(outlevel >= hostLevel){
-                            if(exposing.isComposite){
+                            if(exposing instanceof Composite){
                                 return exposing.exposed
                             }else{
                                 return exposing.exposed.me;

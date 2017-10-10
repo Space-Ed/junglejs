@@ -1,8 +1,8 @@
  import {Construct} from './construct'
 import {isPrimative, isVanillaObject, isVanillaArray, B, meld} from '../util/all'
-import {Domain} from './domain'
+import {Domain, Description} from './domain'
 import {HostState, AccessoryState, ExposureLevel} from './state'
-import {BedAgent, AnchorAgent, AgentPool} from './agency'
+import {BedAgent, AnchorAgent, AgentPool,Agent} from './agency'
 
 export class Composite extends Construct{
 
@@ -16,26 +16,43 @@ export class Composite extends Construct{
 
     anchor:AnchorAgent
     bed:BedAgent
-    pool:AgentPool
+    pool: AgentPool
 
-    beginTractor:()=>void;
-    endTractor:()=>void;
 
-    constructor(public domain:Domain){
-        super(); //cache
-
+    constructor(domain:Domain){
+        super(domain)
         this.subconstructs = [];
         this.nucleus = {}
     }
+    
 
-    init(patch){
-
-        super.init(patch)
-
-        //add Everything
+    init(desc:Description){
         this.addStrange('domain', this.domain.getExposure())
+        
+        this.origins = desc.origins;
+        this.basis = desc.basis;
 
-        if(this.beginTractor){ this.beginTractor.call(this.local) }
+        this.applyHead(desc.head)
+
+        this._patch(desc.body)
+        this._patch(desc.anon)
+
+        let primeResult = this.primeTractor ? this.primeTractor.call(this.nucleus) : undefined
+        
+    }
+
+    /*undo init*/
+    dispose(): any {
+
+        //detach and dispose all children
+        for (let key in this.subconstructs) {
+            let construct = this.detachChild(key)
+            construct.dispose()
+        }
+
+        if (this.disposeTractor) { this.disposeTractor.call(this.nucleus) }
+
+        this.clearHead()
     }
 
     /*
@@ -48,17 +65,21 @@ export class Composite extends Construct{
         this.exposed = this.state.exposed
         this.local = this.state.local
 
-        this.beginTractor = head.begin;
-        this.endTractor = head.end;
+        // //heart method exposure
+        let { exposed, pooled } = this.createHeart(((head.heart || {}).exposed || {}))
 
+        this.addStrange('heart', exposed)
         this.bed = new BedAgent(this, head.bed)
         this.anchor = new AnchorAgent(this, head.anchor)
-        this.pool = new AgentPool(head.pool)
-
+        this.pool = this.createPool(head.pool)
+        
+        this.pool.add(pooled, 'heart')
         this.pool.add(this.bed, 'bed')
         this.pool.add(this.anchor, 'anchor')
 
     }
+
+
 
     /*
         undo the setup so that a new head can be applied
@@ -69,6 +90,16 @@ export class Composite extends Construct{
         super.clearHead()
     }
 
+    attach(host: any, id: string) {
+        this.attachHostAgent(host, id)
+
+        if (this.beginTractor) { this.beginTractor.call(this.local) }
+    }
+
+    patch(patch: any): any {
+        //external patching is considered to be from the host
+        return this.anchor.notify(patch)
+    }
 
     /*
         modification of structure by application of a patch,
@@ -78,29 +109,19 @@ export class Composite extends Construct{
         //incrementally apply the patch, ignoring keywords.
         //console.log("Composite patch: ", patch)
 
-        for(let k in patch){
-            if(!(k in Composite.keywords)){
-                let v = patch[k];
-                this.patchChild(k, v)
-            }
-        }
-
-        if(patch.anon !== undefined){
-            for(let i = 0; i<patch.anon.length; i++){
+        if(patch instanceof Array){
+            for(let i = 0; i<patch.length; i++){
                 //push all, no colli
-                this.add(patch.anon[i])
+                this.add(patch[i])
+            }
+        }else{
+            for(let k in patch){
+                if(!(k in Composite.keywords)){
+                    let v = patch[k];
+                    this.patchChild(k, v)
+                }
             }
         }
-    }
-
-    patch(patch:any):any{
-        //external patching is considered to be from the host
-        return this.anchor.notify(patch)
-    }
-
-    reset(patch){
-        this.dispose()
-        this.init(patch)
     }
 
     protected patchChild(k, v){
@@ -117,10 +138,10 @@ export class Composite extends Construct{
         }
     }
 
-    /**
-     * Add any kind of item to the composite, will split into 4 cases
-     * Ultimately adding to the subcomposite and/or context objects
-     */
+    addAnon(val) {
+        
+    }
+
     add(val:any , key?:string){
 
         let k = key === undefined? this.subconstructs.length++:key
@@ -131,28 +152,41 @@ export class Composite extends Construct{
 
         if (val instanceof Object && 'basis' in val){
             let construct = this.domain.recover(val)
-            if(construct instanceof Construct){
-                this.attachChild(construct, k)
-            }else{
-                //domain emits strange value
-                this.addStrange(k, construct)
-            }
+            this.attachChild(construct, k)
         }else{
             this.addStrange(k, val)
         }
 
     }
 
+
+    remove(k) {
+        let removing = <Construct>this.subconstructs[k];
+
+        if (removing !== undefined) {
+            this.detachChild(k)
+            let final = removing.dispose();
+            return final
+        } else if (k in this.nucleus) {
+            let removeState = this.nucleus[k];
+            delete this.nucleus
+        }
+
+
+    }
+
+
     attachChild(construct:Construct, key:any){
         this.subconstructs[key] = construct;
         construct.attach(this, key)
     }
 
-    detachChild(key){
+    detachChild(key):Construct{
         let construct = this.subconstructs[key];
         delete this.subconstructs[key]
 
         construct.detach(this, key)
+        return construct
     }
 
 
@@ -182,41 +216,6 @@ export class Composite extends Construct{
         }
     }
 
-
-    remove(k){
-        let removing = <Construct>this.subconstructs[k];
-
-        if(removing !== undefined){
-            this.detachChild(k)
-            let final = removing.dispose();
-            return final
-        }else if(k in this.nucleus){
-            let removeState = this.nucleus[k];
-            delete this.nucleus
-        }
-
-
-    }
-
-    /*
-        Called at the end of life of the construct,
-        should return it's final form, and also return to being a pattern
-        it should retract any changes it enacted on the parent.
-    */
-    dispose():any{
-        if(this.endTractor){ this.endTractor.call(this.state.local) }
-
-        for (let key in this.subconstructs) {
-            let construct:Construct = this.subconstructs[key]
-
-            construct.dispose()
-            this.detachChild(key)
-        }
-
-        this.clearHead()
-
-        super.dispose();
-    }
 
     /*
         output a representation of the construct that may be recovered to a replication
@@ -253,5 +252,56 @@ export class Composite extends Construct{
 
     extract(suction:any):any{
         return this.anchor.fetch(suction)
+    }
+
+    createPool(poolConfig): AgentPool {
+        return new AgentPool(poolConfig)
+    }
+
+    createHeart(spec): { exposed:Agent, pooled: Agent } {
+
+        //the front added to the pool
+        let pooled = {
+            config: spec,
+            patch: (patch: any) => {
+                if (exposed.notify instanceof Function) {
+                    return exposed.notify(patch)
+                }
+            },
+
+            notify: null,
+
+            extract: (voidspace: any) => {
+                if (exposed.fetch instanceof Function) {
+                    return exposed.fetch(voidspace)
+                }
+            },
+
+            fetch: null
+        }
+        let exposed = {
+            patch: (patch: any) => {
+                if (pooled.notify instanceof Function) {
+                    return pooled.notify(patch)
+                }
+            },
+
+            notify: null,
+
+            extract: (voidspace: any) => {
+                if (pooled.fetch instanceof Function) {
+                    return pooled.fetch(voidspace)
+                }
+            },
+
+            fetch: null
+
+        }
+
+        return {
+            pooled: pooled,
+            exposed: exposed
+        }
+
     }
 }

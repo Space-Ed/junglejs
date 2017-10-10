@@ -17,7 +17,7 @@ describe("symmetric linking", function(){
             mesh = new TestMesh({
                 membrane:membrane,
                 media:[
-                    'smear'
+                    'cast'
                 ],
                 exposed:{},
                 laws:{}
@@ -30,7 +30,7 @@ describe("symmetric linking", function(){
         })
 
         it("should create a link in either direction",function(){
-            mesh.addRule("a<->b", 'smear')
+            mesh.addRule(":a<->:b", 'cast')
             expect(mesh.hasLinked(':a', ':b')).toBe(true, "has linked a to b")
             expect(mesh.hasLinked(':b', ':a')).toBe(true, "has linked b to a")
         })

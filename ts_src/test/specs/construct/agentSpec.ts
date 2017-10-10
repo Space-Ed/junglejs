@@ -2,7 +2,7 @@
 import {AgentPool} from '../../../construction/agency'
 import {MockAgent} from '../../helpers/mockAgent'
 import TestApp from '../../helpers/testApp'
-import {J, Domain, Composite, Construct, Junction} from '../../../jungle'
+import {J,j, Domain, Composite, Construct, Junction} from '../../../jungle'
 
 
 describe('agency', function(){
@@ -70,13 +70,12 @@ describe('agency', function(){
         let domain, cell, mockagent
 
         beforeAll(function(){
-            domain = new Domain({
-                host:Composite,
-                member:Construct
-            })
+            domain = new Domain()
+                .define('host',Composite)
+                .define('member', Construct)        
 
             cell = new TestApp(domain)
-            cell.init({})
+            cell.init(j({}))
 
             mockagent = new MockAgent({}, 'extracted', 'patched')
 
@@ -91,9 +90,7 @@ describe('agency', function(){
         it('should report patch to other when patch from outside', function(){
 
             cell.patch({
-                newguy:{
-                    basis:'member',
-                }
+                newguy:j('member')
             }).then(presult=>{
                 expect(presult).toBe('patched')
             })
@@ -102,8 +99,9 @@ describe('agency', function(){
 
             //after the upwards
             expect(mockagent.patchSpy.calls.first().args[0]).toEqual({
-                newguy:{
-                    basis:'member'
+                newguy: {
+                    basis:'member',
+                    origins:[]
                 }
             })
         })

@@ -8,10 +8,9 @@ describe('state model', function (){
 
     describe('integrated', function(){
 
-        let domain = new Domain({
-            host:Composite,
-            accessory:Construct
-        })
+        let domain = new Domain()
+            .define('host', Composite)
+            .define('accessory',Construct)
 
         it('a composite is a host and a component is an accessory', function(){
             let composite = <Composite>domain.recover(j('host',{

@@ -87,14 +87,14 @@ describe('The Mesh Host', function () {
         let outer = host.invert
 
         let fabric = new RuleAdapter({
-            media:['smear'],
+            media:['cast', 'direct'],
             laws:{},
             membrane:surface,
             exposed:{},
         })
 
         let outspy = jasmine.createSpy('outspy');
-        fabric.addRule(':pointA->:pointB','smear', 'rule1');
+        fabric.addRule(':pointA->:pointB','cast', 'rule1');
 
         (outer.contacts.pointB).emit = outspy;
 
@@ -105,16 +105,16 @@ describe('The Mesh Host', function () {
 
         //rule does not exist
         expect(function(){
-            fabric.removeRule('inject', 'rule1')
+            fabric.removeRule('direct', 'rule1')
         }).toThrowError()
 
         expect(function(){
-            fabric.removeRule('smear', 'rule2')
+            fabric.removeRule('cast', 'rule2')
         }).toThrowError()
 
         outspy.calls.reset()
 
-        fabric.removeRule('smear', 'rule1')
+        fabric.removeRule('cast', 'rule1')
 
         expect(surface.contacts.pointA.emit).toBeUndefined()
         outer.contacts.pointA.put("hello")

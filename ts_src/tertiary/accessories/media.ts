@@ -6,18 +6,20 @@ import {parseLawExpression, LawIR} from '../../interoperability/law'
 
 export class MediumConstruct extends Construct {
 
-    handles:any[]
+    lawhandles:any[]
+    mhandle:any
 
     attach(anchor: I.CellAnchor, label: string) {
         super.attach(anchor, label)
 
-        this.handles = [];
+        this.lawhandles = [];
         let medium = this.head.medium
         let args = this.nucleus
 
         let _medium = new medium(args)
         
-        this.handleMedium(anchor.mesh.addMedium(label, _medium))
+        let mhandle = anchor.mesh.addMedium(label, _medium)
+        this.handleMedium(mhandle)
         
         for(let lawexp of ensureArray(this.nucleus.law)){
             let laws:LawIR[] = parseLawExpression(lawexp, label)
@@ -31,14 +33,13 @@ export class MediumConstruct extends Construct {
     }
 
     handleLaw(handle){
-        this.handles.push(handle)
+        this.lawhandles.push(handle)
         handle.on
     }
 
     handleMedium(handle){
 
-        this.handles.push(handle)
-        //take responsib
+        //take responsibe
     }
 
     handleConflict(conflict){
@@ -53,9 +54,11 @@ export class MediumConstruct extends Construct {
     detach(anchor: I.CellAnchor, label: string) {
         // anchor.mesh.removeMedium(this.nucleus, label)
 
-        for (let h of this.handles){
-            h.dissolve()
-        }
+        // for (let h of this.lawhandles){
+        //     h.retract()
+        // }
+
+        // this.mhandle.retract()
     }
 
 }

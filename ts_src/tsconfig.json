@@ -16,7 +16,7 @@
         "suppressImplicitAnyIndexErrors": true,
         "sourceMap": true,
         "outDir": "../build",
-        "watch": true
+        "watch": false
     },
     "exclude": [
         "node_modules",
