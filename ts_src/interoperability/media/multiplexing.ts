@@ -82,7 +82,7 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
         }
     }
 
-    emitArgProcess(inpArg, crumb, sink:CallIn, link:I.LinkSpec<CallOut, CallIn>){
+    emitArgProcess(inpArg, crumb, sink:CallIn, link:I.LinkSpec<CallOut, CallIn>):{arg:any, escape:boolean}{
         let arg, escape
 
         let eType:DEMUXARG = this.muxspec.emitArgType
@@ -128,7 +128,7 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
             arg = packet
         }
 
-        return arg
+        return {arg:arg, escape:escape}
 
     }
 
@@ -167,13 +167,16 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
             let link:I.LinkSpec<CallOut, CallIn> = allFromA[sinkToken]
             let sink:CallIn = link.contactB
 
-            let arg = this.emitArgProcess(data, crumb, sink, link);
+            //perform switching 
+            let {arg, escape} = this.emitArgProcess(data, crumb, sink, link);
 
+            if(!escape){
+                let putResp = sink.put(arg, crumb);
+    
+                this.emitResponse(putResp, crumb, link)
+            }
             //Only depth first
             //HACK: setting undefined argument ill advised
-            let putResp = sink.put(arg, crumb);
-
-            this.emitResponse(putResp, crumb, link)
 
         }
 
@@ -220,9 +223,6 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
         let superok =  super.check(link)
         let out = link.contactA.hasOutput
         let inp = link.contactB.hasInput
-
-        // console.log(`check connection ${superok}, input ${inp}, output ${out}`)
-
         return superok && out && inp
     }
 

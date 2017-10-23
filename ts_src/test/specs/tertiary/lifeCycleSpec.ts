@@ -34,16 +34,16 @@ describe('life cycle', function(){
             expect(primespy.calls.first().object).toBe(app.nucleus)
 
             expect(beginspy).toHaveBeenCalledTimes(1)
-            expect(beginspy.calls.first().object).toBe(app.local)
+            expect(beginspy.calls.first().object).toBe(app.self)
 
             app.dispose()
 
             expect(disposespy).toHaveBeenCalledTimes(1)
-            expect(disposespy.calls.first().object).toBe(app.local)
+            expect(disposespy.calls.first().object).toBe(app.self)
 
 
             expect(endspy).toHaveBeenCalledTimes(1)
-            expect(endspy.calls.first().object).toBe(app.local)
+            expect(endspy.calls.first().object).toBe(app.self)
         })
 
         it('should have base properties exposed to prime when extended', function(){

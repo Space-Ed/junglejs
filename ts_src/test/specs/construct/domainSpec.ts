@@ -140,7 +140,7 @@ describe('Domains', function(){
             class N extends Jungle.Construct {}
 
             ef = function(){
-                extendspy(this.apropri)
+                extendspy(this.body.apropri)
             }
 
             domain = new Jungle.Domain()
@@ -270,7 +270,7 @@ describe('Domains', function(){
                 .define('nature', j(Jungle.Construct, {
                     head:{
                         prime(){
-                            this.coax = 10;
+                            this.body.coax = 10;
                         }
                     }
                 }))

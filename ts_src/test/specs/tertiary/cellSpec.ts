@@ -16,31 +16,23 @@ describe("A Cell", function () {
 
        cell = J.recover(j('cell', {
             head:{
+                retain:true,
             },
 
             oesophagus:j('media:direct', {
-                law:[
-                    ':mouth->stomach:swallow'
-                ]
+                law:':mouth->stomach:swallow'
             }),
 
-            mouth:j('op',{
-                carry_in:true
-            }),
+            mouth:j('inward'),
 
             stomach:j('cell',{
-                head:{
-                    exposure:'public'
-                },
 
-                swallow :j('op',{
-                    head:{
-                        exposure:'private'
-                    },
-
-                    resolve_in(food){
-                        this.contents = food
-                        this.hungry = false
+                swallow :j('resolve',{
+                    outer(food){
+                        console.log('depositing food')
+                        console.log(this.earth.contents)
+                        this.earth.contents = food
+                        this.earth.hungry = false
                     }
                 }),
 
@@ -56,13 +48,14 @@ describe("A Cell", function () {
         let crumb = new Debug.Crumb("Beginning")
 
         cell.shell.contacts.mouth.put("Nachos", crumb);
-        expect(cell.exposed.stomach.hungry).toBe(false);
+        expect(cell.subconstructs.stomach.exposed.hungry).toBe(false);
+        // expect(cell.exposed.stomach.hungry).toBe(false);
     })
 
     it('should deposit to the stomach, via oesophagus', function(){
         let crumb = new Debug.Crumb("Beginning Feed");
         cell.shell.contacts.mouth.put("Nachos", crumb);
-        expect(cell.local.stomach.contents).toBe("Nachos");
+        expect(cell.exposed.stomach.contents).toBe("Nachos");
     })
 
     it('should properly dispose', function(){

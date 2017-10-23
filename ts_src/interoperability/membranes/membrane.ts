@@ -192,6 +192,11 @@ export class Membrane extends Section{
 
     removeSubrane(label):Membrane{
         let removing = this.subranes[label];
+
+        if(removing === undefined){
+            return
+        }
+
         delete this.subranes[label];
 
         //before the membrane all contacts being removed must be registered downstream
@@ -204,12 +209,12 @@ export class Membrane extends Section{
         this.notifyMembraneRemove(removing, label)
 
         return removing
-        }
+    }
 
     addContact(contact:BasicContact<any>, label:string){
         let existing:BasicContact<any> = this.contacts[label];
         if(existing !== undefined){
-
+            //no overriding 
         }else{
 
             this.contacts[label] = contact

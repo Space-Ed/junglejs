@@ -31,27 +31,38 @@ export function j(nature:Function, body?):JDescription
  * @param basis a starting point for the description
  * @param patch  the overlaid patch on the description
  */
-export function j(basis: any, patch?: any) {
+export function j(basis?: any, patch?: any) {
 
     if (typeof basis === 'string' || isConstruct(basis)) {
         if (patch === undefined) {
             return { basis: basis }
         } else if (Util.isVanillaObject(patch)) { //("",{})
-            //body is the baseline, head is 
+            let head, domain, body;
+            if('body' in patch && !('head' in patch)){
+                //head is the baseline 
+                head = patch
+                domain = patch.domain
+                body = patch.body
 
-            let head = patch.head || {};
-            if (patch.heart) head.heart = patch.heart;
-            let domain = patch.domain
+                delete patch.head;
+                delete patch.heart;
+                delete patch.domain;
+            }else{
+                //body is baseline or no baseline
+                head = patch.head || {};
+                domain = patch.domain
+                body = patch.body || patch;
 
-            delete patch.head;
-            delete patch.heart;
-            delete patch.domain;
+                delete patch.head;
+                delete patch.heart;
+                delete patch.domain;
+            }
 
             return {
                 domain:domain,
                 basis: basis,
                 head: head,
-                body: patch
+                body: body
             }
         } else if (Util.isVanillaArray(patch)) { //("",[])
             return {
@@ -80,10 +91,14 @@ export function j(basis: any, patch?: any) {
             basis: typeof basis,
             body: basis
         }
-    } else { //(any)
+    } else if (basis !== undefined){ //(any)
         return {
             basis: 'strange',
             body: basis
+        }
+    } else { // ()
+        return {
+            basis:undefined 
         }
     }
 }
@@ -130,6 +145,13 @@ J   .sub('media')
             emitRetType: IO.MUXRESP.RACE,
             emitCallType: IO.CALLTYPE.BREADTH_FIRST
         }))
+
+        .define('serial', j('multiplexer', {
+            symbols: [],
+            emitArgType: IO.DEMUXARG.DONT,
+            emitRetType: IO.MUXRESP.LAST,
+            emitCallType: IO.CALLTYPE.SERIAL
+        }))
     .up()
 
     .define('cell',TRT.Cell)
@@ -140,12 +162,49 @@ J   .sub('media')
 
     .define('law',TRT.LawConstruct)
 
-    .define('op', TRT.StandardOp)
-
-    .define('outward', j('op', {
-        carry_out:true
+    .define('reflex', j(TRT.Reflex, {
+         mode: 'reflex',
+        inner: false,
+        outer: false,
     }))
 
-    .define('inward', j('op', {
-        carry_in:true
+    .define('carry', j(TRT.Carry, {
+            mode: 'carry',
+            inward: false,
+            outward: false
+    }))
+
+    .define('resolve', j(TRT.Resolve, {
+            mode: 'resolve',
+            inner: false,
+            outer: false,
+            either: false,
+        }))
+
+    .define('spring', j(TRT.Spring, {
+            mode: 'spring',
+            inward: false,
+            outward: false,
+            outfirst: false,
+            serial: false,
+            composed: false
+    }))
+
+    .define('raw_op', TRT.OpConstruct)
+    
+
+    .define('outward', j('carry', {
+        outward:true
+    }))
+
+    .define('inward', j('carry', {
+        inward:true
+    }))
+
+    .define('spring_in' , j('spring', {
+        inward:true  
+    }))
+
+    .define('spring_out', j('spring', {
+        inward:false  
     }))

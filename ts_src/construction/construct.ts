@@ -6,10 +6,8 @@ import {deepMeldF} from '../util/ogebra/hierarchical';
 import {meld} from '../util/ogebra/operations'
 
 import {Junction} from '../util/junction/junction'
+import {AnchorAgent, BedAgent, Agent, createHeartBridge} from '../agency/all'
 
-import {ExposureLevel, ReachLevel, AccessoryState} from './state'
-
-import {AnchorAgent, BedAgent} from './agency'
 /*
 
     The construct is a foundational interface that defines all the requirements to being a part of the jungle system.
@@ -27,26 +25,26 @@ import {AnchorAgent, BedAgent} from './agency'
 */
 
 export abstract class Construct{
-
+    host:any;
+    id:string;
+    
+    //immutable 
     origins:string[];
     basis:string;
     head:any;
 
-    //state
+    //complex
+    self;
+
+    //self- interaction
+    heart:Agent
+    dark:Agent
+
+    //primative cache
     nucleus:any;
-    local:any;
+
+    //
     exposed:any;
-
-    exposure:ExposureLevel;
-    reach:ReachLevel;
-    remote:boolean;
-
-    //tractors
-
-    beginTractor: () => void;
-    endTractor: () => void;
-    primeTractor: () => void;
-    disposeTractor: () => void;
 
     constructor(public domain: Domain) {
     }
@@ -62,7 +60,7 @@ export abstract class Construct{
         
         this._patch(desc.body)
 
-        let primeResult = this.primeTractor ? this.primeTractor.call(this.nucleus) : undefined
+        let primeResult = this.head.prime ? this.head.prime.call(this.self) : undefined
 
     }
 
@@ -73,7 +71,7 @@ export abstract class Construct{
     */
     dispose(){
 
-        if (this.disposeTractor) { this.disposeTractor.call(this.nucleus) }
+        if (this.head.dispose) { this.head.dispose.call(this.nucleus) }
 
         this.clearHead()
     }
@@ -83,27 +81,88 @@ export abstract class Construct{
      */
     protected applyHead(head:any={}){
         this.head = head;
-        this.exposure = head.exposure     || 'local'
-        this.reach = head.reach           || 'host'
-        this.remote = head.remote         || false
+        
+        //setup the body
+        this.applyExposed()
 
-        this.beginTractor = head.begin;
-        this.endTractor = head.end;
-        this.primeTractor = head.prime
-        this.disposeTractor = head.dispose
+        //setup the 
+        this.applyHeart(head.heart||{})
 
+        //setup the context
+        this.applySelf()
+    }
 
+    protected applyExposed(){
+
+        //this behaviour is to notify upwards when sets occur to the body. 
+        // alternative behavious include no body 
+        Object.defineProperty(this, 'exposed', {
+            configurable: true,
+            get: () => {
+                return this.nucleus
+            },
+            set: (value) => {
+                //when the 
+                this.dark.patch(value)
+                this.notify(value)
+                return this.nucleus = value
+            }
+        })
+    }
+
+    /**
+     * create and set the heart that is exposed as part of the self
+     * @param heartspec the head.heart config section
+     */
+    protected applyHeart(heartspec){
+        let { exposed, pooled } = createHeartBridge(heartspec.exposed)
+
+        //the light side is local and showing where the dark is dealt with internally
+        this.heart = exposed 
+        this.dark = pooled
+
+        this.dark.notify = (nt) => {
+            this.nucleus = nt
+
+            if (this.notify) {
+                this.notify(nt)
+            }
+
+            return null
+        }
+
+        this.dark.fetch = (ft) => {
+            let res = this.nucleus
+            if (res == undefined) {
+                if (this.fetch) {
+                    res = this.fetch(ft)
+                }
+            }
+            return res
+        }
+    }
+
+    protected applySelf() {
+        this.self = {}
+        Object.defineProperties(this.self, {
+            body: {
+                get: () => (this.exposed)
+            },
+
+            heart: {
+                get: () => {
+                    console.log("heart gotten", this.heart)
+                    return this.heart
+                }
+            },
+        })
     }
 
     /**
      *Restore the object so preheaded state
      */
     protected clearHead(){
-        this.primeTractor = undefined
-        this.disposeTractor = undefined
-        this.exposure =undefined
-        this.reach = undefined
-        this.remote = undefined
+        
     }
 
     /**
@@ -111,34 +170,34 @@ export abstract class Construct{
      * Extending: Always call super, and provide your own interface,
      */
     attach(host:any, id:string){
+        this.host = host;
+        this.id = id;
+        
+        console.log('attach for ', id)
+
+        //access to host methods is through this.world
+        let visor = host.grantVisor(id, this)
+        Object.defineProperties(this.self, {
+            world: {
+                configurable:true,
+                get: () => (visor)
+            },
+            earth: {
+                configurable:true,
+                get: () => (visor.body)
+            },
+            agent: {
+                configurable: true, 
+                get: () => (visor.heart)
+            },
+        })
 
         this.attachHostAgent(host, id)
-        
-        this.attachHostState(host,id)
 
-        if (this.beginTractor) { this.beginTractor.call(this.local) }
-
-    }
-
-    private  attachHostState(host, id){
-        let acc = new AccessoryState(this, id, host.local, {
-            reach: this.reach,
-            exposure: this.exposure,
-            initial: this.nucleus
-        })
-
-        this.local = acc.exposed
-        this.exposed = acc.exposed
-
-        //setting the nucleus proxies to setting the exposed value
-        Object.defineProperty(this, 'nucleus', {
-            get: () => {
-                return this.local.me
-            },
-            set: (value) => {
-                return this.local.me = value
-            }
-        })
+        if (this.head.attach) { 
+            console.log('Calling attach for ', id)
+            this.head.attach.call(this.self)
+        }
     }
 
     protected  attachHostAgent(host, id){
@@ -155,15 +214,6 @@ export abstract class Construct{
         }
     }
 
-    detachHostState(){
-        this.local = undefined;
-        this.exposed = undefined;
-        
-        //what? // undoing get/set proxy to local
-        Object.defineProperty(this, 'nucleus', {
-            value:this.nucleus
-        })
-    }
 
     detachHostAgent(){
         this.fetch = undefined;
@@ -174,12 +224,13 @@ export abstract class Construct{
      * remove any trace of this construct from the parent and vice versa
      */
     detach(host:any, id:string){
-        if (this.endTractor) { this.endTractor.call(this.local) }
+        if (this.head.detach) { this.head.detach.call(this.self) }
 
-        this.detachHostState();
         this.detachHostAgent();
-    }
 
+        delete this.self.world;
+        delete this.self.agent;
+    }
     /**
         modification of structure by application of a patch,
         @param: patch the value to reset
@@ -189,7 +240,8 @@ export abstract class Construct{
     }
 
     patch(patch?:any){
-        return this._patch(patch)
+        this._patch(patch)
+        this.dark.notify(patch)
     }
 
     notify:(patch)=>any
@@ -202,9 +254,41 @@ export abstract class Construct{
     }
 
     extract(sucker?:any):any{
-        return this._extract(sucker)
+        let extract = this._extract(sucker)
+
+        if(extract == undefined){
+            extract = this.dark.fetch(sucker)
+        }
+
+        return extract
     }
 
     fetch:(patch:any)=>any
+
+    protected move(to:string){
+        let landing = this.host.getAtLocation(to)
+        let id = this.id
+
+        if(landing){
+            this.detach(this.host, this.id)
+            this.attach(landing, this.id)
+        }
+    }
+
+    protected getRoot():Construct {
+        if(this.host === undefined){
+            return this;
+        }else{
+            return this.host.getRoot()
+        }
+    }
+        
+    protected getLocation():string{
+        if (this.host !== undefined){
+            return this.host.getLocation()+'/'+ this.id
+        } else {
+            return '/'
+        }
+    }
 
 }

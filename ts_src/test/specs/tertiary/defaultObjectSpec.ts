@@ -22,22 +22,14 @@ describe('defaults of objects', function(){
         it('should be implicitly accessible from parent state', function(){
 
             let aCell:Cell = <Cell>J.recover(j('cell', {
-                head:{
-                    exposure:'public'
-                },
                 obj:j({
-                    head:{
-                        exposure:'public'
-                    },
                     one:"default primative"
                 })
             }))
 
             expect(aCell.subconstructs.obj instanceof ObjectCell).toBe(true, 'must be a default cell')
             expect(aCell.subconstructs.obj.exposed.one).toBe('default primative')
-            expect(aCell.subconstructs.obj.exposure).toBe('public')
 
-            expect((<any>aCell.state).outsourced.obj.exposed.one).toBe('default primative')
             expect(aCell.exposed.obj.one).toBe('default primative')
 
         })

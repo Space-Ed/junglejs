@@ -1,8 +1,8 @@
  import {Construct} from './construct'
-import {isPrimative, isVanillaObject, isVanillaArray, B, meld} from '../util/all'
+import {isPrimative, isVanillaObject, isVanillaArray, B, meld, createVisor} from '../util/all'
 import {Domain, Description} from './domain'
-import {HostState, AccessoryState, ExposureLevel} from './state'
-import {BedAgent, AnchorAgent, AgentPool,Agent} from './agency'
+import {makeHandler} from './state'
+import {BedAgent, AnchorAgent, AgentPool, Agent, createHeartBridge} from '../agency/all'
 
 export class Composite extends Construct{
 
@@ -10,8 +10,6 @@ export class Composite extends Construct{
     
     subconstructs:any
 
-    state:HostState
-    
     isComposite = true
 
     anchor:AnchorAgent
@@ -24,77 +22,70 @@ export class Composite extends Construct{
         this.subconstructs = [];
         this.nucleus = {}
     }
-    
 
-    init(desc:Description){
-        this.addStrange('domain', this.domain.getExposure())
-        
-        this.origins = desc.origins;
-        this.basis = desc.basis;
-
-        this.applyHead(desc.head)
-
-        this._patch(desc.body)
-        this._patch(desc.anon)
-
-        let primeResult = this.primeTractor ? this.primeTractor.call(this.nucleus) : undefined
-        
-    }
 
     /*undo init*/
     dispose(): any {
-
+        
         //detach and dispose all children
         for (let key in this.subconstructs) {
             let construct = this.detachChild(key)
             construct.dispose()
         }
-
-        if (this.disposeTractor) { this.disposeTractor.call(this.nucleus) }
-
+        
+        if (this.head.dispose) { this.head.dispose.call(this.self) }
+        
         this.clearHead()
     }
 
-    /*
-        essential configuration to occur before constructions
-    */
-    applyHead(head:any={}){
-        super.applyHead(head)
+    protected applyExposed() {
+        this.exposed = new Proxy(this.nucleus, makeHandler(this, this.subconstructs))
+    }
+    
+    protected applyHeart(heartspec) {
+        let { exposed, pooled } = createHeartBridge(heartspec.exposed)
 
-        this.state = new HostState(this, head.state)
-        this.exposed = this.state.exposed
-        this.local = this.state.local
+        //the light side is local and showing where the dark is dealt with internally
+        this.heart = exposed
+        this.dark = pooled
 
-        // //heart method exposure
-        let { exposed, pooled } = this.createHeart(((head.heart || {}).exposed || {}))
+        this.bed = new BedAgent(this, this.head.bed)
+        this.anchor = new AnchorAgent(this, this.head.anchor)
+        this.pool = this.createPool(this.head.pool)
 
-        this.addStrange('heart', exposed)
-        this.bed = new BedAgent(this, head.bed)
-        this.anchor = new AnchorAgent(this, head.anchor)
-        this.pool = this.createPool(head.pool)
-        
-        this.pool.add(pooled, 'heart')
+        this.pool.add(this.dark, 'heart')
         this.pool.add(this.bed, 'bed')
         this.pool.add(this.anchor, 'anchor')
-
     }
 
+    protected applySelf(){
+        this.self =  {};
+        Object.defineProperties(this.self, {
+            body:{
+                get:()=> (this.exposed)
+            },
+
+            heart: {
+                get: () => {
+                    console.log("heart gotten", this.heart)
+                    return this.heart
+                }
+            },
+                
+            domain: {
+                get:()=> (this.domain)
+            }
+        })
+    }
 
 
     /*
         undo the setup so that a new head can be applied
     */
     clearHead(){
-        this.beginTractor = undefined;
-        this.endTractor = undefined;
         super.clearHead()
     }
 
-    attach(host: any, id: string) {
-        this.attachHostAgent(host, id)
-
-        if (this.beginTractor) { this.beginTractor.call(this.local) }
-    }
 
     patch(patch: any): any {
         //external patching is considered to be from the host
@@ -198,32 +189,13 @@ export class Composite extends Construct{
         this.nucleus[k] = v
     }
 
-    /**
-     * Add an item to the composite that is not an object
-     */
-    addPrimative(k, v){
-        this.nucleus[k] = v
-    }
-
-    getExposure():any{
-        return {
-            create:(v, k?)=>{
-                this.add(v, k)
-            },
-            destroy:(k)=>{
-                this.remove(k)
-            }
-        }
-    }
-
-
     /*
         output a representation of the construct that may be recovered to a replication
     */
     _extract(suction:any):any {
         let voidspace
 
-        if(suction === undefined || typeof suction === 'object'){
+        if(suction == undefined || typeof suction === 'object'){
             voidspace = suction
         }else if (typeof suction === 'string'){
             voidspace = {};
@@ -234,14 +206,14 @@ export class Composite extends Construct{
 
         let extracted = {}
         for (let key in this.subconstructs) {
-            if(voidspace === undefined || key in voidspace){
+            if(voidspace == undefined || key in voidspace){
                 let construct = this.subconstructs[key]
-                extracted[key] = construct.extract(voidspace===undefined?undefined:voidspace[key]);
+                extracted[key] = construct.extract(voidspace==undefined?undefined:voidspace[key]);
             }
         }
 
         for (let key in this.nucleus){
-            if(voidspace === undefined || (key in voidspace && voidspace[key] === undefined)){
+            if(voidspace == undefined || (key in voidspace && voidspace[key] == undefined)){
                 extracted[key] = this.nucleus[key]
             }
         }
@@ -258,50 +230,72 @@ export class Composite extends Construct{
         return new AgentPool(poolConfig)
     }
 
-    createHeart(spec): { exposed:Agent, pooled: Agent } {
+    /**
+     * Grant visor creates the object representing someone elses perspective on this space, including the ability to act as an agent in the scope
+     * 
+     * @param k the key of the requesting construct,
+     * @param c the construct that will use the visor
+     */
+    grantVisor(k:string , c:Construct){
+        
+        //pending agent configuration defaults 
+        // if ((c.head.world||{}).heart){
+        //     if(this.head.heart[k]){
+        //         let {exposed, pooled} = createHeartBridge(this.head.heart[k]||{})
+        //         agent = exposed;
+        //         this.pool.add(pooled, k)
+        //     }else if(this.head.heart.other){
+        //         let { exposed, pooled } = createHeartBridge(this.head.heart[k])
+        //         this.pool.add(pooled, k)
+        //         agent = exposed
+        //     }
+        // }
 
-        //the front added to the pool
-        let pooled = {
-            config: spec,
-            patch: (patch: any) => {
-                if (exposed.notify instanceof Function) {
-                    return exposed.notify(patch)
-                }
+        let { exposed:agent, pooled } = createHeartBridge({})//this.head.heart[k])
+        
+        this.pool.add(pooled, k)
+        
+        //proxy to self except referring to the heart yields the agent rather than the core heart
+        return new Proxy(this.self, {
+            
+            set(oTarg, prop, val){
+                return false
             },
 
-            notify: null,
-
-            extract: (voidspace: any) => {
-                if (exposed.fetch instanceof Function) {
-                    return exposed.fetch(voidspace)
+            get(oTarg, prop){
+                if (prop === 'heart'){
+                    return agent
+                }else {
+                    return oTarg[prop]
                 }
-            },
-
-            fetch: null
-        }
-        let exposed = {
-            patch: (patch: any) => {
-                if (pooled.notify instanceof Function) {
-                    return pooled.notify(patch)
-                }
-            },
-
-            notify: null,
-
-            extract: (voidspace: any) => {
-                if (pooled.fetch instanceof Function) {
-                    return pooled.fetch(voidspace)
-                }
-            },
-
-            fetch: null
-
-        }
-
-        return {
-            pooled: pooled,
-            exposed: exposed
-        }
-
+            }
+        })
     }
+
+    protected getAtLocation(to: string) {
+        let items = to.split('/')
+
+        let thumb:Composite;
+        if(to[0] === '/'){
+            thumb = <Composite>this.getRoot(); items.shift()
+        }else {
+            thumb = this
+        }
+
+        for (let i=0 ; i< items.length;i++) {
+            let item = items[i]
+            if (item in thumb.subconstructs && thumb.subconstructs[item] instanceof Composite){
+                thumb = thumb.subconstructs[item]
+            }else if(item === '..' && thumb.host !== undefined){
+                //upward
+                thumb = thumb.host
+            }else if (item !== ''){
+                //can only nav to composite
+                return undefined
+            }
+        }
+
+        return thumb
+    }
+
 }

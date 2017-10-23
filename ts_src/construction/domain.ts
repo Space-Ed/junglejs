@@ -32,9 +32,10 @@ export interface GDescription<H,B>{
 }
 
 function parseBasisString(str:string):{location:string[], name:string, invasive:boolean}{
-    let m = /^(?:((?:\w+\.)*[\w]+)\:)?(\w+)$/
+    let rx = /^(?:((?:\w+\.)*[\w]+)\:)?(\w+)$/
+    let m = str.match(rx)
     if(m){
-        let [full, loc, name] = str.match(m)
+        let [full, loc, name] = m
 
         let sloc = loc ? loc.split('.') : []
 
@@ -44,7 +45,7 @@ function parseBasisString(str:string):{location:string[], name:string, invasive:
             invasive:false
         }
     }else{
-        throw new RangeError("invalid basis desiginator expression")
+        throw new RangeError(`invalid basis desiginator expression ${str}`)
     }
 }
 
@@ -184,7 +185,6 @@ export class Domain {
                     basis:val
                 })
             } else {                            //other
-                console.log('add static', name)
                 this.addStatic(name, val)
             }
 

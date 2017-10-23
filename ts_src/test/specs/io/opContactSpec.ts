@@ -1,6 +1,7 @@
 
 import {Junction} from '../../../util/junction/junction'
 import {Op,OpSpec,OpCallTarget} from '../../../interoperability/contacts/op'
+import {StdOp,StdOpSpec} from '../../../interoperability/contacts/stdops'
 
 interface OpTest {
     spec:OpSpec,
@@ -22,12 +23,13 @@ describe('op contact', function(){
 
     it('should create resolver', function(){
 
-        let op = new Op({
+        let op = new StdOp({
+            label:'resolver',
             context:context,
-            major_op(inp){
+            mode:'resolve',
+            inner_op(inp){
                 return 'Fiddle' + inp + this.detritus
             },
-            major_return:'resolve'
         })
 
         let opinv = op.invert()
@@ -43,12 +45,13 @@ describe('op contact', function(){
     })
 
     it('should create carrier', function(){
-        let op = new Op({
+        let op = new StdOp({
+            label:'carrier',
             context:context,
-            major_op(inp){
-                return 'Fiddle' + inp + this.detritus
+            mode:'carry',
+            inner_op(inp, carry){
+                return carry('Fiddle' + inp + this.detritus)
             },
-            major_return:'carry'
         })
 
         let opinv = op.invert()
@@ -68,12 +71,13 @@ describe('op contact', function(){
     })
 
     it('should create reflex',function(){
-        let op = new Op({
+        let op = new StdOp({
+            label:'reflex',
             context:context,
-            major_op(inp){
-                return 'Fiddle' + inp + this.detritus
-            },
-            major_return:'reflex'
+            mode:'reflex',
+            inner_op(inp, reflex){
+                return reflex('Fiddle' + inp + this.detritus)
+            }
         })
 
         let opinv = op.invert()
@@ -93,17 +97,17 @@ describe('op contact', function(){
 
     it('should create a bidirectional push, pull buffer', function(){
         let buffer = []
-        let op = new Op({
+        let op = new StdOp({
             context:buffer,
-            major_op(data){
+            label:'push-pull buffer',
+            mode:'resolve',
+            inner_op(data){
                 this.push(data)
             },
 
-            minor_op(data){
+            outer_op(data){
                 return this.shift()
             },
-
-            minor_return:'resolve'
         })
 
         let opinv = op.invert()
@@ -163,10 +167,11 @@ describe('op contact', function(){
             this.dumped = data
         }
 
-        let op = new Op({
+        let op = new StdOp({
             context: context,
-            major_op:drain,
-            minor_op:drain
+            mode:'resolve', label:'resolve',
+            inner_op:drain,
+            outer_op:drain
         })
 
         let opinv = op.invert()

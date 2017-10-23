@@ -35,7 +35,7 @@ export class OpConstruct<Body=OpConstructBody> extends Construct{
         this.nucleus = this.spec.default;
 
         let op = new Op({
-            context:this.local,
+            context:this.self,
             major_op:this.spec.major_op,
             major_arg1:this.spec.major_arg1,
             major_arg2:this.spec.major_arg2,
@@ -159,7 +159,10 @@ export class Drain extends OpConstruct {
             },
             origins:desc.origins
         })
+
+        
     }
+
 }
 
 
@@ -187,6 +190,16 @@ export class Spring extends OpConstruct {
             },  
             origins:desc.origins
         })
+
+        Object.defineProperty(this, 'exposed', {
+            get: () => {
+                return springF
+            },
+            set: (value) => {
+                return false
+            }
+        })
     }
+
 
 }

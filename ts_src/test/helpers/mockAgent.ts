@@ -1,5 +1,5 @@
 
-import {Agent, AgentConfig} from '../../construction/agency'
+import {Agent, AgentConfig} from '../../agency/all'
 
 import Jasmine = require('jasmine')
 

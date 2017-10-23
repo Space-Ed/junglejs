@@ -10,7 +10,7 @@ describe("multiplex medium", function(){
 
         app.init(j({
             head:{
-                debug:true
+                debug:true,
             },
 
             smear:j('media:direct',{
@@ -44,6 +44,7 @@ describe("multiplex medium", function(){
             app.init(j({
                 head:{
                     debug:true,
+                    retain:true
                 },
 
                 composer:j('media:compose', {
@@ -57,13 +58,19 @@ describe("multiplex medium", function(){
                 }),
 
                 a:j('cell',{
-                    receptorA:j('op', { resolve_in(val){return "receptorA in cell a got "+val}}),
-                    receptorB:j('op', { resolve_in(val){return "receptorB in cell a got "+val}})
+                    head: {
+                        // withold: true,
+                    },
+                    receptorA:j('resolve', { outer(val){return "receptorA in cell a got "+val}}),
+                    receptorB:j('resolve', { outer(val){return "receptorB in cell a got "+val}})
                 }),
 
-                b:j('cell',{
-                    receptorA:j('op',{resolve_in(val){return "receptorA in cell b got "+val}}),
-                    receptorB:j('op', { resolve_in(val){return "receptorB in cell b got "+val}})
+                b: j('cell', {
+                    head:{
+                        // withold:true,
+                    },
+                    receptorA:j('resolve',{ outer(val){return "receptorA in cell b got "+val}}),
+                    receptorB:j('resolve', { outer(val){return "receptorB in cell b got "+val}})
                 }),
 
                 entry:j('inward'),

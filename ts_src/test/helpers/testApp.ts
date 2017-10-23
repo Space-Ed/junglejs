@@ -29,8 +29,6 @@ export default class TestApp extends Cell{
         Crumb.defaultOptions.log = console
         Crumb.defaultOptions.debug = true
 
-        this.exposure = head.exposure || 'public'
-
         super.applyHead(head);
         this.debug = head.debug;
 

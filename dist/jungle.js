@@ -63,7 +63,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 31);
+/******/ 	return __webpack_require__(__webpack_require__.s = 30);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -72,7 +72,7 @@
 
 "use strict";
 
-const state_1 = __webpack_require__(17);
+Object.defineProperty(exports, "__esModule", { value: true });
 class Construct {
     constructor(domain) {
         this.domain = domain;
@@ -82,54 +82,86 @@ class Construct {
         this.basis = desc.basis;
         this.applyHead(desc.head);
         this._patch(desc.body);
-        let primeResult = this.primeTractor ? this.primeTractor.call(this.nucleus) : undefined;
+        let primeResult = this.head.prime ? this.head.prime.call(this.self) : undefined;
     }
     dispose() {
-        if (this.disposeTractor) {
-            this.disposeTractor.call(this.nucleus);
+        if (this.head.dispose) {
+            this.head.dispose.call(this.nucleus);
         }
         this.clearHead();
     }
     applyHead(head = {}) {
         this.head = head;
-        this.exposure = head.exposure || 'local';
-        this.reach = head.reach || 'host';
-        this.remote = head.remote || false;
-        this.beginTractor = head.begin;
-        this.endTractor = head.end;
-        this.primeTractor = head.prime;
-        this.disposeTractor = head.dispose;
-    }
-    clearHead() {
-        this.primeTractor = undefined;
-        this.disposeTractor = undefined;
-        this.exposure = undefined;
-        this.reach = undefined;
-        this.remote = undefined;
-    }
-    attach(host, id) {
-        this.attachHostAgent(host, id);
-        this.attachHostState(host, id);
-        if (this.beginTractor) {
-            this.beginTractor.call(this.local);
-        }
-    }
-    attachHostState(host, id) {
-        let acc = new state_1.AccessoryState(this, id, host.local, {
-            reach: this.reach,
-            exposure: this.exposure,
-            initial: this.nucleus
-        });
-        this.local = acc.exposed;
-        this.exposed = acc.exposed;
-        Object.defineProperty(this, 'nucleus', {
+        Object.defineProperty(this, 'exposed', {
             get: () => {
-                return this.local.me;
+                return this.nucleus;
             },
             set: (value) => {
-                return this.local.me = value;
+                this.dark.patch(value);
+                this.notify(value);
+                return this.nucleus = value;
             }
         });
+        this.applyHeart(head.heart || {});
+        this.dark.notify = (nt) => {
+            this.nucleus = nt;
+            if (this.notify) {
+                this.notify(nt);
+            }
+            return null;
+        };
+        this.dark.fetch = (ft) => {
+            let res = this.nucleus;
+            if (res == undefined) {
+                if (this.fetch) {
+                    res = this.fetch(ft);
+                }
+            }
+            return res;
+        };
+        this.self = this.createSelfVisor();
+    }
+    applyHeart(heartspec) {
+        let { exposed, pooled } = this.createHeart(heartspec.exposed);
+        this.heart = exposed;
+        this.dark = pooled;
+    }
+    createSelfVisor() {
+        let self = {};
+        Object.defineProperties(self, {
+            body: {
+                get: () => (this.exposed)
+            },
+            heart: {
+                get: () => {
+                    console.log("heart gotten", this.heart);
+                    return this.heart;
+                }
+            },
+        });
+        return self;
+    }
+    clearHead() {
+    }
+    attach(host, id) {
+        console.log('attach for ', id);
+        let visor = host.grantVisor(id, this);
+        Object.defineProperties(this.self, {
+            world: {
+                get: () => (visor)
+            },
+            earth: {
+                get: () => (visor.body)
+            },
+            agent: {
+                get: () => (visor.heart)
+            },
+        });
+        this.attachHostAgent(host, id);
+        if (this.head.attach) {
+            console.log('Calling attach for ', id);
+            this.head.attach.call(this.self);
+        }
     }
     attachHostAgent(host, id) {
         this.fetch = (extractor) => {
@@ -143,35 +175,68 @@ class Construct {
             return host.bed.notify(qualified);
         };
     }
-    detachHostState() {
-        this.local = undefined;
-        this.exposed = undefined;
-        Object.defineProperty(this, 'nucleus', {
-            value: this.nucleus
-        });
-    }
     detachHostAgent() {
         this.fetch = undefined;
         this.notify = undefined;
     }
     detach(host, id) {
-        if (this.endTractor) {
-            this.endTractor.call(this.local);
+        if (this.head.detach) {
+            this.head.detach.call(this.self);
         }
-        this.detachHostState();
         this.detachHostAgent();
     }
     _patch(patch) {
         this.nucleus = patch;
     }
     patch(patch) {
-        return this._patch(patch);
+        this._patch(patch);
+        this.dark.notify(patch);
     }
     _extract(sucker) {
         return this.nucleus;
     }
     extract(sucker) {
-        return this._extract(sucker);
+        let extract = this._extract(sucker);
+        if (extract == undefined) {
+            extract = this.dark.fetch(sucker);
+        }
+        return extract;
+    }
+    createHeart(spec) {
+        let pooled = {
+            config: spec,
+            patch: (patch) => {
+                console.log('heart notify called with ', patch);
+                if (exposed.notify instanceof Function) {
+                    return exposed.notify(patch);
+                }
+            },
+            notify: null,
+            extract: (voidspace) => {
+                if (exposed.fetch instanceof Function) {
+                    return exposed.fetch(voidspace);
+                }
+            },
+            fetch: null
+        };
+        let exposed = {
+            patch: (patch) => {
+                if (pooled.notify instanceof Function) {
+                    return pooled.notify(patch);
+                }
+            },
+            notify: null,
+            extract: (voidspace) => {
+                if (pooled.fetch instanceof Function) {
+                    return pooled.fetch(voidspace);
+                }
+            },
+            fetch: null
+        };
+        return {
+            pooled: pooled,
+            exposed: exposed
+        };
     }
 }
 exports.Construct = Construct;
@@ -183,7 +248,8 @@ exports.Construct = Construct;
 
 "use strict";
 
-const typesplit_1 = __webpack_require__(13);
+Object.defineProperty(exports, "__esModule", { value: true });
+const typesplit_1 = __webpack_require__(10);
 function isPrimative(thing) {
     return thing == undefined || typeof (thing) !== 'object';
 }
@@ -305,10 +371,16 @@ exports.isDeepReplicaThrow = isDeepReplicaThrow;
 function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
-__export(__webpack_require__(16));
-__export(__webpack_require__(0));
-__export(__webpack_require__(14));
-__export(__webpack_require__(15));
+Object.defineProperty(exports, "__esModule", { value: true });
+__export(__webpack_require__(35));
+__export(__webpack_require__(1));
+const debug = __webpack_require__(22);
+exports.Debug = debug;
+__export(__webpack_require__(23));
+__export(__webpack_require__(24));
+__export(__webpack_require__(9));
+__export(__webpack_require__(25));
+__export(__webpack_require__(38));
 //# sourceMappingURL=all.js.map
 
 /***/ }),
@@ -320,14 +392,13 @@ __export(__webpack_require__(15));
 function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
-__export(__webpack_require__(39));
-__export(__webpack_require__(1));
-const debug = __webpack_require__(24);
-exports.Debug = debug;
-__export(__webpack_require__(25));
-__export(__webpack_require__(26));
-__export(__webpack_require__(12));
-__export(__webpack_require__(27));
+Object.defineProperty(exports, "__esModule", { value: true });
+__export(__webpack_require__(19));
+__export(__webpack_require__(29));
+__export(__webpack_require__(18));
+__export(__webpack_require__(28));
+__export(__webpack_require__(15));
+__export(__webpack_require__(17));
 //# sourceMappingURL=all.js.map
 
 /***/ }),
@@ -339,12 +410,13 @@ __export(__webpack_require__(27));
 function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
-__export(__webpack_require__(8));
-__export(__webpack_require__(30));
-__export(__webpack_require__(21));
-__export(__webpack_require__(29));
-__export(__webpack_require__(18));
+Object.defineProperty(exports, "__esModule", { value: true });
 __export(__webpack_require__(20));
+__export(__webpack_require__(21));
+__export(__webpack_require__(34));
+__export(__webpack_require__(32));
+__export(__webpack_require__(31));
+__export(__webpack_require__(33));
 //# sourceMappingURL=all.js.map
 
 /***/ }),
@@ -353,45 +425,8 @@ __export(__webpack_require__(20));
 
 "use strict";
 
-function __export(m) {
-    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
-}
-__export(__webpack_require__(22));
-__export(__webpack_require__(23));
-__export(__webpack_require__(38));
-__export(__webpack_require__(33));
-__export(__webpack_require__(32));
-__export(__webpack_require__(34));
-__export(__webpack_require__(35));
-__export(__webpack_require__(36));
-__export(__webpack_require__(37));
-//# sourceMappingURL=all.js.map
-
-/***/ }),
-/* 6 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const base_1 = __webpack_require__(18);
-class Call extends base_1.BasicContact {
-    constructor(...args) {
-        super(...args);
-        this.invertable = true;
-        this.hasInput = false;
-        this.hasOutput = false;
-    }
-}
-exports.Call = Call;
-//# sourceMappingURL=call.js.map
-
-/***/ }),
-/* 7 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const designator_1 = __webpack_require__(9);
+Object.defineProperty(exports, "__esModule", { value: true });
+const designator_1 = __webpack_require__(6);
 const linktype = '[-=~]';
 const mediumMidExp = `-\\(\\w+\\)-|=\\(\\w+\\)=`;
 const mediumBounds = `(${linktype})\\((\\w+)\\)${linktype}`;
@@ -465,224 +500,15 @@ exports.parseLawExpression = parseLawExpression;
 //# sourceMappingURL=law.js.map
 
 /***/ }),
-/* 8 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-const designator_1 = __webpack_require__(9);
-(function (MembraneEvents) {
-    MembraneEvents[MembraneEvents["AddContact"] = 0] = "AddContact";
-    MembraneEvents[MembraneEvents["AddMembrane"] = 1] = "AddMembrane";
-    MembraneEvents[MembraneEvents["RemoveContact"] = 2] = "RemoveContact";
-    MembraneEvents[MembraneEvents["RemoveMembrane"] = 3] = "RemoveMembrane";
-})(exports.MembraneEvents || (exports.MembraneEvents = {}));
-var MembraneEvents = exports.MembraneEvents;
-function DemuxWatchMethodsF(target) {
-    return (event, data, token) => {
-        switch (event) {
-            case (MembraneEvents.AddContact):
-                target.onAddContact(data, token);
-                break;
-            case (MembraneEvents.RemoveContact):
-                target.onRemoveContact(data, token);
-                break;
-            case (MembraneEvents.AddMembrane):
-                target.onAddMembrane(data, token);
-                break;
-            case (MembraneEvents.RemoveMembrane):
-                target.onRemoveMembrane(data, token);
-                break;
-        }
-    };
-}
-exports.DemuxWatchMethodsF = DemuxWatchMethodsF;
-class Section {
-    constructor() {
-        this.sections = [];
-        this.watches = [];
-    }
-    createSection(desexp, alias) {
-        let section = new Section();
-        if (this instanceof Membrane) {
-            section.source = this;
-        }
-        else {
-            section.source = this.source;
-        }
-        Object.defineProperty(section, 'subranes', {
-            get() {
-                return this.source.subranes;
-            }
-        });
-        Object.defineProperty(section, 'contacts', {
-            get() {
-                return this.source.contacts;
-            }
-        });
-        section.designator = new designator_1.Designator('subranes', 'contacts', desexp);
-        if (alias === undefined) {
-            this.sections[Symbol("anon")] = section;
-        }
-        else {
-            this.sections[alias] = section;
-        }
-        return section;
-    }
-    designate(dexp, flat = false) {
-        let desig = new designator_1.Designator('subranes', 'contacts', dexp);
-        for (let ik of Object.getOwnPropertySymbols(this.sections).concat(Object.keys(this.sections))) {
-            desig.screen(this.sections[ik].designator.expression);
-        }
-        return desig.scan(this, flat);
-    }
-    addWatch(watcher, alias) {
-        if (alias === undefined) {
-            this.watches[Symbol("anon")] = watcher;
-        }
-        else {
-            this.watches[alias] = watcher;
-        }
-    }
-    removeWatch(key) {
-        delete this.watches[key];
-    }
-    removeAllWatches() {
-        this.watches = [];
-    }
-    nextToken(token, key) {
-        if (!(typeof key === 'symbol')) {
-            if (token === undefined) {
-                return key;
-            }
-            else if (token.match(/^\:\w+$/)) {
-                return `${key}${token}`;
-            }
-            else {
-                return `${key}.${token}`;
-            }
-        }
-        else {
-            return token || "";
-        }
-    }
-    changeOccurred(event, subject, token) {
-        for (let skey of Object.getOwnPropertySymbols(this.sections).concat(Object.keys(this.sections))) {
-            let section = this.sections[skey];
-            if (section.designator === undefined || section.designator.matches(token)) {
-                section.changeOccurred(event, subject, this.nextToken(token, skey));
-                return;
-            }
-        }
-        for (let wKey of Object.getOwnPropertySymbols(this.watches).concat(Object.keys(this.watches))) {
-            let watch = this.watches[wKey];
-            if (watch.designator === undefined || watch.designator.matches(token)) {
-                watch.changeOccurred(event, subject, this.nextToken(token, wKey));
-            }
-        }
-    }
-}
-exports.Section = Section;
-class Membrane extends Section {
-    constructor() {
-        super();
-        this.contacts = {};
-        this.subranes = {};
-        this.notify = true;
-    }
-    invert() {
-        if (this.inverted === undefined) {
-            this.inverted = new Membrane();
-            this.inverted.inverted = this;
-            for (let rk in this.contacts) {
-                let contact = this.contacts[rk];
-                if (contact.invertable) {
-                    this.inverted.addContact(contact.invert(), rk);
-                }
-            }
-        }
-        return this.inverted;
-    }
-    addSubrane(membrane, label) {
-        this.subranes[label] = membrane;
-        membrane.addWatch(this, label);
-        this.notifyMembraneAdd(membrane, label);
-        let allNew = membrane.designate("**:*", false);
-        for (let token in allNew) {
-            this.changeOccurred(MembraneEvents.AddContact, allNew[token], this.nextToken(token, label));
-        }
-    }
-    removeSubrane(label) {
-        let removing = this.subranes[label];
-        delete this.subranes[label];
-        let allNew = removing.designate("**:*", false);
-        for (let token in allNew) {
-            this.changeOccurred(MembraneEvents.RemoveContact, allNew[token], this.nextToken(token, label));
-        }
-        this.notifyMembraneRemove(removing, label);
-        return removing;
-    }
-    addContact(contact, label) {
-        let existing = this.contacts[label];
-        if (existing !== undefined) {
-        }
-        else {
-            this.contacts[label] = contact;
-            if (this.inverted !== undefined) {
-                if (contact.invertable && !contact.inverted) {
-                    let partner = contact.invert();
-                    this.inverted.addContact(partner, label);
-                    if (this.inverted.contacts[label] !== partner) {
-                    }
-                }
-            }
-            this.notifyContactAdd(contact, label);
-        }
-    }
-    removeContact(label) {
-        let removing = this.contacts[label];
-        if (removing !== undefined) {
-            delete this.contacts[label];
-            if (this.inverted && removing.invertable) {
-                this.inverted.removeContact(label);
-            }
-            this.notifyContactRemove(removing, label);
-        }
-        return removing;
-    }
-    notifyContactAdd(contact, label) {
-        if (this.notify) {
-            this.changeOccurred(MembraneEvents.AddContact, contact, ":" + label);
-        }
-    }
-    notifyContactRemove(contact, label) {
-        if (this.notify) {
-            this.changeOccurred(MembraneEvents.RemoveContact, contact, ":" + label);
-        }
-    }
-    notifyMembraneAdd(membrane, token) {
-        if (this.notify) {
-            this.changeOccurred(MembraneEvents.AddMembrane, membrane, "" + token);
-        }
-    }
-    notifyMembraneRemove(membrane, token) {
-        if (this.notify) {
-            this.changeOccurred(MembraneEvents.RemoveMembrane, membrane, "" + token);
-        }
-    }
-}
-exports.Membrane = Membrane;
-//# sourceMappingURL=membrane.js.map
-
-/***/ }),
-/* 9 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const hierarchical_1 = __webpack_require__(28);
-const operations_1 = __webpack_require__(10);
-const f = __webpack_require__(11);
+Object.defineProperty(exports, "__esModule", { value: true });
+const hierarchical_1 = __webpack_require__(26);
+const operations_1 = __webpack_require__(7);
+const f = __webpack_require__(8);
 exports.DSetExp = "(?:\\*|\\{\\w+(?:\,\\w+)*\\})?";
 exports.DSymBindingExp = `(?:\\w+#${exports.DSetExp})`;
 exports.DSymBindingParse = `(?:(\\w+)#(${exports.DSetExp}))`;
@@ -1061,11 +887,12 @@ exports.Designator = Designator;
 //# sourceMappingURL=designator.js.map
 
 /***/ }),
-/* 10 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", { value: true });
 function meld(reduce) {
     return function (obj1, obj2) {
         let melded = {};
@@ -1156,11 +983,12 @@ exports.invert = invert;
 //# sourceMappingURL=operations.js.map
 
 /***/ }),
-/* 11 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", { value: true });
 var map;
 (function (map) {
     function identity(x) {
@@ -1212,13 +1040,14 @@ var negate;
 //# sourceMappingURL=primary-functions.js.map
 
 /***/ }),
-/* 12 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", { value: true });
 const checks_1 = __webpack_require__(1);
-const typesplit_1 = __webpack_require__(13);
+const typesplit_1 = __webpack_require__(10);
 function ensureArray(sometimes) {
     return (sometimes instanceof Array) ? sometimes : (sometimes != undefined ? [sometimes] : []);
 }
@@ -1419,11 +1248,12 @@ exports.projectObject = projectObject;
 //# sourceMappingURL=transforms.js.map
 
 /***/ }),
-/* 13 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", { value: true });
 const checks_1 = __webpack_require__(1);
 function identity(x) {
     return x;
@@ -1531,12 +1361,29 @@ exports.typeCaseSplitM = typeCaseSplitM;
 //# sourceMappingURL=typesplit.js.map
 
 /***/ }),
-/* 14 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-const all_1 = __webpack_require__(27);
+function __export(m) {
+    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+__export(__webpack_require__(14));
+__export(__webpack_require__(0));
+__export(__webpack_require__(12));
+__export(__webpack_require__(13));
+//# sourceMappingURL=all.js.map
+
+/***/ }),
+/* 12 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const all_1 = __webpack_require__(25);
 const construct_1 = __webpack_require__(0);
 const checks_1 = __webpack_require__(1);
 function parseBasisString(str) {
@@ -1852,12 +1699,13 @@ exports.Domain = Domain;
 //# sourceMappingURL=domain.js.map
 
 /***/ }),
-/* 15 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-const junction_1 = __webpack_require__(25);
+Object.defineProperty(exports, "__esModule", { value: true });
+const junction_1 = __webpack_require__(23);
 class BedAgent {
     constructor(home, config) {
         this.home = home;
@@ -1909,6 +1757,7 @@ class AgentPool {
             let junction = new junction_1.Junction().mode('last');
             for (let k in this.pool) {
                 if (k !== key) {
+                    console.log('notifyOUt: ', k, data);
                     junction.merge(this.pool[k].patch(data));
                 }
             }
@@ -1943,14 +1792,15 @@ exports.AgentPool = AgentPool;
 //# sourceMappingURL=agency.js.map
 
 /***/ }),
-/* 16 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", { value: true });
 const construct_1 = __webpack_require__(0);
-const state_1 = __webpack_require__(17);
-const agency_1 = __webpack_require__(15);
+const state_1 = __webpack_require__(27);
+const agency_1 = __webpack_require__(13);
 class Composite extends construct_1.Construct {
     constructor(domain) {
         super(domain);
@@ -1958,49 +1808,48 @@ class Composite extends construct_1.Construct {
         this.subconstructs = [];
         this.nucleus = {};
     }
-    init(desc) {
-        this.addStrange('domain', this.domain.getExposure());
-        this.origins = desc.origins;
-        this.basis = desc.basis;
-        this.applyHead(desc.head);
-        this._patch(desc.body);
-        this._patch(desc.anon);
-        let primeResult = this.primeTractor ? this.primeTractor.call(this.nucleus) : undefined;
-    }
     dispose() {
         for (let key in this.subconstructs) {
             let construct = this.detachChild(key);
             construct.dispose();
         }
-        if (this.disposeTractor) {
-            this.disposeTractor.call(this.nucleus);
+        if (this.head.dispose) {
+            this.head.dispose.call(this.self);
         }
         this.clearHead();
     }
     applyHead(head = {}) {
-        super.applyHead(head);
-        this.state = new state_1.HostState(this, head.state);
-        this.exposed = this.state.exposed;
-        this.local = this.state.local;
-        let { exposed, pooled } = this.createHeart(((head.heart || {}).exposed || {}));
-        this.addStrange('heart', exposed);
+        this.head = head;
+        this.applyHeart(head.heart || {});
+        this.exposed = new Proxy(this.nucleus, state_1.makeHandler(this, this.subconstructs));
         this.bed = new agency_1.BedAgent(this, head.bed);
         this.anchor = new agency_1.AnchorAgent(this, head.anchor);
         this.pool = this.createPool(head.pool);
-        this.pool.add(pooled, 'heart');
+        this.pool.add(this.dark, 'heart');
         this.pool.add(this.bed, 'bed');
         this.pool.add(this.anchor, 'anchor');
+        this.self = this.createSelfVisor();
+    }
+    createSelfVisor() {
+        let self = {};
+        Object.defineProperties(self, {
+            body: {
+                get: () => (this.exposed)
+            },
+            heart: {
+                get: () => {
+                    console.log("heart gotten", this.heart);
+                    return this.heart;
+                }
+            },
+            domain: {
+                get: () => (this.domain)
+            }
+        });
+        return self;
     }
     clearHead() {
-        this.beginTractor = undefined;
-        this.endTractor = undefined;
         super.clearHead();
-    }
-    attach(host, id) {
-        this.attachHostAgent(host, id);
-        if (this.beginTractor) {
-            this.beginTractor.call(this.local);
-        }
     }
     patch(patch) {
         return this.anchor.notify(patch);
@@ -2119,40 +1968,22 @@ class Composite extends construct_1.Construct {
     createPool(poolConfig) {
         return new agency_1.AgentPool(poolConfig);
     }
-    createHeart(spec) {
-        let pooled = {
-            config: spec,
-            patch: (patch) => {
-                if (exposed.notify instanceof Function) {
-                    return exposed.notify(patch);
-                }
+    grantVisor(k, c) {
+        let { exposed: agent, pooled } = this.createHeart({});
+        this.pool.add(pooled, k);
+        return new Proxy(this.self, {
+            set(oTarg, prop, val) {
+                return false;
             },
-            notify: null,
-            extract: (voidspace) => {
-                if (exposed.fetch instanceof Function) {
-                    return exposed.fetch(voidspace);
+            get(oTarg, prop) {
+                if (prop === 'heart') {
+                    return agent;
                 }
-            },
-            fetch: null
-        };
-        let exposed = {
-            patch: (patch) => {
-                if (pooled.notify instanceof Function) {
-                    return pooled.notify(patch);
+                else {
+                    return oTarg[prop];
                 }
-            },
-            notify: null,
-            extract: (voidspace) => {
-                if (pooled.fetch instanceof Function) {
-                    return pooled.fetch(voidspace);
-                }
-            },
-            fetch: null
-        };
-        return {
-            pooled: pooled,
-            exposed: exposed
-        };
+            }
+        });
     }
 }
 Composite.keywords = { basis: null, domain: null, head: null, anon: null };
@@ -2160,164 +1991,12 @@ exports.Composite = Composite;
 //# sourceMappingURL=composite.js.map
 
 /***/ }),
-/* 17 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-const composite_1 = __webpack_require__(16);
-class AccessoryState {
-    constructor(home, accessoryKey, scope, spec) {
-        this.home = home;
-        this.accessoryKey = accessoryKey;
-        this.exposed = new Proxy(scope, this);
-        this.myval = spec.initial;
-    }
-    set(target, prop, value) {
-        if (prop === 'me' || prop == this.accessoryKey) {
-            this.myval = value;
-            return true;
-        }
-        else {
-            target[prop] = value;
-            return true;
-        }
-    }
-    get(target, prop) {
-        if (prop === 'me' || prop == this.accessoryKey) {
-            return this.myval;
-        }
-        else {
-            return target[prop];
-        }
-    }
-    defineProperty(oTarget, sKey, oDesc) {
-        if (sKey == 'me') {
-            return Reflect.defineProperty(this, 'myval', oDesc);
-        }
-        else {
-            Object.defineProperty(oTarget, sKey, oDesc);
-        }
-    }
-}
-exports.AccessoryState = AccessoryState;
-const exposureLevels = {
-    'public': 2,
-    'local': 1,
-    'private': 0
-};
-class HostState {
-    constructor(host, spec) {
-        this.host = host;
-        this.spec = spec;
-        this.scope = this.host.nucleus || {};
-        let outsourced = this.host.subconstructs;
-        this.outsourced = outsourced;
-        let exposedHandler = function (level) {
-            let hostLevel = exposureLevels[level];
-            return {
-                set: (target, prop, value) => {
-                    if (prop in outsourced) {
-                        let exposing = outsourced[prop];
-                        let outlevel = exposureLevels[exposing.exposure];
-                        if (outlevel >= hostLevel) {
-                            if (exposing instanceof composite_1.Composite) {
-                                this.setSubCell(exposing, prop, value);
-                            }
-                            else {
-                                this.setAccessory(exposing, prop, value);
-                            }
-                        }
-                        else {
-                            throw new Error(`Cannot assign, this space: ${prop} is taken by subconstruct that is closed`);
-                        }
-                    }
-                    else if (prop in target) {
-                        target[prop] = value;
-                    }
-                    else {
-                        host.add(value, prop);
-                    }
-                    let q = {};
-                    q[prop] = value;
-                    host.bed.notify(q);
-                    return true;
-                },
-                get: (target, prop) => {
-                    if (prop in outsourced) {
-                        let exposing = outsourced[prop];
-                        let outlevel = exposureLevels[exposing.exposure];
-                        if (outlevel >= hostLevel) {
-                            if (exposing instanceof composite_1.Composite) {
-                                return exposing.exposed;
-                            }
-                            else {
-                                return exposing.exposed.me;
-                            }
-                        }
-                        else if (exposing.remote) {
-                            exposing.extract();
-                        }
-                    }
-                    else {
-                        return target[prop];
-                    }
-                },
-                deleteProperty: (oTarget, sKey) => {
-                    if (sKey in outsourced) {
-                        this.host.remove(sKey);
-                    }
-                    else {
-                        delete this.scope[sKey];
-                    }
-                },
-                ownKeys: function (oTarget, sKey) {
-                    let keycoll = {};
-                    for (let k in outsourced) {
-                        let outlevel = exposureLevels[outsourced[k].exposure];
-                        if (outlevel >= hostLevel) {
-                            keycoll[k] = null;
-                        }
-                    }
-                    for (let k in oTarget) {
-                        keycoll[k] = null;
-                    }
-                    return Object.keys(keycoll);
-                },
-                has: function (oTarget, sKey) {
-                    return sKey in oTarget || sKey in outsourced;
-                },
-            };
-        };
-        this.local = new Proxy(this.scope, exposedHandler.call(this, 'local'));
-        this.exposed = new Proxy(this.scope, exposedHandler.call(this, 'public'));
-    }
-    setAccessory(exposing, key, value) {
-        exposing.exposed[key] = value;
-    }
-    setSubCell(exposing, key, value) {
-        if (value === undefined) {
-            this.host.remove(key);
-        }
-        else if (typeof value === 'object') {
-            let p = {};
-            p[key] = value;
-            this.host._patch(p);
-        }
-        else {
-            throw new Error("A subcell cannot be reset from the context, must dispose (set undefined)");
-        }
-    }
-}
-exports.HostState = HostState;
-//# sourceMappingURL=state.js.map
-
-/***/ }),
-/* 18 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
+Object.defineProperty(exports, "__esModule", { value: true });
 class BasicContact {
     constructor() {
         this.hidden = false;
@@ -2343,74 +2022,34 @@ exports.BasicContact = BasicContact;
 //# sourceMappingURL=base.js.map
 
 /***/ }),
-/* 19 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-const call_1 = __webpack_require__(6);
-class Integrator extends call_1.Call {
-    constructor(spec) {
-        super();
-        this.spec = spec;
-        this.invertable = false;
-        this.put = (data, debug) => {
-            if (data instanceof Object && typeof data.method === 'string') {
-                if (this.recievers[data.method] !== undefined) {
-                    return this.recievers[data.method].call(this.spec.target, data.payload);
-                }
-            }
-            if ('any' in this.recievers) {
-                return this.recievers['any'].call(this.spec.target, data);
-            }
-        };
-        this.hasInput = true;
-        this.hasOutput = true;
-        this.recievers = {};
-        let on = this.createReciever();
-        let emit = this.createEmitter();
-        spec.integrator(spec.target, this.recievers, emit);
-    }
-    createEmitter() {
-        return (name) => {
-            if (name !== undefined) {
-                return (arg) => {
-                    let packet = {
-                        method: name,
-                        payload: arg
-                    };
-                    if (this.emit) {
-                        this.emit(packet);
-                    }
-                };
-            }
-            else {
-                return (arg) => {
-                    if (this.emit) {
-                        this.emit(arg);
-                    }
-                };
-            }
-        };
-    }
-    createReciever() {
-    }
-    createPartner() {
-        return undefined;
+Object.defineProperty(exports, "__esModule", { value: true });
+const base_1 = __webpack_require__(15);
+class Call extends base_1.BasicContact {
+    constructor() {
+        super(...arguments);
+        this.invertable = true;
+        this.hasInput = false;
+        this.hasOutput = false;
     }
 }
-exports.Integrator = Integrator;
-//# sourceMappingURL=integrator.js.map
+exports.Call = Call;
+//# sourceMappingURL=call.js.map
 
 /***/ }),
-/* 20 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-const Debug = __webpack_require__(24);
-const all_1 = __webpack_require__(3);
-const call_1 = __webpack_require__(6);
+Object.defineProperty(exports, "__esModule", { value: true });
+const Debug = __webpack_require__(22);
+const all_1 = __webpack_require__(2);
+const call_1 = __webpack_require__(16);
 class Op extends call_1.Call {
     constructor(spec) {
         super();
@@ -2527,11 +2166,12 @@ exports.Op = Op;
 //# sourceMappingURL=op.js.map
 
 /***/ }),
-/* 21 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", { value: true });
 class BaseMedium {
     constructor(spec) {
         this.exclusive = false;
@@ -2605,13 +2245,225 @@ exports.mediaConstructors = {};
 //# sourceMappingURL=medium.js.map
 
 /***/ }),
-/* 22 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-const IO = __webpack_require__(4);
-const CS = __webpack_require__(2);
+Object.defineProperty(exports, "__esModule", { value: true });
+const designator_1 = __webpack_require__(6);
+var MembraneEvents;
+(function (MembraneEvents) {
+    MembraneEvents[MembraneEvents["AddContact"] = 0] = "AddContact";
+    MembraneEvents[MembraneEvents["AddMembrane"] = 1] = "AddMembrane";
+    MembraneEvents[MembraneEvents["RemoveContact"] = 2] = "RemoveContact";
+    MembraneEvents[MembraneEvents["RemoveMembrane"] = 3] = "RemoveMembrane";
+})(MembraneEvents = exports.MembraneEvents || (exports.MembraneEvents = {}));
+function DemuxWatchMethodsF(target) {
+    return (event, data, token) => {
+        switch (event) {
+            case (MembraneEvents.AddContact):
+                target.onAddContact(data, token);
+                break;
+            case (MembraneEvents.RemoveContact):
+                target.onRemoveContact(data, token);
+                break;
+            case (MembraneEvents.AddMembrane):
+                target.onAddMembrane(data, token);
+                break;
+            case (MembraneEvents.RemoveMembrane):
+                target.onRemoveMembrane(data, token);
+                break;
+        }
+    };
+}
+exports.DemuxWatchMethodsF = DemuxWatchMethodsF;
+class Section {
+    constructor() {
+        this.sections = [];
+        this.watches = [];
+    }
+    createSection(desexp, alias) {
+        let section = new Section();
+        if (this instanceof Membrane) {
+            section.source = this;
+        }
+        else {
+            section.source = this.source;
+        }
+        Object.defineProperty(section, 'subranes', {
+            get() {
+                return this.source.subranes;
+            }
+        });
+        Object.defineProperty(section, 'contacts', {
+            get() {
+                return this.source.contacts;
+            }
+        });
+        section.designator = new designator_1.Designator('subranes', 'contacts', desexp);
+        if (alias === undefined) {
+            this.sections[Symbol("anon")] = section;
+        }
+        else {
+            this.sections[alias] = section;
+        }
+        return section;
+    }
+    designate(dexp, flat = false) {
+        let desig = new designator_1.Designator('subranes', 'contacts', dexp);
+        for (let ik of Object.getOwnPropertySymbols(this.sections).concat(Object.keys(this.sections))) {
+            desig.screen(this.sections[ik].designator.expression);
+        }
+        return desig.scan(this, flat);
+    }
+    addWatch(watcher, alias) {
+        if (alias === undefined) {
+            this.watches[Symbol("anon")] = watcher;
+        }
+        else {
+            this.watches[alias] = watcher;
+        }
+    }
+    removeWatch(key) {
+        delete this.watches[key];
+    }
+    removeAllWatches() {
+        this.watches = [];
+    }
+    nextToken(token, key) {
+        if (!(typeof key === 'symbol')) {
+            if (token === undefined) {
+                return key;
+            }
+            else if (token.match(/^\:\w+$/)) {
+                return `${key}${token}`;
+            }
+            else {
+                return `${key}.${token}`;
+            }
+        }
+        else {
+            return token || "";
+        }
+    }
+    changeOccurred(event, subject, token) {
+        for (let skey of Object.getOwnPropertySymbols(this.sections).concat(Object.keys(this.sections))) {
+            let section = this.sections[skey];
+            if (section.designator === undefined || section.designator.matches(token)) {
+                section.changeOccurred(event, subject, this.nextToken(token, skey));
+                return;
+            }
+        }
+        for (let wKey of Object.getOwnPropertySymbols(this.watches).concat(Object.keys(this.watches))) {
+            let watch = this.watches[wKey];
+            if (watch.designator === undefined || watch.designator.matches(token)) {
+                watch.changeOccurred(event, subject, this.nextToken(token, wKey));
+            }
+        }
+    }
+}
+exports.Section = Section;
+class Membrane extends Section {
+    constructor() {
+        super();
+        this.contacts = {};
+        this.subranes = {};
+        this.notify = true;
+    }
+    invert() {
+        if (this.inverted === undefined) {
+            this.inverted = new Membrane();
+            this.inverted.inverted = this;
+            for (let rk in this.contacts) {
+                let contact = this.contacts[rk];
+                if (contact.invertable) {
+                    this.inverted.addContact(contact.invert(), rk);
+                }
+            }
+        }
+        return this.inverted;
+    }
+    addSubrane(membrane, label) {
+        this.subranes[label] = membrane;
+        membrane.addWatch(this, label);
+        this.notifyMembraneAdd(membrane, label);
+        let allNew = membrane.designate("**:*", false);
+        for (let token in allNew) {
+            this.changeOccurred(MembraneEvents.AddContact, allNew[token], this.nextToken(token, label));
+        }
+    }
+    removeSubrane(label) {
+        let removing = this.subranes[label];
+        delete this.subranes[label];
+        let allNew = removing.designate("**:*", false);
+        for (let token in allNew) {
+            this.changeOccurred(MembraneEvents.RemoveContact, allNew[token], this.nextToken(token, label));
+        }
+        this.notifyMembraneRemove(removing, label);
+        return removing;
+    }
+    addContact(contact, label) {
+        let existing = this.contacts[label];
+        if (existing !== undefined) {
+        }
+        else {
+            this.contacts[label] = contact;
+            if (this.inverted !== undefined) {
+                if (contact.invertable && !contact.inverted) {
+                    let partner = contact.invert();
+                    this.inverted.addContact(partner, label);
+                    if (this.inverted.contacts[label] !== partner) {
+                    }
+                }
+            }
+            this.notifyContactAdd(contact, label);
+        }
+    }
+    removeContact(label) {
+        let removing = this.contacts[label];
+        if (removing !== undefined) {
+            delete this.contacts[label];
+            if (this.inverted && removing.invertable) {
+                this.inverted.removeContact(label);
+            }
+            this.notifyContactRemove(removing, label);
+        }
+        return removing;
+    }
+    notifyContactAdd(contact, label) {
+        if (this.notify) {
+            this.changeOccurred(MembraneEvents.AddContact, contact, ":" + label);
+        }
+    }
+    notifyContactRemove(contact, label) {
+        if (this.notify) {
+            this.changeOccurred(MembraneEvents.RemoveContact, contact, ":" + label);
+        }
+    }
+    notifyMembraneAdd(membrane, token) {
+        if (this.notify) {
+            this.changeOccurred(MembraneEvents.AddMembrane, membrane, "" + token);
+        }
+    }
+    notifyMembraneRemove(membrane, token) {
+        if (this.notify) {
+            this.changeOccurred(MembraneEvents.RemoveMembrane, membrane, "" + token);
+        }
+    }
+}
+exports.Membrane = Membrane;
+//# sourceMappingURL=membrane.js.map
+
+/***/ }),
+/* 20 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const IO = __webpack_require__(3);
+const CS = __webpack_require__(11);
 class Cell extends CS.Composite {
     constructor(domain) {
         super(domain);
@@ -2653,12 +2505,13 @@ exports.Cell = Cell;
 //# sourceMappingURL=cell.js.map
 
 /***/ }),
-/* 23 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-const cell_1 = __webpack_require__(22);
+Object.defineProperty(exports, "__esModule", { value: true });
+const cell_1 = __webpack_require__(20);
 class ObjectCell extends cell_1.Cell {
     applyHead(head = {}) {
         head.exposure = 'public';
@@ -2670,13 +2523,14 @@ exports.ObjectCell = ObjectCell;
 //# sourceMappingURL=object.js.map
 
 /***/ }),
-/* 24 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", { value: true });
 const checks_1 = __webpack_require__(1);
-const transforms_1 = __webpack_require__(12);
+const transforms_1 = __webpack_require__(9);
 function dumpToDepthF(maxdepth, indentSym = "  ") {
     let recur = function (depth, indentation, item) {
         let outstr = "\n";
@@ -2871,12 +2725,13 @@ exports.Crumb = Crumb;
 //# sourceMappingURL=debug.js.map
 
 /***/ }),
-/* 25 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-const Modes = __webpack_require__(41);
+Object.defineProperty(exports, "__esModule", { value: true });
+const Modes = __webpack_require__(37);
 var JResultNatures;
 (function (JResultNatures) {
     JResultNatures[JResultNatures["Single"] = 0] = "Single";
@@ -3090,11 +2945,12 @@ exports.Junction = Junction;
 //# sourceMappingURL=junction.js.map
 
 /***/ }),
-/* 26 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", { value: true });
 function isSubset(seq1, seq2) {
     for (let k of seq1) {
         if (seq2.indexOf(k) === -1) {
@@ -3170,7 +3026,7 @@ exports.range = range;
 //# sourceMappingURL=math.js.map
 
 /***/ }),
-/* 27 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3178,19 +3034,21 @@ exports.range = range;
 function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
-__export(__webpack_require__(28));
-__export(__webpack_require__(10));
-__export(__webpack_require__(11));
+Object.defineProperty(exports, "__esModule", { value: true });
+__export(__webpack_require__(26));
+__export(__webpack_require__(7));
+__export(__webpack_require__(8));
 //# sourceMappingURL=all.js.map
 
 /***/ }),
-/* 28 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-const f = __webpack_require__(11);
-const op = __webpack_require__(10);
+Object.defineProperty(exports, "__esModule", { value: true });
+const f = __webpack_require__(8);
+const op = __webpack_require__(7);
 function mustTerminate(obj1, obj2, q) {
     obj1 instanceof Object;
 }
@@ -3237,28 +3095,97 @@ exports.deepInvertF = deepInvertF;
 //# sourceMappingURL=hierarchical.js.map
 
 /***/ }),
-/* 29 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-const medium_1 = __webpack_require__(21);
-const all_1 = __webpack_require__(3);
-const call_1 = __webpack_require__(6);
+Object.defineProperty(exports, "__esModule", { value: true });
+const composite_1 = __webpack_require__(14);
+function makeHandler(host, outsourced) {
+    return {
+        set: (target, prop, value) => {
+            if (prop in outsourced) {
+                let exposing = outsourced[prop];
+                if (exposing instanceof composite_1.Composite) {
+                    throw new Error("A subcell cannot be reset from the context, must use patch");
+                }
+                else {
+                    exposing.exposed = value;
+                }
+            }
+            else if (prop in target) {
+                target[prop] = value;
+            }
+            else {
+                host.add(value, prop);
+            }
+            let q = {};
+            q[prop] = value;
+            host.bed.notify(q);
+            return true;
+        },
+        get: (target, prop) => {
+            if (prop in outsourced) {
+                let exposing = outsourced[prop];
+                return exposing.exposed;
+            }
+            else {
+                return target[prop];
+            }
+        },
+        deleteProperty: (oTarget, sKey) => {
+            if (sKey in outsourced) {
+                host.remove(sKey);
+                return true;
+            }
+            else {
+                return delete this.scope[sKey];
+            }
+        },
+        ownKeys: function (oTarget) {
+            let keycoll = new Set();
+            for (let k in outsourced) {
+                keycoll.add(k);
+            }
+            for (let k in oTarget) {
+                keycoll.add(k);
+            }
+            return [...keycoll.values()];
+        },
+        has: function (oTarget, sKey) {
+            return sKey in oTarget || sKey in outsourced;
+        }
+    };
+}
+exports.makeHandler = makeHandler;
+//# sourceMappingURL=state.js.map
+
+/***/ }),
+/* 28 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const medium_1 = __webpack_require__(18);
+const all_1 = __webpack_require__(2);
+const call_1 = __webpack_require__(16);
+var DEMUXARG;
 (function (DEMUXARG) {
     DEMUXARG[DEMUXARG["ONE"] = 0] = "ONE";
     DEMUXARG[DEMUXARG["SOME"] = 1] = "SOME";
     DEMUXARG[DEMUXARG["DONT"] = 2] = "DONT";
     DEMUXARG[DEMUXARG["ALL"] = 3] = "ALL";
-})(exports.DEMUXARG || (exports.DEMUXARG = {}));
-var DEMUXARG = exports.DEMUXARG;
+})(DEMUXARG = exports.DEMUXARG || (exports.DEMUXARG = {}));
+var CALLTYPE;
 (function (CALLTYPE) {
     CALLTYPE[CALLTYPE["DIRECT"] = 0] = "DIRECT";
     CALLTYPE[CALLTYPE["BREADTH_FIRST"] = 1] = "BREADTH_FIRST";
     CALLTYPE[CALLTYPE["DEPTH_FIRST"] = 2] = "DEPTH_FIRST";
     CALLTYPE[CALLTYPE["SERIAL"] = 3] = "SERIAL";
-})(exports.CALLTYPE || (exports.CALLTYPE = {}));
-var CALLTYPE = exports.CALLTYPE;
+})(CALLTYPE = exports.CALLTYPE || (exports.CALLTYPE = {}));
+var MUXRESP;
 (function (MUXRESP) {
     MUXRESP[MUXRESP["RACE"] = 0] = "RACE";
     MUXRESP[MUXRESP["FIRST"] = 1] = "FIRST";
@@ -3266,8 +3193,7 @@ var CALLTYPE = exports.CALLTYPE;
     MUXRESP[MUXRESP["MAP"] = 3] = "MAP";
     MUXRESP[MUXRESP["ORDER"] = 4] = "ORDER";
     MUXRESP[MUXRESP["DROP"] = 5] = "DROP";
-})(exports.MUXRESP || (exports.MUXRESP = {}));
-var MUXRESP = exports.MUXRESP;
+})(MUXRESP = exports.MUXRESP || (exports.MUXRESP = {}));
 const JunctionModeKeys = {};
 JunctionModeKeys[MUXRESP.RACE] = "race";
 JunctionModeKeys[MUXRESP.FIRST] = "first";
@@ -3401,15 +3327,16 @@ exports.MuxMedium = MuxMedium;
 //# sourceMappingURL=multiplexing.js.map
 
 /***/ }),
-/* 30 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-const membrane_1 = __webpack_require__(8);
-const designator_1 = __webpack_require__(9);
-const matching_1 = __webpack_require__(40);
-const law_1 = __webpack_require__(7);
+Object.defineProperty(exports, "__esModule", { value: true });
+const membrane_1 = __webpack_require__(19);
+const designator_1 = __webpack_require__(6);
+const matching_1 = __webpack_require__(36);
+const law_1 = __webpack_require__(5);
 class RuleMesh {
     constructor(membrane) {
         this.changeOccurred = membrane_1.DemuxWatchMethodsF(this);
@@ -3608,7 +3535,7 @@ exports.RuleMesh = RuleMesh;
 //# sourceMappingURL=ruleMesh.js.map
 
 /***/ }),
-/* 31 */
+/* 30 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3616,32 +3543,43 @@ exports.RuleMesh = RuleMesh;
 function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
-const domain_1 = __webpack_require__(14);
-const Util = __webpack_require__(3);
-const IO = __webpack_require__(4);
-const TRT = __webpack_require__(5);
-__export(__webpack_require__(3));
-__export(__webpack_require__(4));
+Object.defineProperty(exports, "__esModule", { value: true });
+const domain_1 = __webpack_require__(12);
+const Util = __webpack_require__(2);
+const IO = __webpack_require__(3);
+const TRT = __webpack_require__(4);
 __export(__webpack_require__(2));
-__export(__webpack_require__(5));
+__export(__webpack_require__(3));
+__export(__webpack_require__(11));
+__export(__webpack_require__(4));
 function j(basis, patch) {
     if (typeof basis === 'string' || domain_1.isConstruct(basis)) {
         if (patch === undefined) {
             return { basis: basis };
         }
         else if (Util.isVanillaObject(patch)) {
-            let head = patch.head || {};
-            if (patch.heart)
-                head.heart = patch.heart;
-            let domain = patch.domain;
-            delete patch.head;
-            delete patch.heart;
-            delete patch.domain;
+            let head, domain, body;
+            if ('body' in patch && !('head' in patch)) {
+                head = patch;
+                domain = patch.domain;
+                body = patch.body;
+                delete patch.head;
+                delete patch.heart;
+                delete patch.domain;
+            }
+            else {
+                head = patch.head || {};
+                domain = patch.domain;
+                body = patch.body || patch;
+                delete patch.head;
+                delete patch.heart;
+                delete patch.domain;
+            }
             return {
                 domain: domain,
                 basis: basis,
                 head: head,
-                body: patch
+                body: body
             };
         }
         else if (Util.isVanillaArray(patch)) {
@@ -3676,21 +3614,21 @@ function j(basis, patch) {
             body: basis
         };
     }
-    else {
+    else if (basis !== undefined) {
         return {
             basis: 'strange',
             body: basis
         };
     }
+    else {
+        return {
+            basis: undefined
+        };
+    }
 }
 exports.j = j;
 exports.J = new domain_1.Domain();
-exports.J.sub('agent')
-    .define('context', TRT.ContextAgent)
-    .define('contact', TRT.ContactAgent)
-    .define('membrane', TRT.SubraneAgent)
-    .up()
-    .sub('media')
+exports.J.sub('media')
     .define('multiplexer', j(TRT.MediumConstruct, {
     head: {
         medium: IO.MuxMedium,
@@ -3741,13 +3679,14 @@ exports.J.sub('agent')
 //# sourceMappingURL=jungle.js.map
 
 /***/ }),
-/* 32 */
+/* 31 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", { value: true });
 const construct_1 = __webpack_require__(0);
-const op_1 = __webpack_require__(20);
+const op_1 = __webpack_require__(17);
 class OpConstruct extends construct_1.Construct {
     init(spec) {
         super.init(spec);
@@ -3757,7 +3696,7 @@ class OpConstruct extends construct_1.Construct {
         this.spec = this.nucleus;
         this.nucleus = this.spec.default;
         let op = new op_1.Op({
-            context: this.local,
+            context: this.self,
             major_op: this.spec.major_op,
             major_arg1: this.spec.major_arg1,
             major_arg2: this.spec.major_arg2,
@@ -3876,13 +3815,14 @@ exports.Spring = Spring;
 //# sourceMappingURL=contact.js.map
 
 /***/ }),
-/* 33 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", { value: true });
 const construct_1 = __webpack_require__(0);
-const law_1 = __webpack_require__(7);
+const law_1 = __webpack_require__(5);
 class LawConstruct extends construct_1.Construct {
     attach(anchor, label) {
         super.attach(anchor, label);
@@ -3904,14 +3844,15 @@ exports.LawConstruct = LawConstruct;
 //# sourceMappingURL=law.js.map
 
 /***/ }),
-/* 34 */
+/* 33 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", { value: true });
 const construct_1 = __webpack_require__(0);
-const transforms_1 = __webpack_require__(12);
-const law_1 = __webpack_require__(7);
+const transforms_1 = __webpack_require__(9);
+const law_1 = __webpack_require__(5);
 class MediumConstruct extends construct_1.Construct {
     attach(anchor, label) {
         super.attach(anchor, label);
@@ -3944,209 +3885,13 @@ exports.MediumConstruct = MediumConstruct;
 //# sourceMappingURL=media.js.map
 
 /***/ }),
-/* 35 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const all_1 = __webpack_require__(2);
-const integrator_1 = __webpack_require__(19);
-class ContactAgent extends all_1.Construct {
-    init(spec) {
-        super.init(spec);
-    }
-    applyHead(head) {
-        super.applyHead(head);
-        this.presence = head.presence || 'none';
-    }
-    patch(spec) {
-        if (this.host !== undefined) {
-            let host = this.host, alias = this.alias;
-            this.detach(this.host, this.alias);
-            this.spec = spec;
-            this.attach(host, alias);
-        }
-    }
-    extract() {
-        return this.spec;
-    }
-    attach(host, key) {
-        super.attach(host, key);
-        this.agency = {
-            config: this.spec,
-            patch: null,
-            notify: null,
-            extract: null,
-            fetch: null
-        };
-        const contact = () => (new integrator_1.Integrator({
-            target: this.agency,
-            integrator(target, on, emit) {
-                on.extract = (voidspace) => {
-                    if (target.fetch instanceof Function) {
-                        return target.fetch(voidspace);
-                    }
-                };
-                on.patch = (voidspace) => {
-                    if (target.notify instanceof Function) {
-                        return target.notify(voidspace);
-                    }
-                };
-                target.patch = emit('patch');
-                target.extract = emit('patch');
-            }
-        }));
-        if (this.presence == 'lining') {
-            host.lining.addContact(contact(), key);
-            console.log('added to lining');
-        }
-        if (this.presence == 'shell') {
-            host.shell.addContact(contact(), key);
-            console.log('added to shell');
-        }
-        host.pool.add(this.agency, key);
-    }
-    detach(host, key) {
-        super.detach(host, key);
-        host.lining.removeContact(key);
-        host.pool.remove(key);
-    }
-}
-exports.ContactAgent = ContactAgent;
-//# sourceMappingURL=contactMeta.js.map
-
-/***/ }),
-/* 36 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const all_1 = __webpack_require__(2);
-class ContextAgent extends all_1.Construct {
-    init(spec) {
-        super.init(spec);
-        this.spec = spec;
-    }
-    extract() {
-        return this.spec;
-    }
-    attach(host, key) {
-        super.attach(host, key);
-        this.nucleus = {
-            patch: (patch) => {
-                if (this.agency.notify instanceof Function) {
-                    return this.agency.notify(patch);
-                }
-            },
-            notify: null,
-            extract: (voidspace) => {
-                if (this.agency.fetch instanceof Function) {
-                    return this.agency.fetch(voidspace);
-                }
-            },
-            fetch: null
-        };
-        this.agency = {
-            config: this.spec,
-            patch: (patch) => {
-                if (this.nucleus.notify instanceof Function) {
-                    return this.nucleus.notify(patch);
-                }
-            },
-            notify: null,
-            extract: (voidspace) => {
-                if (this.nucleus.fetch instanceof Function) {
-                    return this.nucleus.fetch(voidspace);
-                }
-            },
-            fetch: null
-        };
-        host.pool.add(this.agency, key);
-    }
-    detach(host, key) {
-        super.detach(host, key);
-        host.pool.remove(key);
-    }
-}
-exports.ContextAgent = ContextAgent;
-//# sourceMappingURL=contextMeta.js.map
-
-/***/ }),
-/* 37 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const all_1 = __webpack_require__(2);
-const integrator_1 = __webpack_require__(19);
-const membrane_1 = __webpack_require__(8);
-class SubraneAgent extends all_1.Construct {
-    applyHead(head) {
-        super.applyHead(head);
-        this.presence = head.presence || 'none';
-    }
-    patch(spec) {
-        if (this.host !== undefined) {
-            let host = this.host, alias = this.alias;
-            this.detach(this.host, this.alias);
-            this.spec = spec;
-            this.attach(host, alias);
-        }
-    }
-    extract() {
-        return this.spec;
-    }
-    attach(host, key) {
-        super.attach(host, key);
-        this.agency = {
-            config: this.spec,
-            patch: null,
-            notify: null,
-            extract: null,
-            fetch: null
-        };
-        let integrator = (push) => (new integrator_1.Integrator({
-            target: this.agency,
-            integrator(target, on, emit) {
-                let op = push ? 'notify' : 'fetch';
-                on.any = (voidspace) => {
-                    if (target[op] instanceof Function) {
-                        return target[op](voidspace);
-                    }
-                };
-                target[push ? 'patch' : 'extract'] = emit();
-            }
-        }));
-        let subrane = new membrane_1.Membrane();
-        subrane.addContact(integrator(false), 'pull');
-        subrane.addContact(integrator(true), 'push');
-        if (this.presence === 'shell') {
-            host.shell.addSubrane(subrane, key);
-        }
-        else if (this.presence === 'lining') {
-            host.lining.addSubrane(subrane, key);
-        }
-        host.pool.add(this.agency, key);
-    }
-    detach(host, key) {
-        super.detach(host, key);
-        host.lining.removeContact(key);
-        host.pool.remove(key);
-    }
-}
-exports.SubraneAgent = SubraneAgent;
-//# sourceMappingURL=subraneMeta.js.map
-
-/***/ }),
-/* 38 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-const object_1 = __webpack_require__(23);
+const object_1 = __webpack_require__(21);
 class ArrayCell extends object_1.ObjectCell {
     constructor(domain) {
         super(domain);
@@ -4157,14 +3902,15 @@ exports.ArrayCell = ArrayCell;
 //# sourceMappingURL=array.js.map
 
 /***/ }),
-/* 39 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-const typesplit_1 = __webpack_require__(13);
+Object.defineProperty(exports, "__esModule", { value: true });
+const typesplit_1 = __webpack_require__(10);
 const checks_1 = __webpack_require__(1);
-const math_1 = __webpack_require__(26);
+const math_1 = __webpack_require__(24);
 function B(crown = {}, form = {}) {
     return new Blender(crown, form);
 }
@@ -4301,11 +4047,12 @@ exports.Blender = Blender;
 //# sourceMappingURL=blender.js.map
 
 /***/ }),
-/* 40 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", { value: true });
 function pairByBinding(result1, result2, hard = false) {
     let transA = transposeBindings(result1);
     let transB = transposeBindings(result2);
@@ -4376,11 +4123,12 @@ exports.transposeBindings = transposeBindings;
 //# sourceMappingURL=matching.js.map
 
 /***/ }),
-/* 41 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", { value: true });
 class BaseMode {
     constructor() {
         this.checkedTickets = [];
@@ -4532,6 +4280,44 @@ class ObjectMode extends BaseMode {
 }
 exports.ObjectMode = ObjectMode;
 //# sourceMappingURL=modes.js.map
+
+/***/ }),
+/* 38 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+function createVisor(target, visorConfig) {
+    let visor = {};
+    for (let k in visorConfig) {
+        let v = visorConfig[k];
+        if (v instanceof Function) {
+            visor[k] = v(k, target);
+        }
+        else if (v instanceof Object) {
+            visor[k] = createVisor(target[k], v);
+        }
+        else if (v) {
+            let tk = typeof v == 'string' ? v : k;
+            if (target[tk] instanceof Function) {
+                visor[k] = target[tk].bind(target);
+            }
+            else {
+                Object.defineProperty(visor, k, {
+                    get: () => {
+                        return target[tk];
+                    }
+                });
+            }
+        }
+        else {
+        }
+    }
+    return visor;
+}
+exports.createVisor = createVisor;
+//# sourceMappingURL=visor.js.map
 
 /***/ })
 /******/ ]);
