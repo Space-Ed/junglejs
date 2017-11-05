@@ -64,7 +64,7 @@ describe('Domains', function(){
 
             //if the domain was not isolated it would find the nature in the root
             expect(function(){
-                console.log(located.seek('uniso', true))
+                located.seek('uniso', true)
             }).toThrowError()
 
         })
@@ -125,6 +125,30 @@ describe('Domains', function(){
             
 
             expect(subDom.seek('fallback').entry.body(0)).toBe(0)
+        })
+
+        it('can select a deep domain by fallback', function (){
+            let root = new Jungle.Domain({})
+                .define('comp', Jungle.Composite)
+                .define('cstr', Jungle.Construct)
+
+            let field = root.sub('field')
+                .define('situation', j('comp', {
+                    deep:j('comp',{
+                        tacked:j('tack:fact')
+                    })
+                }))
+ 
+            let tack  = field.sub('tack')
+                .define('fact', j('cstr', {
+                    word:'bird'
+                }))
+
+            let scene = field.recover('situation')
+
+            expect(scene.exposed.deep.tacked.word).toBe('bird')
+            expect((<any>scene).subconstructs.deep.subconstructs.tacked.domain).toBe(tack, 
+         "when domains are chosen the target will be given their domain of definition")
         })
 
     })

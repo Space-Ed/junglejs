@@ -19,38 +19,27 @@ describe("A Cell", function () {
                 retain:true,
             },
 
+            mouth:j('inward'),
+            
+            stomach:j('cell',{
+                
+                swallow :j('resolve',{
+                    outer(food){
+                        this.earth.contents = food
+                    }
+                }),
+                
+                contents:'empty'
+            }),
+          
             oesophagus:j('media:direct', {
                 law:':mouth->stomach:swallow'
             }),
-
-            mouth:j('inward'),
-
-            stomach:j('cell',{
-
-                swallow :j('resolve',{
-                    outer(food){
-                        console.log('depositing food')
-                        console.log(this.earth.contents)
-                        this.earth.contents = food
-                        this.earth.hungry = false
-                    }
-                }),
-
-                contents:'empty',
-                hungry:true
-            })
-
+            
+            
         }))
     })
 
-    it('should not be hungry when it has been fed', function () {
-        expect(cell.shell.contacts.mouth).not.toBeUndefined();
-        let crumb = new Debug.Crumb("Beginning")
-
-        cell.shell.contacts.mouth.put("Nachos", crumb);
-        expect(cell.subconstructs.stomach.exposed.hungry).toBe(false);
-        // expect(cell.exposed.stomach.hungry).toBe(false);
-    })
 
     it('should deposit to the stomach, via oesophagus', function(){
         let crumb = new Debug.Crumb("Beginning Feed");
@@ -60,7 +49,7 @@ describe("A Cell", function () {
 
     it('should properly dispose', function(){
         cell.dispose();
-        expect(cell.shell.designate(':mouth')[":mouth"]).toBe(undefined)
+        expect(cell.shell.scan(':mouth')[":mouth"]).toBe(undefined)
     })
 
 

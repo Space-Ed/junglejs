@@ -1,22 +1,5 @@
 import {Membrane} from './membranes/membrane'
 import {BasicContact} from './contacts/base'
-import {Designator} from '../util/designator'
-
-
-export enum LINK_FILTERS {
-    PROCEED, DECEED, ELSEWHERE, NONE
-}
-
-export interface LinkRule {
-    designatorA:Designator;
-    designatorB:Designator;
-    closeA:boolean;
-    closeB:boolean;
-    forward:boolean;
-    backward:boolean;
-    matching:boolean;
-    propogation:LINK_FILTERS;
-}
 
 export interface LinkSpec<A,B> {
     tokenA:string,
@@ -47,8 +30,8 @@ export interface Medium<A extends Contact, B extends Contact>{
     typeA:Function;
     typeB:Function;
 
-    breakA(token:string, a:A);
-    breakB(token:string, b:B);
+    breakA(token:string, a?:A);
+    breakB(token:string, b?:B);
     hasToken(token:string):boolean;
     hasClaim(link:LinkSpec<A,B>):boolean;
     hasLink(link:LinkSpec<A,B>):boolean;

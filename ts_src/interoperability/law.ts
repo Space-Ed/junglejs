@@ -1,51 +1,34 @@
-import {Designator, DTotalExp, DFullExp, DTermExp} from '../util/designator'
-
+import {tokenize, DTotalExp, scannerF, matches, TokenIR, DFullExp, compileToken, DTermExp, parseDesignatorString, pairByBinding, DesignatorIR} from '../util/designation/all'
+import {Medium } from './interfaces'
+import {Layer, Section} from './membranes/membrane'
 // export interface Handle {
 //     retract()
 //     blame(reason:string, deny:(justification:string)=>never, handle:Handle):(remedy)=>never
 // }
 
-// export interface LinkIR {
-//     law:LawActual,
-//     tokenA:string,
-//     tokenB:string,
+export interface LinkIR {
+    law:Law
+    tokenA:string
+    tokenB:string
+    bindings:{[sym:string]:string}
+}
 
-//     contactA:Contact,
-//     contactB:Contact,
-// }
+export interface Link {
+    laws:Law[],
+    medium:Medium<any,any>,
+    from: ContactRecord,
+    to: ContactRecord,
+}
 
-// export interface LinkActual {
-//     laws:LawActual[],
-//     medium:Medium,
-//     A: ContactRecord,
-//     B: ContactRecord,
+export interface ContactRecord {
+    laws:Law[];
+    token:string;
+    contact:any;
+    tags:string[];
+    incoming:{[token:string]:Link}
+    outgoing:{[token:string]:Link}
+}
 
-// }
-
-// export interface ContactRecord {
-//     token:string;
-//     tags:string[];  
-//     medium:Medium,
-//     contact:any; 
-// }
-
-// export interface LawActual {
-//     ir:LawIR,
-//     medium:Medium,
-//     designatorA:Designator,
-//     designatorB:Designator,
-//     links:LinkActual[],
-// }
-
-
-// export class Law {
-
-//     constructor(public ir:LawIR, weave){
-
-//     } 
-
-
-// }
 
 export interface LawIR {
     expression:string,
@@ -142,4 +125,145 @@ export function parseLawExpression(linkexp: string, defaultMedium?:string):LawIR
     }else{
         throw new Error("Invalid law expression")
     }
+}
+
+const scan = scannerF()
+
+export class Pancedent extends Section {
+
+    partner:Pancedent
+    watchsym:symbol|string
+
+    bindings:any
+
+    constructor(public law:Law, public leftToRight:boolean){
+        super(true, law.spec[leftToRight ? 'designatorA' : 'designatorB'])
+    }
+
+    onAddContact(contact, token: TokenIR) {
+       super.onAddContact(contact,token)
+        
+        // INDUCT
+    //    if (this.leftToRight) {
+    //         this.law.medium.inductA(compileToken(token))
+    //     } else {
+    //         this.law.medium.inductB(compileToken(token))
+    //     }
+
+    }
+    
+    onRemoveContact(token: TokenIR) {
+        super.onRemoveContact(token)
+
+        if(this.leftToRight){
+            this.law.medium.breakA(compileToken(token))
+        }else{
+            this.law.medium.breakB(compileToken(token))
+        }
+    }
+
+    contactChange(token: TokenIR, contact?: any) {
+        let match = matches(this.designator, token)
+
+        
+        if (match) {        
+        
+            //collects the bindings for the partner
+            let oscan = tokenize(scannerF('subranes','contacts')(this.partner.designator, this.partner))
+
+            if (contact) {
+                this.onAddContact(contact, token)
+                let tokenstr = compileToken(token)
+                match[tokenstr] = contact
+                if(this.leftToRight){
+                    this.law.square(match, oscan)
+                }else{
+                    this.law.square(oscan, match)
+                }
+            } else {
+                this.onRemoveContact(token)
+            }
+        }
+    }
+
+
+
+    watchOn(layer:Layer){
+        this.watchsym = layer.addWatch(this)
+    }
+
+    watchOff(layer:Layer){
+        layer.removeWatch(this.watchsym)    
+    }
+
+    
+}
+
+//looking in from a waeve, constructed 
+export class Law {
+
+    left:Pancedent
+    right:Pancedent
+    medium:Medium<any,any>
+    links:Link[]
+    target:Layer
+
+    constructor(public spec:LawIR){
+        this.left = new Pancedent(this, true)
+        this.right = new Pancedent(this,false)
+
+        this.left.partner = this.right
+        this.right.partner = this.left
+    }
+
+    engage(layer:Layer, medium:Medium<any,any>){
+
+        this.medium= medium;
+        this.target = layer
+
+        this.left.watchOn(layer)
+        this.right.watchOn(layer)
+        
+    }
+
+    disengage(){
+        this.left.watchOff(this.target);
+        this.right.watchOff(this.target);
+    }
+
+    square(from, to) {
+        let pairs = pairByBinding(from, to)
+
+        for (let pair of pairs) {
+
+            let linkIR = this.produceLinkIR(pair);
+
+            let linkSpec = {
+                bindings: pair.bindings,
+                contactA: from[pair.tokenA],
+                contactB: to[pair.tokenB],
+                tokenA: pair.tokenA,
+                tokenB: pair.tokenB
+            }
+
+            
+            let liveLink = this.medium.suppose(linkSpec)
+
+            if (liveLink) {
+                //create a record of the link here
+                // this.links.push({
+                //     from: pair.tokenA,
+                //     to: pair.tokenB,
+                //     laws:this
+                // })
+            }
+        }
+    }
+
+    produceLinkIR({ tokenA, tokenB, bindings }):LinkIR{
+        return {
+            tokenA, tokenB, bindings, law:this
+        }
+    }
+
 }

@@ -1,8 +1,7 @@
 import { Construct } from '../../construction/construct'
 import * as I from '../interfaces'
-import { LinkRule } from '../../interoperability/interfaces'
 import {ensureArray}  from '../../util/transforms'
-import {parseLawExpression, LawIR} from '../../interoperability/law'
+import {parseLawExpression, LawIR, Law} from '../../interoperability/law'
 
 export class MediumConstruct extends Construct {
 
@@ -18,14 +17,14 @@ export class MediumConstruct extends Construct {
 
         let _medium = new medium(args)
         
-        let mhandle = anchor.mesh.addMedium(label, _medium)
+        let mhandle = anchor.weave.addMedium(_medium, label)
         this.handleMedium(mhandle)
         
         for(let lawexp of ensureArray(this.nucleus.law)){
             let laws:LawIR[] = parseLawExpression(lawexp, label)
 
             for(let law of laws){
-                let handle = anchor.mesh.addLaw(law)
+                let handle = anchor.weave.addLaw(new Law(law))
                 //this.handleLaw()
             }
         }

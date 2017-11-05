@@ -104,7 +104,7 @@ describe('anonymisation',function(){
 
     it('should support designation of contacts within array structure', function(){
 
-        let app = new TestApp()
+        let app:any = new TestApp()
 
         app.init(j({
             head:{

@@ -7,7 +7,7 @@ export function createHeartBridge(spec:AgentConfig): { exposed: Agent, pooled: A
     let pooled = {
         config: spec,
         patch: (patch: any) => {
-            console.log('heart notify called with ', patch)
+            
             if (exposed.notify instanceof Function) {
                 return exposed.notify(patch)
             }

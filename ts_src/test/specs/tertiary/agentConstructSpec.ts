@@ -1,7 +1,6 @@
 
 import TestApp from  '../../helpers/testApp'
 import {J, j, Cell} from '../../../jungle'
-// import {testJ} from '../../helpers/testDomain'
 
 J.define('test', TestApp)
 
@@ -13,7 +12,7 @@ outerNotifySpy = jasmine.createSpy('outer notify')
 J.define('scenari', j('test', {
     head: {
         prime() {
-            console.log('attaching heart notify')
+            
             this.heart.notify = heartNotifySpy;
         },
 

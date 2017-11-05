@@ -3,13 +3,11 @@ import * as Debug from '../../../util/debug'
 
 import {j, J} from '../../../jungle'
 
-import Jasmine = require('jasmine')
-
 describe('rule connector constructs', function(){
 
     it('should create link when part of spec', function(){
 
-        let app = new TestApp(J)
+        let app:any = new TestApp(J)
 
         app.init(j({
 
@@ -36,7 +34,7 @@ describe('rule connector constructs', function(){
         expect(app.lining.contacts.ghost.hasOutput).toBe(true,'ghost has output on lining')
         expect(app.lining.contacts.child.hasInput).toBe(true,'ghost has input on lining')
 
-        expect(app.mesh.hasLinked(':ghost', ':child')).toBe(true,'link heeded')
+        // expect(app.weave.hasLinked(':ghost', ':child')).toBe(true,'link heeded')
 
         expect(app.lining.contacts.ghost.emit).toBeDefined('emit has been assigned on ghost')
         

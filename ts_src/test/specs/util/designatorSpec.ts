@@ -1,11 +1,10 @@
-
-import * as Designate from '../../../util/designator'
-import {Designator} from '../../../util/designator'
+import * as D from '../../../util/designation/all'
+import {parseDesignatorString as parse, tokenize} from '../../../util/designation/all'
 import {deeplyEqualsThrow} from '../../../util/checks'
 import {B} from '../../../util/blender'
 
 describe('',function(){
-
+    const scan = D.scannerF('departments', 'employees')
     const structure = {
         departments:{
             production:{
@@ -62,32 +61,36 @@ describe('',function(){
         }
     }
 
+    function testScanF(structure){
+        return (desigstr, expected, debug=false)=>{
+            let scanned = scan(parse(desigstr), structure)
+            if(debug) console.log('scanned: ', scanned);
+            let tokenized = tokenize(scanned)
+            if(debug) console.log('tokenized: ', tokenized)
+            expect(tokenized).toEqual(expected)
+        }
+    }
+
+    const testScanStructure = testScanF(structure)
+
     beforeEach(function(){
 
     })
 
     it('should designate at a basic level', function(){
-
-        let designator = new Designator('departments', 'employees', ":CEO")
-
-        deeplyEqualsThrow(designator.scan(structure),{
-            ':CEO':"Big Boss"
+        testScanStructure(':CEO', {
+            ':CEO': "Big Boss"
         })
     })
 
     it('should designate at a deep level', function(){
-        let designator = new Designator('departments', 'employees', "usa.engineering:geoff")
-
-        deeplyEqualsThrow(designator.scan(structure),{
+        testScanStructure("usa.engineering:geoff",{
             'usa.engineering:geoff':'invents everything'
         })
     })
 
     it('should designate all', function(){
-
-        let designator = new Designator('departments', 'employees', "**:*")
-
-        deeplyEqualsThrow(designator.scan(structure),{
+        testScanStructure('**:*',{
             ':CEO': 'Big Boss',
             ':CFO': 'Profiteer',
             ':CTO': 'Technocrat',
@@ -104,19 +107,14 @@ describe('',function(){
     })
 
     it('should designate terminal match', function(){
-
-        let designator = new Designator('departments', 'employees', "**:AreaManager")
-
-        deeplyEqualsThrow(designator.scan(structure),{
+        testScanStructure("**:AreaManager",{
             'china:AreaManager': 'Foreign arm',
             'usa:AreaManager': 'DomesticArm'
         })
     })
 
     it('should designate end path', function(){
-        let designator = new Designator('departments', 'employees', "**.sales:*")
-
-        deeplyEqualsThrow(designator.scan(structure),{
+        testScanStructure("**.sales:*",{
             'china.sales:jono': 'flipper J',
             'usa.sales:rex':'R dog'
         })
@@ -153,90 +151,54 @@ describe('',function(){
             }
         }
 
-        let terb = {turbine:undefined}
-        terb.turbine = terb;
-        toy.groups.a.terms.A  = terb
+        let scan = D.scannerF('groups', 'terms')
 
-        let desig = new Designator('groups', 'terms','**.a:*')
+        //injecting circularity
+        // let terb = {turbine:undefined}
+        // terb.turbine = terb;
+        // toy.groups.a.terms.A  = terb
+
+        let desig = tokenize(scan(parse('**.a:*'), toy))
+
+        expect(desig).toEqual({
+            'a.a:A':'a.a:A',
+            'b.a:A':'b.a:A',
+            'a:A':undefined
+        })
 
     })
 
     it('should designate at many depths', function(){
 
-        let designator = new Designator('departments', 'employees', "**.production:*")
-
-        deeplyEqualsThrow(designator.scan(structure),{
+        testScanStructure("**.production:*", {
             'production:dao': 'World Computer',
             'production.production:dao': 'Meta Computer',
             'china.production:ed': 'soldering',
             'china.production:fred': 'nuts and bolts'
         })
     })
-
-    it('shoule converr designator to token regex', function(){
-        let basic = new Designator('g','t','a:p').regex;
-        expect('a:p'.match(basic)).not.toBeNull();
-
-        let onewild = new Designator('g','t','*:p').regex;
-        expect('a:p'.match(onewild)).not.toBeNull();
-
-        let leadingGlob = new Designator('g','t','**.a:*').regex;
-        expect('globby.glob.blob.a:farts'.match(leadingGlob)).not.toBeNull();
-
-        let multiGlob = new Designator('g','t','**.a.**:p').regex;
-        expect('globby.a.globby:p'.match(multiGlob)).not.toBeNull();
-
-        let trickyGlob = new Designator('g','t','**.a.**:p').regex;
-       //console.log('trickyGlob:', trickyGlob);
-        expect('globby.a.a.a:p'.match(trickyGlob)).not.toBeNull();
-
-    })
-
-    it('can screen other designators ',function(){
-
-        let all = new Designator('departments', 'employees', "**:*")
-
-        all.screen('china.**:*')
-
-       //console.log(all.scan(structure))
-
-        deeplyEqualsThrow(all.scan(structure),{
-            ':CEO': 'Big Boss',
-            ':CFO': 'Profiteer',
-            ':CTO': 'Technocrat',
-            'production:dao': 'World Computer',
-            'production.production:dao':'Meta Computer',
-            'usa:AreaManager': 'DomesticArm',
-            'usa.sales:rex': 'R dog',
-            'usa.engineering:geoff': 'invents everything'
-        })
-    })
-
-    it('defaults a single word to be a terminal designator', function(){
-        let one = new Designator('departments', 'employees', "CEO")
-
-        expect(one.scan(structure)[':CEO']).toBe('Big Boss')
-
-    })
-
+   
 })
 
-describe('symbolic matching', function(){
+describe('matching', function(){
 
-    it('should designate a range', function(){
+    it('should match tokens that would be selected by the designator', function(){
 
-        let structure = {
-            terminals:{
-                0:'a'
-            },
-            groups:[
-                {
-                    terminals:"that"
-                }
-            ]
+        let desigPlusMinus = [
+            ['*.b:*', ['a.b:c', 'all_the_thing.b:blab$'], ['a.d:c', 'd.d:c', 'b:c']],
+            ['**:C', ['a.b:C', 'b:C', ':C'], ['a.d:c']]
+        ]
+
+        for (let [d, plus, minus] of desigPlusMinus){
+            let desig = parse(<string>d)
+            for (let token of plus){
+                expect(D.matches(desig, D.parseTokenSimple(token))).toBeTruthy(`designator ${d} should match token ${token}`)
+            }
+            
+            for (let token of minus) {
+                expect(D.matches(desig, D.parseTokenSimple(token))).toBeFalsy(`designator ${d} should NOT match token ${token}`)
+            }
         }
-
+        
     })
-
-
 })

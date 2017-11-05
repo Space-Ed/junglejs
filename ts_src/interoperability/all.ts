@@ -1,6 +1,6 @@
 
 export * from './membranes/membrane'
-export * from './mesh/ruleMesh'
+export * from './weave'
 
 export * from './media/medium'
 export * from "./media/multiplexing"

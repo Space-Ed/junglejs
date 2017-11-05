@@ -1,88 +1,126 @@
-import {mask} from "../ogebra/operations";
+import {DesignatorIR, TokenIR, parseTokenSimple, compileToken, DTerm} from './parsing'
 
-/**
- * return the tokens that have an agreeable symbolic matching
- */
-export function pairByBinding(result1, result2, hard=false):{tokenA:string, tokenB:string, bindings:{[sym:string]:string}}[]{
 
-    let transA = transposeBindings(result1)
-    let transB = transposeBindings(result2)
-
-    let collection = []
-
-    for (let tokenA in transA){
-        for (let tokenB in transB){
-            let breakpair = false
-
-            let bindingsA = transA[tokenA]
-            let bindingsB = transB[tokenB]
-            let merged = {}
-
-            for (let symInA in bindingsA){
-                let termInA = bindingsA[symInA]
-                if(symInA in bindingsB && termInA !== bindingsB[symInA] || (!(symInA in bindingsB) && hard) ){
-                    breakpair = true
-                }else{
-                    merged[symInA] = termInA
-                }
-
-            }
-
-            for (let symInB in bindingsB){
-                let termInB = bindingsB[symInB]
-                if(!(symInB in bindingsA)){
-                    if(hard){
-                        breakpair = true;
-                    }else{
-                        merged[symInB] = termInB;
-                    }
-                }
-            }
-
-            if(breakpair) continue;
-
-            collection.push({
-                tokenA:tokenA,
-                tokenB:tokenB,
-                bindings:merged
-            })
-        }
+export function matchDesignationTerm(target:string, term:DTerm): {sym?:symbol, val?:string} {
+    if (typeof (term) == 'string') {
+        return {val:target === term?target:undefined}
+    } if (term instanceof Function) {
+        return term(target)
+    } else if (term instanceof RegExp) {
+        let m = target.match(term)
+        return {val:m?m[0]:undefined}
+    } else {
+        throw new Error("Jungle Internal Error: Invalid DTerm")
     }
-
-    return collection
 }
 
-/*
-    walk the symbol tree creating binding sets for each token,
-*/
-export function transposeBindings(bindings){
+function mergeBindings(bindings1, bindings2) {
 
-    function recur(bindingTree, collected, current){
-        for(let token in bindingTree){
-            collected[token] = current
-        }
+    if (!bindings1) return bindings2;
+    if (!bindings2) return bindings1;
 
-        for (let sym of Object.getOwnPropertySymbols(bindingTree)){
-            let terms = bindingTree[sym]
-            for(let term in terms){
-                let upBind = {};
-                if(Symbol.keyFor(sym) in current && current[Symbol.keyFor(sym)] !== term){
-                    //we cannot do this bind as it contradicts a prior one,
-                    continue
-                }
+    let merged = {}
 
-                for (let bsym in current){
-                    upBind[bsym] = current[bsym]
-                }
-
-                upBind[Symbol.keyFor(sym)] = term;
-
-                let tokens = terms[term]
-                recur(tokens, collected, upBind)
-            }
-        }
-        return collected
+    for (let sym of Object.getOwnPropertySymbols(bindings1 || {})) {
+        let bound = bindings1[sym]
+        merged[sym] = bound;
     }
 
-    return recur(bindings, {}, {})
+    for (let sym of Object.getOwnPropertySymbols(bindings2 || {})) {
+        let bound = bindings2[sym]
+        let resolved
+        //if COLLIDE
+        if ((sym in merged)) {
+            let existing = merged[sym];
+            if (typeof bound === 'string' && typeof existing === 'string') {
+                //both terminal
+                if (merged[sym] === bindings2[sym]) {
+                    resolved = bound;
+                } else {
+                    //UNMATCHING NOT ALLOWED
+                    delete merged[sym]
+                }
+            } else if (typeof bound === 'object' && typeof existing === 'object') {
+                resolved = mergeBindings(merged[sym], bound)
+            } else {
+                throw new Error(`Invalid Designation: binding ${bound} is of different type to binding ${existing}`)
+            }
+        } else {
+            resolved = bindings2[sym]
+        }
+        merged[sym] = resolved
+    }
+
+    for(let token in bindings1){
+        merged[token] = bindings1[token];
+    }
+
+    for (let token in bindings2) {
+        merged[token] = bindings2[token];
+    }
+
+    return merged
+}
+
+function _matches(designatorIR:DesignatorIR, tokenIR:TokenIR,  ti, di) {
+    let [tgroup, tend] = tokenIR
+
+    /**
+     * double scan recursively, stepping forward as terms are paired and maintaining a tree of bindings
+     * E | sym -> matched -> E
+     *   | complete_token
+     */
+
+    let tAtEnd = ti === tgroup.length, dAtEnd = di === designatorIR.groups.length;
+
+    let tokenDTerm = tAtEnd ? tend : tgroup[ti];
+    let dTerm = dAtEnd ? designatorIR.end : designatorIR.groups[di];
+
+    if (tAtEnd !== dAtEnd){
+        //the odd tail globbing case means we skip past the glob to check the final token
+        if(di === designatorIR.groups.length-1 && dTerm === '**'){
+            return _matches(designatorIR, tokenIR, ti, di+1)
+        }else{
+            return false;
+        }
+    } 
+
+    let {val:tmatch, sym} = matchDesignationTerm(tokenDTerm, dTerm)
+
+    if (tmatch || dTerm == '**') {
+        //true, regex match or [sym, bind]
+        let boundval;
+        if (dAtEnd) {
+            //terminal bindings for symbolization
+            boundval = {}
+            boundval[compileToken(tokenIR)] = null
+        } else {
+            //handle globbing
+            if (dTerm === '**') {
+                //recur with both di && di+1 if either is a match
+                let patient = _matches(designatorIR, tokenIR, ti + 1, di)
+                let eager = _matches(designatorIR, tokenIR, ti + 1, di + 1)
+                boundval = mergeBindings(patient, eager)
+            } else {
+                boundval = _matches(designatorIR, tokenIR, ti + 1, di + 1)
+            }
+        }
+
+        if (sym) {
+            let binding = {}, sbind = {};
+            sbind[tmatch] = boundval;
+            binding[sym] = sbind;
+            return binding
+        } else {
+            return boundval
+        }
+    } else {
+
+        return false
+    }
+}
+
+export function matches(designator:DesignatorIR, token:TokenIR):any{
+    let m = _matches(designator, token, 0, 0);
+    return m
 }

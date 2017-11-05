@@ -1,8 +1,8 @@
 
 import {deepMeldF, deepInvertF, safeMeld, negate, reduce, terminate} from '../util/ogebra/all'
-import {Designator} from "../util/designator";
 import {Construct} from './construct'
 import {isVanillaObject, isVanillaArray} from '../util/checks'
+
 
 export interface SeekResult {
     domain: Domain,
@@ -195,7 +195,7 @@ export class Domain {
     }
     
     addDescription(name, desc:Description){
-        // console.log('add description with name', name)
+        // 
 
         if(!(name in this.registry)){
             this.registry[name] = desc;
@@ -221,7 +221,7 @@ export class Domain {
 
         _desc.origins = [];
 
-        // console.log('initial description', _desc)
+        // 
 
         //reduce the description to a final one
         let final = this.collapse(_desc);
@@ -230,7 +230,7 @@ export class Domain {
         let nature = <any>final.basis
         let recovered = new nature(final.domain);
 
-        // console.log('final description', final)
+        // 
 
         recovered.init(final)
         return recovered
@@ -264,7 +264,7 @@ export class Domain {
 
             let melded = descmeld(entry, desc)
             melded.origins = [desc.basis, ...desc.origins] //<--base level--   --top level
-            melded.domain = desc.domain || domain
+            melded.domain = domain
 
             if(this.rebasing){
                 //keep trying to find next basis from initial domain
@@ -343,6 +343,11 @@ export class Domain {
         let parsed = parseBasisString(basis)
         let result = this._seek(parsed)
 
+        //When a domain is found and did not have any digging
+        if(parsed.location.length === 0 && result.domain !== undefined){
+            result.domain = this
+        }
+
         if (fussy && result.domain == undefined) {
             throw new Error(`Unable to find domain designated for basis: ${basis}`)
         } else if (fussy && result.entry == undefined) {
@@ -363,7 +368,7 @@ export class Domain {
             }
         }
 
-        return result
+         return result
     }
 
     //recurse in when basis has terms remaining 

@@ -5,13 +5,14 @@ import{ShellPolicy, FreePolicy, Contact} from '../../interoperability/interfaces
 import * as I from '../interfaces'
 import {meld} from "../../util/ogebra/operations";
 
-function forwardPointPrepare(section:IO.Section, configval:any, point:string):IO.Section{
+function forwardPointPrepare(section:IO.Layer, configval:any, point:string):{positive: IO.Layer, negative: IO.Layer}{
     if(typeof configval === 'string'){
-        return section.createSection(configval)
+        
+        return {positive: section.createSection(configval, 'WTF'), negative: section.createSection(configval, '', false)}
     }else if(configval === true){
-        return section
+        return { positive: section, negative:undefined}
     }else if( configval === false){
-        return undefined
+        return { positive: undefined, negative: section}
     }else{
         throw new Error(`Invalid config value for head setting ${point}, must be boolean or designator string` )
     }
@@ -20,12 +21,12 @@ function forwardPointPrepare(section:IO.Section, configval:any, point:string):IO
 /*
 
 */
-export class Cell extends CS.Composite implements I.CellAnchor{
+export class Cell extends CS.Composite {
 
     host:Cell;
     shell:IO.Membrane;
     lining:IO.Membrane;
-    mesh:IO.RuleMesh;
+    weave:IO.Weave
 
     released:IO.Section;
     witheld:IO.Section;
@@ -41,7 +42,9 @@ export class Cell extends CS.Composite implements I.CellAnchor{
         this.lining = this.shell.invert();
 
         //the internal interlinking mechanism
-        this.mesh = new IO.RuleMesh(this.lining)
+        this.weave = new IO.Weave({
+            target:this.lining
+        })
 
     }
 
@@ -51,9 +54,6 @@ export class Cell extends CS.Composite implements I.CellAnchor{
     applyHead(head:any={}){
         //creates state, pool and tractors from head
         super.applyHead(head)
-
-
-
       
     }
 
@@ -70,51 +70,33 @@ export class Cell extends CS.Composite implements I.CellAnchor{
 
     attach(anchor:Cell, alias){
         super.attach(anchor, alias)
-
-        console.log(this.head)
-
+        let retainer = new IO.Section(true, "**:*")
         
+        let { positive: witheld, negative: unwitheld } = forwardPointPrepare(this.shell, this.head.withold === undefined ? false : true, 'witheld')
         
-        //release defaults to true, but withold trumps release
-        let release = this.head.withold === true ? false : (this.head.release === undefined ? true :this.head.release)
-        
-        //withold & retain default to false
-        let withold = this.head.withold === undefined ? (anchor.head.retain === true?true:false) : this.head.withold;
-        let retain = anchor.head.retain === undefined ? false : anchor.head.retain;
-        
-        //witholding trumps false retain 
-        if(!retain && withold === true){
-            retain = true
-        }
-
-        //default to forward as long as we do not retain all
-        let forward = anchor.head.forward === undefined ? true : anchor.head.forward;
-
-        //retain trumps forward
-        if(retain === true && forward === true){
-            forward = false
+        if(witheld !== undefined){
+            witheld.addWatch(retainer)
         }
         
-        //withold has precedence of section.
-        let witheld = forwardPointPrepare(this.shell, withold, 'withold')
-        let released = forwardPointPrepare(this.shell, release, 'release')
+        let { positive: released, negative: unreleased } = forwardPointPrepare(unwitheld, this.head.release === undefined ? true : false, 'released')
+        if(released !== undefined){
+            let { positive: retained, negative: unretained } = forwardPointPrepare(released, anchor.head.retain === undefined ? false : true, 'retained')
+            if(retained !== undefined){
+                
+                retained.addWatch(retainer)
+            }
 
-        if(witheld){
-            let retained = forwardPointPrepare(witheld, retain, 'anchor retain')
-            if (retained) {
-                anchor.lining.addSubrane(retained, alias)
+            if(unretained !== undefined){
+                let { positive: forwarded, negative: unforwarded } = forwardPointPrepare(unretained, anchor.head.forward === undefined ? true : false, 'forwarded')
+                if(forwarded !== undefined){
+                    anchor.shell.addSubrane(forwarded, alias)
+                }
             }
         }
-        
-        if (released) {
-            let forwarded = forwardPointPrepare(released, forward, 'anchor forward')    
-            if (forwarded){
-                //so long as we have released and forwarded and the shell is not retained
-                anchor.shell.addSubrane(forwarded, alias)
-            }
-        }
+ 
+        anchor.lining.addSubrane(retainer, alias)
     }
-
+    
     detach(anchor:Cell, alias){
         super.detach(anchor, alias)
 
@@ -123,7 +105,7 @@ export class Cell extends CS.Composite implements I.CellAnchor{
     }
 
     scan(designator:string){
-        return this.shell.designate(designator)
+        return this.shell.scan(designator)
     }
 
     seek(designator:string){

@@ -1,8 +1,7 @@
 
 import {Construct} from '../../construction/construct'
 import * as I from '../interfaces'
-import {LinkRule} from '../../interoperability/interfaces'
-import {parseLawExpression} from '../../interoperability/law'
+import {parseLawExpression, Law} from '../../interoperability/law'
 
 
 export class LawConstruct extends Construct {
@@ -21,13 +20,16 @@ export class LawConstruct extends Construct {
         for (let i = 0; i<lawIRS.length; i++){
             let law = lawIRS[i]
             law.key = label+i
-            this.handles.push(anchor.mesh.addLaw(law))
+
+            let actual = new Law(law);
+            anchor.weave.addLaw(actual)
+            this.handles.push(actual)
         }
     }
 
     detach(anchor:I.CellAnchor, label:string){
         for(let handle of this.handles){
-            handle.retract()
+            anchor.weave.removeLaw(handle)
         }
     }
 

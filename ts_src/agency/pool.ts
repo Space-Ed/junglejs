@@ -42,7 +42,7 @@ export class AgentPool {
 
             for (let k in this.pool) {
                 if (k !== key) {
-                    console.log('notifyOUt: ', k, data)
+                    
                     let result = this.pool[k].patch(data);
                     if(result !== undefined){
                         if(cresult == undefined){

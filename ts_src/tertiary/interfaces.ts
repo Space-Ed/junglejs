@@ -3,7 +3,7 @@ import {Construct} from '../construction/construct'
 import {Cell} from './cells/cell'
 import {Contact} from '../interoperability/interfaces'
 import {Membrane} from '../interoperability/membranes/membrane'
-import {RuleMesh} from '../interoperability/mesh/ruleMesh'
+import {Weave} from '../interoperability/weave'
 
 export interface AccessPolicy {
 
@@ -11,7 +11,7 @@ export interface AccessPolicy {
 
 export interface CellAnchor {
     nucleus:any,
-    mesh:RuleMesh,
+    weave:Weave,
     lining:Membrane
 }
 

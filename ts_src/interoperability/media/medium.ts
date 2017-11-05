@@ -30,7 +30,7 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
     suppose(supposedLink: I.LinkSpec<A,B>):boolean{
 
         if(this.check(supposedLink)){
-
+            
             let {tokenA, tokenB, contactA, contactB} = supposedLink;
 
             //introduce contacts to the medium
@@ -82,7 +82,7 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
         return this.exclusive && (link.tokenA in this.matrix.to || link.tokenB in this.matrix.from)
     }
 
-    breakA(token:string, a:A){
+    breakA(token:string, a?:A){
         let connections = this.matrix.to[token];
 
         for(let other in connections){
@@ -92,7 +92,7 @@ export abstract class BaseMedium <A extends I.Contact,B extends I.Contact> imple
 
     }
 
-    breakB(token:string, b:B){
+    breakB(token:string, b?:B){
         let connections = this.matrix.from[token];
 
         for(let other in connections){

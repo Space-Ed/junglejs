@@ -85,7 +85,7 @@ export abstract class Construct{
         //setup the body
         this.applyExposed()
 
-        //setup the 
+        //setup the heart
         this.applyHeart(head.heart||{})
 
         //setup the context
@@ -151,7 +151,7 @@ export abstract class Construct{
 
             heart: {
                 get: () => {
-                    console.log("heart gotten", this.heart)
+                    
                     return this.heart
                 }
             },
@@ -173,7 +173,7 @@ export abstract class Construct{
         this.host = host;
         this.id = id;
         
-        console.log('attach for ', id)
+        
 
         //access to host methods is through this.world
         let visor = host.grantVisor(id, this)
@@ -195,7 +195,7 @@ export abstract class Construct{
         this.attachHostAgent(host, id)
 
         if (this.head.attach) { 
-            console.log('Calling attach for ', id)
+            
             this.head.attach.call(this.self)
         }
     }

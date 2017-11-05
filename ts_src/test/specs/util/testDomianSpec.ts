@@ -1,8 +1,8 @@
 import {j, Domain, J} from '../../../jungle'
-import {run, DetectorContact, EmitterContact} from '../../helpers/testDomain'
+import { DetectorContact, EmitterContact} from '../../jungle-test/domain'
+import {run } from '../../jungle-test/run'
 
-
-describe('testing', function(){
+fdescribe('testing', function(){
     let subject:Domain
 
     beforeAll(function(){
@@ -33,6 +33,8 @@ describe('testing', function(){
     describe('emitter', function(){
 
         it('should throw back an error when it is not connected to anything', function (done){
+            pending('behaviour of unconnected contacts may be variable')
+
             run({
                 domain:J,
                 situation:j('cell', {

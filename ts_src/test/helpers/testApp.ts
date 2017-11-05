@@ -36,7 +36,7 @@ export default class TestApp extends Cell{
     }
 
     call(contact:string, data:any){
-        let input = this.shell.designate(contact)[contact];
+        let input = this.shell.scan(contact)[contact];
 
         let crumb = new Crumb("Call from TestApp")
             .with(data)
@@ -51,11 +51,11 @@ export default class TestApp extends Cell{
      */
     callResponseTest(spec:CallResponseTestSpec):Junction{
 
-        let input = this.shell.designate(spec.inputContact)[spec.inputContact]
+        let input = this.shell.scan(spec.inputContact)[spec.inputContact]
 
         expect(input).toBeDefined("Unable to find input contact")
 
-        let output = this.shell.designate(spec.outputContact)[spec.outputContact]
+        let output = this.shell.scan(spec.outputContact)[spec.outputContact]
 
         expect(output).toBeDefined("Unable to find output contact")
 
@@ -104,7 +104,7 @@ export default class TestApp extends Cell{
 
     callReturnTest(spec:CallReturnTestSpec):Junction{
         console.log(`------------Call Return Test - ${spec.label||"unlabelled"}----------------`)
-        let input = this.shell.designate(spec.inputContact)[spec.inputContact]
+        let input = this.shell.scan(spec.inputContact)[spec.inputContact]
         expect(input).toBeDefined("Unable to find input contact")
 
 

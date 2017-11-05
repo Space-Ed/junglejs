@@ -93,6 +93,7 @@ export class StdOp extends Call<StdOp> {
 
             let mycrumb: Debug.Crumb = (crumb || new Debug.Crumb("Begin tracking"))
             .drop("Op Contact Put")
+            .at(this.spec.label)
             .with(inp)
 
             //pass the crumb to the propogation chain (around the outside)
@@ -132,6 +133,7 @@ export class StdOp extends Call<StdOp> {
 
             let mycrumb: Debug.Crumb = (crumb || new Debug.Crumb("Begin tracking"))
                 .drop("Op Contact Hook")
+                .at(this.spec.label)
                 .with(inp)
 
             if(target.emit === undefined){

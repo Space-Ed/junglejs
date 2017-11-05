@@ -67,7 +67,7 @@ export class Composite extends Construct{
 
             heart: {
                 get: () => {
-                    console.log("heart gotten", this.heart)
+                    
                     return this.heart
                 }
             },
@@ -98,7 +98,7 @@ export class Composite extends Construct{
     */
     _patch(patch:any):any{
         //incrementally apply the patch, ignoring keywords.
-        //console.log("Composite patch: ", patch)
+        //
 
         if(patch instanceof Array){
             for(let i = 0; i<patch.length; i++){

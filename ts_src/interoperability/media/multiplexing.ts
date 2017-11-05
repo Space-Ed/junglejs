@@ -223,6 +223,7 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
         let superok =  super.check(link)
         let out = link.contactA.hasOutput
         let inp = link.contactB.hasInput
+        
         return superok && out && inp
     }
 

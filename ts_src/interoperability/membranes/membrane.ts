@@ -1,150 +1,191 @@
 
 import * as I from '../interfaces'
-import {Designator} from '../../util/designator'
+import {parseTokenSimple, DesignatorIR, TokenIR, matches, compileToken, parseDesignatorString, scannerF, tokenize} from '../../util/designation/all'
 import {BasicContact} from '../contacts/base'
+import * as O from '../../util/ogebra/all'
 
-export enum MembraneEvents {
-    AddContact, AddMembrane, RemoveContact, RemoveMembrane
-}
 
 export interface Watchable<Watcher> {
     addWatch(watcher:Watcher, alias?:string);
 }
 
 export interface SectionWatcher {
-    designator?:Designator;
-    changeOccurred(event:MembraneEvents, subject:BasicContact<any>|Section, token:string):void
+    contactChange (token: TokenIR, thing?: BasicContact<any>):void
 }
 
-export function DemuxWatchMethodsF(target:I.MembraneWatcher){
-    return  (event:MembraneEvents, data, token)=>{
-        switch(event){
-            case(MembraneEvents.AddContact):target.onAddContact(<I.Contact>data, token);break;
-            case(MembraneEvents.RemoveContact):target.onRemoveContact(<I.Contact>data, token);break;
-            case(MembraneEvents.AddMembrane):target.onAddMembrane(<Membrane>data, token);break;
-            case(MembraneEvents.RemoveMembrane):target.onRemoveMembrane(<Membrane>data, token);break;
-        }
-    }
 
-}
+export class Layer implements Watchable<SectionWatcher>, SectionWatcher{
 
-export class Section implements Watchable<SectionWatcher>, SectionWatcher{
+    watches: SectionWatcher[]
 
-    designator:Designator;
-    watches:SectionWatcher[]
-    sections:Section[]
-
-    source:Membrane;
-
-    constructor(){
-        this.sections = [];
+    constructor() {
         this.watches = [];
     }
 
-    createSection(desexp:string, alias?:string|number):Section{
-        let section = new Section();
-
-        if(this instanceof Membrane){
-            section.source = this;
-        }else{
-            section.source = this.source;
-        }
-
-        Object.defineProperty(section, 'subranes',{
-            get(){
-                return this.source.subranes
-            }
-        })
-
-        Object.defineProperty(section, 'contacts',{
-            get(){
-                return this.source.contacts
-            }
-        })
-
-        section.designator = new Designator('subranes', 'contacts', desexp);
-
-        if(alias === undefined){
-            this.sections[Symbol("anon")] = section
-        }else{
-            this.sections[alias]= section
-        }
+    createSection(desexp: string, alias?: string, positive=true): Section {
+        let section = new Section(positive, desexp);
+        this.addWatch(section)
+        // section.addSource(this, alias)
 
         return section
     }
 
-    designate(dexp:string, flat=false){
-        let desig = new Designator('subranes','contacts', dexp);
+    addWatch(watcher:SectionWatcher, alias?:string|number):symbol|string{
 
-        for(let ik of (<any[]>Object.getOwnPropertySymbols(this.sections)).concat(Object.keys(this.sections))){
-            desig.screen(this.sections[ik].designator.expression)
-        }
-
-        return desig.scan(this, flat)
-    }
-
-
-    addWatch(watcher:SectionWatcher, alias?:string|number){
+        let sym
         if(alias === undefined){
-            this.watches[Symbol("anon")] = watcher
+            sym = Symbol("anon")
+            this.watches[sym] = watcher
         }else{
+            sym = alias
             this.watches[alias]= watcher
         }
-    }
 
-    removeWatch(key){
+        let all = this.scan('**:*', true)
+        for (let token in all){
+            let reparse = parseTokenSimple(token);
+            let qpath:TokenIR = alias === undefined ? reparse : [[alias+"", ...reparse[0]], reparse[1]]
+            
+            watcher.contactChange(qpath, all[token])
+        }
+
+        return sym
+    }
+    
+    removeWatch(key:symbol|string){
+        let watcher = this.watches[key]
+
+        let all = this.scan('**:*', true)
+        for (let token in all) {
+
+            let reparse = parseTokenSimple(token);
+            let qpath:TokenIR = typeof key !== 'string' ? reparse : [[key+'', ...reparse[0]], reparse[1]]
+            watcher.contactChange(qpath)
+        }
+
         delete this.watches[key]
     }
-
     removeAllWatches(){
         this.watches = [];
     }
-
-    protected nextToken(token, key){
-
-        if(!(typeof key === 'symbol')){
-            if(token === undefined){ //membrane inception
-                return key
-            }else if (token.match(/^\:\w+$/)){//contact inception
-                return `${key}${token}`
-            } else { //membrane continutation
-                return `${key}.${token}`
-            }
-        }else{
-            //anonymous watch
-            return token  || ""
+    
+    nextToken(token:TokenIR, key?:string):TokenIR{
+        if(typeof key === 'string'){
+            return [[key, ...token[0]], token[1]]
+        }else {
+            return token
         }
-
     }
 
-    changeOccurred(event:MembraneEvents, subject:BasicContact<any>|Section, token?:string){
+    contactChange(path: TokenIR, thing?: BasicContact<any>){
 
-        for (let skey of (<any[]>Object.getOwnPropertySymbols(this.sections)).concat(Object.keys(this.sections))){
-            let section = this.sections[skey];
-            if(section.designator === undefined || section.designator.matches(token)){
-
-               //console.log(`section.designator: ${section.designator.regex.source}  matches (token):${token}`)
-                section.changeOccurred(event, subject, this.nextToken(token, skey))
-                return //escaped
-            }
-        }
-
-        //when not
+        //notify all watchers of the change
         for(let wKey of (<any[]>Object.getOwnPropertySymbols(this.watches)).concat(Object.keys(this.watches))){
             let watch = this.watches[wKey];
-
-            if(watch.designator === undefined || watch.designator.matches(token)){
-                watch.changeOccurred(event, subject, this.nextToken(token, wKey))
-            }
+            watch.contactChange(this.nextToken(path, wKey), thing)
         }
     }
+
+    scan(exp, flat):any {
+
+    }
+}
+
+//a section is derived from a layer and represents a designation virtual
+export class Section extends Layer {
+
+    designator: DesignatorIR;
+    sources:Layer[];
+
+    contacts: { [label: string]: BasicContact<any> };
+    subranes: { [label: string]: Layer };
+
+    constructor(private positive: boolean, private expression: string){
+        super()
+
+        //the designator is used to select which of the source tree
+        this.designator = parseDesignatorString(expression)
+        this.contacts = {}
+        this.subranes = {}
+        
+    }
+
+    onAddContact(contact, token:TokenIR) {
+
+        //ADD THIS CONTACT TO THE VIRTUAL COLLECTION
+        let [groups, end] = token
+        let loc:any = this
+        
+        for (let g of groups){
+            if(!(g in loc.subranes)){
+                
+                loc.subranes[g] = {subranes:{}, contacts:{}}
+            }
+            
+            loc = loc.subranes[g]
+        }
+
+        loc.contacts[end] = contact
+    }
+
+    onRemoveContact( token:TokenIR){
+        let [groups, end] = token
+
+        let loc:any = this
+        for (let g of groups) {
+            loc = loc.subranes[g]
+        }
+
+        delete loc.contacts[end]
+   
+    }
+
+    scan(dexp: string, flat = true) {
+        //form a designator and scan the virtualized section representaion
+        let desig = scannerF('subranes', 'contacts');
+        let scan = desig(parseDesignatorString(dexp), this)
+
+        if(flat){
+            return tokenize(scan)
+        }else{
+            return scan
+        }
+    }
+
+    contactChange(token: TokenIR, contact?:BasicContact<any>) {
+
+        let m = matches(this.designator, token)
+
+        
+        
+        if(m){
+            m = compileToken(token) in m;
+        }
+
+        if(!m === !this.positive){
+
+            
+            //update virtualization
+            if(contact){
+                this.onAddContact(contact, token)
+            }else{
+                this.onRemoveContact(token)
+            }
+
+            //notify all downstream of the change
+            super.contactChange(token, contact)                
+        }
+
+
+    }
+
 
 }
 
-export class Membrane extends Section{
+export class Membrane extends Layer{
 
-    contacts:any;
-    subranes:any;
+    contacts:{[label:string]:BasicContact<any>};
+    subranes:{[label:string]:Layer};
 
     inverted:Membrane;
     notify:boolean;
@@ -176,37 +217,31 @@ export class Membrane extends Section{
         return this.inverted
     }
 
-    addSubrane(membrane:Section, label:string){
-        this.subranes[label] = membrane;
-
-        membrane.addWatch(this, label); //watch for changes in the subrane
-        this.notifyMembraneAdd(membrane, label);
-
-        //after the membrane all contacts added must be registered downstream
-        let allNew = membrane.designate("**:*", false);
-        for(let token in allNew){
-            //emulated from upstream
-            this.changeOccurred(MembraneEvents.AddContact, allNew[token], this.nextToken(token,label))
+    scan(desexp: string, flat = true) {
+        let desig = scannerF('subranes', 'contacts');
+        let scan = desig(parseDesignatorString(desexp), this)
+        if (flat) {
+            return tokenize(scan)
+        } else {
+            return scan
         }
     }
 
-    removeSubrane(label):Membrane{
-        let removing = this.subranes[label];
+    addSubrane(layer:Layer, label:string){
+        this.subranes[label] = layer;
 
+        layer.addWatch(this, label); //watch for changes in the subrane
+    }
+
+    removeSubrane(label):Layer  {
+        let removing = this.subranes[label];
+        
         if(removing === undefined){
             return
         }
-
+        
+        removing.removeWatch(label)
         delete this.subranes[label];
-
-        //before the membrane all contacts being removed must be registered downstream
-        let allNew = removing.designate("**:*", false);
-        for(let token in allNew){
-            //emulated from upstream
-            this.changeOccurred(MembraneEvents.RemoveContact, allNew[token], this.nextToken(token,label))
-        }
-
-        this.notifyMembraneRemove(removing, label)
 
         return removing
     }
@@ -256,25 +291,14 @@ export class Membrane extends Section{
 
     notifyContactAdd(contact:BasicContact<any>, label){
         if(this.notify){
-            this.changeOccurred(MembraneEvents.AddContact, contact, ":"+label)
+            this.contactChange([[],label], contact)
         }
     }
 
     notifyContactRemove(contact:BasicContact<any>, label){
-        if(this.notify){
-            this.changeOccurred(MembraneEvents.RemoveContact, contact, ":"+label)
+        if (this.notify) {
+            this.contactChange([[], label])
         }
     }
 
-    notifyMembraneAdd(membrane, token?){
-        if(this.notify){
-            this.changeOccurred(MembraneEvents.AddMembrane, membrane, ""+token)
-        }
-    }
-
-    notifyMembraneRemove(membrane, token?){
-        if(this.notify){
-            this.changeOccurred(MembraneEvents.RemoveMembrane, membrane, ""+token)
-        }
-    }
 }
