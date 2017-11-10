@@ -30,15 +30,15 @@ export abstract class OpConstruct<Body> extends Construct{
         host.lining.addContact(op, key)
     }
 
+    detach(host:Cell, key:string){
+        host.lining.removeContact(key)
+    }
     abstract createOp(body:Body, key:string):StdOp
 
     getInjected(){
         return undefined
     }
 
-    detach(host:Cell, key:string){
-        host.lining.removeContact(key)
-    }
 
 }
 
@@ -141,3 +141,29 @@ export class Carry extends OpConstruct<CarryBody> {
     }
 }
 
+
+export class Deposit extends Construct {
+
+    attach(host: Cell, key: string) {
+        super.attach(host, key)
+
+        const drop = (x) => { if (x == undefined) { return this.nucleus } else { this.nucleus = x } } 
+        let op = new StdOp({
+            label: this.getLocation() + key,
+            context: this.self,
+            description: "A simple deposit",
+            hook_inward: false,
+            hook_outward: false,
+            mode: 'resolve',
+            inner_op: drop,
+            outer_op: drop
+        })
+
+        host.lining.addContact(op, key)
+    }
+
+    detach(host: Cell, key: string) {
+        host.lining.removeContact(key)
+    }
+
+}

@@ -37,32 +37,27 @@ export function j(basis?: any, patch?: any) {
         if (patch === undefined) {
             return { basis: basis }
         } else if (Util.isVanillaObject(patch)) { //("",{})
-            let head, domain, body;
+            let head, domain, body, anon;
             if('body' in patch && !('head' in patch)){
                 //head is the baseline 
                 head = patch
-                domain = patch.domain
-                body = patch.body
+                body = head.body
 
-                delete patch.head;
-                delete patch.heart;
-                delete patch.domain;
+                delete patch.body;
             }else{
                 //body is baseline or no baseline
                 head = patch.head || {};
-                domain = patch.domain
                 body = patch.body || patch;
-
                 delete patch.head;
-                delete patch.heart;
-                delete patch.domain;
             }
-
+            
+            domain = patch.domain
+            anon = patch.anon
+            delete patch.domain;
+            delete patch.anon
+            
             return {
-                domain:domain,
-                basis: basis,
-                head: head,
-                body: body
+                anon, domain,basis, head, body
             }
         } else if (Util.isVanillaArray(patch)) { //("",[])
             return {
@@ -76,9 +71,15 @@ export function j(basis?: any, patch?: any) {
             }
         }
     } else if (Util.isVanillaObject(basis)) { //({})
+        let head = basis.head
+        delete basis.head
+        let anon = basis.anon
+        delete basis.anon
+
         return {
             basis: 'object',
-            head: basis.head,
+            head: head,
+            anon: anon,
             body: basis
         }
     } else if (Util.isVanillaArray(basis)) { //([])
@@ -86,7 +87,7 @@ export function j(basis?: any, patch?: any) {
             basis: 'array',
             anon: basis
         }
-    } else if (Util.isPrimative(basis)) { //(string|number|boolean|symbol)
+    } else if (Util.isPrimative(basis)) { //(number|boolean|symbol)
         return {
             basis: typeof basis,
             body: basis
@@ -175,7 +176,6 @@ J   .sub('media')
     }))
 
     .define('resolve', j(TRT.Resolve, {
-            mode: 'resolve',
             inner: false,
             outer: false,
             either: false,
@@ -189,6 +189,8 @@ J   .sub('media')
             serial: false,
             composed: false
     }))
+
+    .define('deposit', j(TRT.Deposit))
 
     .define('raw_op', TRT.OpConstruct)
     

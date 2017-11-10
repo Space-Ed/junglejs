@@ -104,8 +104,10 @@ export default class TestApp extends Cell{
 
     callReturnTest(spec:CallReturnTestSpec):Junction{
         console.log(`------------Call Return Test - ${spec.label||"unlabelled"}----------------`)
-        let input = this.shell.scan(spec.inputContact)[spec.inputContact]
-        expect(input).toBeDefined("Unable to find input contact")
+        let scan = this.shell.scan(spec.inputContact)
+        let input = scan[spec.inputContact]
+
+        expect(input).toBeDefined("Unable to find input contact, only found "+Object.keys(scan))
 
 
         let allDone = new Junction()

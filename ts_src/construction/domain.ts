@@ -436,7 +436,7 @@ export class Domain {
         }else{
             return this
         }
-    }
+    } 
 
     private addSubdomain(key: string, val: Domain) {
         if (key in this.subdomain) {

@@ -2,7 +2,7 @@ import {j, Domain, J} from '../../../jungle'
 import { DetectorContact, EmitterContact} from '../../jungle-test/domain'
 import {run } from '../../jungle-test/run'
 
-fdescribe('testing', function(){
+describe('testing', function(){
     let subject:Domain
 
     beforeAll(function(){

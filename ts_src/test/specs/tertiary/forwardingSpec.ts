@@ -7,7 +7,7 @@ let SubDomain
 //the situations are achieved by creating a detector and emmitter 
 
 
-fdescribe('forwarding', function(){
+describe('forwarding', function(){
     beforeAll(function(){
         SubDomain = J.sub('forwards', {rebasing:false})
 

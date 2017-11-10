@@ -134,7 +134,6 @@ describe('heart access agent', function(){
 
         expect(extracted).toEqual({
             historian:{
-                mode:'resolve',
                 inner:false,
                 either:false,
                 outer: selfpatching.historian.body.outer

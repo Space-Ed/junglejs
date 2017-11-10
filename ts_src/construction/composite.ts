@@ -1,13 +1,12 @@
  import {Construct} from './construct'
 import {isPrimative, isVanillaObject, isVanillaArray, B, meld, createVisor} from '../util/all'
-import {Domain, Description} from './domain'
-import {makeHandler} from './state'
+import {Domain, Description, isDescription} from './domain'
+import {makeSplitStateProxy} from './state'
 import {BedAgent, AnchorAgent, AgentPool, Agent, createHeartBridge} from '../agency/all'
 
 export class Composite extends Construct{
 
-    static keywords = {basis:null, domain:null, head:null, anon:null}
-    
+    index:any
     subconstructs:any
 
     isComposite = true
@@ -19,10 +18,22 @@ export class Composite extends Construct{
 
     constructor(domain:Domain){
         super(domain)
-        this.subconstructs = [];
-        this.nucleus = {}
+        this.subconstructs = {};
+        this.nucleus = [];
+        this.index = [];
     }
 
+    init(desc: Description) {
+        this.origins = desc.origins;
+        this.basis = desc.basis;
+
+        this.applyHead(desc.head)
+
+        this._patch(desc.body)
+        this._patch(desc.anon)
+
+        let primeResult = this.head.prime ? this.head.prime.call(this.self) : undefined
+    }
 
     /*undo init*/
     dispose(): any {
@@ -39,7 +50,7 @@ export class Composite extends Construct{
     }
 
     protected applyExposed() {
-        this.exposed = new Proxy(this.nucleus, makeHandler(this, this.subconstructs))
+        this.exposed = makeSplitStateProxy(this)
     }
     
     protected applyHeart(heartspec) {
@@ -98,19 +109,15 @@ export class Composite extends Construct{
     */
     _patch(patch:any):any{
         //incrementally apply the patch, ignoring keywords.
-        //
 
         if(patch instanceof Array){
             for(let i = 0; i<patch.length; i++){
-                //push all, no colli
-                this.add(patch[i])
+                this.addAnon(patch[i])
             }
         }else{
             for(let k in patch){
-                if(!(k in Composite.keywords)){
-                    let v = patch[k];
-                    this.patchChild(k, v)
-                }
+                let v = patch[k];
+                this.patchChild(k, v)
             }
         }
     }
@@ -130,26 +137,28 @@ export class Composite extends Construct{
     }
 
     addAnon(val) {
-        
+        let id = this.makeID(val)
+        console.log('add anon, assigned id', id)
+        this.add(val, ""+id)
+    }
+
+    makeID(val: any): number {
+        //COUPLE : use of anon count to discern IDS
+        return this.index.length++
     }
 
     add(val:any , key?:string){
-
-        let k = key === undefined? this.subconstructs.length++:key
-
-        if(this.nucleus instanceof Array){
-            this.nucleus.length = this.subconstructs.length
+        if(key === undefined){
+            return this.addAnon(val)
         }
 
-        if (val instanceof Object && 'basis' in val){
+        if (isDescription(val)){
             let construct = this.domain.recover(val)
-            this.attachChild(construct, k)
+            this.attachChild(construct, key)
         }else{
-            this.addStrange(k, val)
+            this.addStrange(key, val)
         }
-
     }
-
 
     remove(k) {
         let removing = <Construct>this.subconstructs[k];
@@ -160,66 +169,98 @@ export class Composite extends Construct{
             return final
         } else if (k in this.nucleus) {
             let removeState = this.nucleus[k];
-            delete this.nucleus
+            delete this.nucleus[k]
+            delete this.index[k]
         }
-
-
     }
-
 
     attachChild(construct:Construct, key:any){
         this.subconstructs[key] = construct;
+        this.index[key] = this.subconstructs;
+        this.nucleus.length = this.index.length;
         construct.attach(this, key)
     }
 
     detachChild(key):Construct{
         let construct = this.subconstructs[key];
         delete this.subconstructs[key]
+        delete this.index[key]
 
         construct.detach(this, key)
         return construct
     }
-
 
     /**
      * Add an item to the construct that is an object of a Class that is not conformant or
      Coercible to a standard jungle Construct object.
      */
     addStrange(k, v){
-        this.nucleus[k] = v
+        this.nucleus[k] = v;
+        this.index[k] = this.nucleus
     }
 
     /*
         output a representation of the construct that may be recovered to a replication
+
+        the suction has a few overloads
+        null/undefined                  : Everything of the body
+        []                              : Eveything anon
+        j() - the undefined basis: E    : the entire description
+        {}                              : only the matching object keys and recur
+        value                           : only if different
+
     */
     _extract(suction:any):any {
         let voidspace
+    
+        if(suction instanceof Array){
+            //COUPLE : use of anon count to discern IDS
+            let result=[...suction]
 
-        if(suction == undefined || typeof suction === 'object'){
-            voidspace = suction
-        }else if (typeof suction === 'string'){
-            voidspace = {};
-            voidspace[suction] = null;
+            this.index.foreach( (location, i)=>{
+                let extract;
+                if(location === this.subconstructs){
+                    extract = this.subconstructs[i].extract();
+                }else if (location === this.nucleus) {
+                    extract = this.nucleus[i]
+                }
+                result.push(extract)
+            })
+
+            return result
+        }else if(isDescription(suction)){
+            return {
+                basis:this.basis,
+                body:this._extract(undefined),
+                anon:this._extract([]),
+                origins:this.origins
+            }
         }else{
-            throw new Error('Invalid extractor suction argument')
-        }
-
-        let extracted = {}
-        for (let key in this.subconstructs) {
-            if(voidspace == undefined || key in voidspace){
-                let construct = this.subconstructs[key]
-                extracted[key] = construct.extract(voidspace==undefined?undefined:voidspace[key]);
+            if (suction == undefined || typeof suction === 'object') {
+                voidspace = suction
+            } else if (typeof suction === 'string') {
+                voidspace = {};
+                voidspace[suction] = null;
+            } else {
+                throw new Error('Invalid extractor suction argument')
             }
-        }
 
-        for (let key in this.nucleus){
-            if(voidspace == undefined || (key in voidspace && voidspace[key] == undefined)){
-                extracted[key] = this.nucleus[key]
+            let extracted = {}
+            for (let key in this.subconstructs) {
+                if(voidspace == undefined || key in voidspace){
+                    let construct = this.subconstructs[key]
+                    extracted[key] = construct.extract(voidspace==undefined?undefined:voidspace[key]);
+                }
             }
+    
+            for (let key in this.nucleus){
+                if(voidspace == undefined || (key in voidspace && voidspace[key] == undefined)){
+                    extracted[key] = this.nucleus[key]
+                }
+            }
+    
+            return extracted
         }
-
-        return extracted
-
     }
 
     extract(suction:any):any{
