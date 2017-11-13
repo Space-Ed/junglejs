@@ -1,5 +1,5 @@
 
-import {Domain, Description} from './domain'
+import {Domain, Description, isDescription} from './domain'
 import * as Util from '../util/all'
 
 import {deepMeldF} from '../util/ogebra/hierarchical';
@@ -24,7 +24,7 @@ import {AnchorAgent, BedAgent, Agent, createHeartBridge} from '../agency/all'
 
 */
 
-export abstract class Construct{
+export class Construct{
     host:any;
     id:string;
     
@@ -250,6 +250,15 @@ export abstract class Construct{
         output a representation of the construct that may be recovered to a replication
     */
     _extract(sucker?:any):any{
+        if(isDescription(sucker)){
+            return {
+                basis:this.basis,
+                head:this.head,
+                origins:this.origins,
+                body:this.nucleus
+            }
+        }
+
         return this.nucleus
     }
 

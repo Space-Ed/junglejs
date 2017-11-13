@@ -31,13 +31,12 @@ export function j(nature:Function, body?):JDescription
  * @param basis a starting point for the description
  * @param patch  the overlaid patch on the description
  */
-export function j(basis?: any, patch?: any) {
+export function j(basis?: any, patch?: any) {  
+    let head, domain, body, anon, dbasis;
 
     if (typeof basis === 'string' || isConstruct(basis)) {
-        if (patch === undefined) {
-            return { basis: basis }
-        } else if (Util.isVanillaObject(patch)) { //("",{})
-            let head, domain, body, anon;
+        dbasis = basis;
+        if (Util.isVanillaObject(patch)) { //("",{})
             if('body' in patch && !('head' in patch)){
                 //head is the baseline 
                 head = patch
@@ -55,53 +54,41 @@ export function j(basis?: any, patch?: any) {
             anon = patch.anon
             delete patch.domain;
             delete patch.anon
-            
-            return {
-                anon, domain,basis, head, body
-            }
         } else if (Util.isVanillaArray(patch)) { //("",[])
-            return {
-                basis: basis,
-                anon: patch
-            }
-        } else { //("", any)
-            return {
-                basis: basis,
-                body: patch
-            }
+            anon = patch            
+        } else if (patch !== undefined) { //("", any)
+            body = patch
         }
     } else if (Util.isVanillaObject(basis)) { //({})
-        let head = basis.head
+        head = basis.head
         delete basis.head
-        let anon = basis.anon
+        anon = basis.anon
         delete basis.anon
 
-        return {
-            basis: 'object',
-            head: head,
-            anon: anon,
-            body: basis
-        }
+        body = basis
+        dbasis = 'object'
     } else if (Util.isVanillaArray(basis)) { //([])
-        return {
-            basis: 'array',
-            anon: basis
-        }
+        dbasis ='array',
+        anon = basis
     } else if (Util.isPrimative(basis)) { //(number|boolean|symbol)
-        return {
-            basis: typeof basis,
-            body: basis
-        }
+        dbasis = typeof basis,
+        body = basis
     } else if (basis !== undefined){ //(any)
-        return {
-            basis: 'strange',
-            body: basis
-        }
+        dbasis = 'strange',
+        body =  basis
     } else { // ()
-        return {
-            basis:undefined 
-        }
+        dbasis = undefined
     }
+
+    let desc:any = {}
+
+    desc.basis = dbasis
+    if(head !== undefined) desc.head = head
+    if(body !== undefined) desc.body = body
+    if(anon !== undefined) desc.anon = anon
+    if(domain !== undefined) desc.domain = domain
+
+    return desc
 }
 
 export const J = new Domain()

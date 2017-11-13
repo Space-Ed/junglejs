@@ -64,13 +64,15 @@ export interface DomainOps {
 
 
 export function descmeld(entry, desc, k?) {
-
-    return {
+    let meld:Description =  {
         basis: entry.basis,
         head: headmeld(entry.head||{}, desc.head||{}),
         body: safeMeld(bodyMeldItem)(entry.body||{}, desc.body||{}),
-        anon: desc.anon || [] //must take topmost collection
     }
+
+    if(desc.anon) meld.anon = desc.anon
+
+    return meld
 }
 
 function bodyMeldItem(entry, desc, k?) {
@@ -102,8 +104,8 @@ function descdebase(desc, base) {
 
     let debased:Description = {
         basis: base.basis,
-        head: deepMeldF(terminate.isPrimative, reduce.negateEqual)(desc.head||{}, base.head||{}),
-        body: safeMeld(debaseBodyItem)(desc.body||{}, base.body||{})
+        head: deepMeldF(terminate.isPrimative, reduce.negateEqual)(desc.head || {}, base.head || {}),
+        body: safeMeld(debaseBodyItem)(desc.body, base.body),
     }
 
     if(desc.origins){
@@ -289,15 +291,12 @@ export class Domain {
     describe(construct:Construct, target:boolean|string=true):Description{
 
         //extract possible changes
-        let body = construct.extract(null)
+        let extracted = construct.extract({
+            basis:undefined
+        })
 
         //percolate through origins until the origin cannot be found,  
-        let debased = this.debase({
-            basis:construct.basis,
-            head:construct.head,
-            body:body,
-            origins:construct.origins,
-        },target)
+        let debased = this.debase(extracted, target)
 
         return debased
 

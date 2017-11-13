@@ -9,12 +9,9 @@ export class Composite extends Construct{
     index:any
     subconstructs:any
 
-    isComposite = true
-
     anchor:AnchorAgent
     bed:BedAgent
     pool: AgentPool
-
 
     constructor(domain:Domain){
         super(domain)
@@ -29,23 +26,18 @@ export class Composite extends Construct{
 
         this.applyHead(desc.head)
 
-        this._patch(desc.body)
-        this._patch(desc.anon)
+        if(desc.body !== undefined) this._patch(desc.body)
+        if(desc.anon !== undefined) this._patch(desc.anon)
 
         let primeResult = this.head.prime ? this.head.prime.call(this.self) : undefined
     }
 
     /*undo init*/
     dispose(): any {
-        
-        //detach and dispose all children
-        for (let key in this.subconstructs) {
-            let construct = this.detachChild(key)
-            construct.dispose()
-        }
-        
+        this.disposeBody()
+        this.disposeAnon()
+
         if (this.head.dispose) { this.head.dispose.call(this.self) }
-        
         this.clearHead()
     }
 
@@ -108,10 +100,13 @@ export class Composite extends Construct{
         when alive and being reformed it will kill it first and then apply a recursive patching
     */
     _patch(patch:any):any{
-        //incrementally apply the patch, ignoring keywords.
-
-        if(patch instanceof Array){
-            for(let i = 0; i<patch.length; i++){
+        if(patch == undefined){
+            this.disposeBody()
+        }if(!(patch instanceof Object)){
+            // non object patches are singular anonymous
+            this._patch([patch])
+        }else if(patch instanceof Array){
+            for(let i=0; i<patch.length; i++){
                 this.addAnon(patch[i])
             }
         }else{
@@ -123,27 +118,21 @@ export class Composite extends Construct{
     }
 
     protected patchChild(k, v){
-
-        let existing:Construct = this.subconstructs[k];
-        if(existing !== undefined){
-            existing.patch(v);
+        if(v == undefined){
+            this.remove(k)
+        }else if(v in this.subconstructs){
+            this.subconstructs[k].patch(v);
         }else{
-            if(v === undefined){
-                this.remove(k)
-            }else{
-                this.add(v , k);
-            }
+            this.add(v , k);
         }
     }
 
     addAnon(val) {
         let id = this.makeID(val)
-        console.log('add anon, assigned id', id)
         this.add(val, ""+id)
     }
 
     makeID(val: any): number {
-        //COUPLE : use of anon count to discern IDS
         return this.index.length++
     }
 
@@ -174,6 +163,35 @@ export class Composite extends Construct{
         }
     }
 
+    disposeBody(): any {
+        //detach and dispose all children
+        for (let key in this.index) {
+            if (isNaN(<any>key)) {
+                if (this.index[key] == this.subconstructs) {
+                    let construct = this.detachChild(key)
+                    construct.dispose()
+                } else {
+                    this.removeStrange(key)
+                }
+
+            }
+        }
+    }
+
+    disposeAnon() {
+        for (let key in this.index) {
+            if (!isNaN(<any>key)) {
+                if (this.index[key] == this.subconstructs) {
+                    let construct = this.detachChild(key)
+                    construct.dispose()
+                } else {
+                    this.removeStrange(key)
+                }
+
+            }
+        }
+    }
+
     attachChild(construct:Construct, key:any){
         this.subconstructs[key] = construct;
         this.index[key] = this.subconstructs;
@@ -199,6 +217,15 @@ export class Composite extends Construct{
         this.index[k] = this.nucleus
     }
 
+    removeStrange(k){
+        delete this.nucleus[k];
+        delete this.index[k];
+    }
+
+    extract(suction: any): any {
+        return this.anchor.fetch(suction)
+    }
+
     /*
         output a representation of the construct that may be recovered to a replication
 
@@ -211,60 +238,119 @@ export class Composite extends Construct{
 
     */
     _extract(suction:any):any {
-        let voidspace
     
         if(suction instanceof Array){
-            //COUPLE : use of anon count to discern IDS
-            let result=[...suction]
+            return this.extractAnon(suction)
+        }else if(typeof suction === 'number' ){
+            let subsuck = []
 
-            this.index.foreach( (location, i)=>{
-                let extract;
-                if(location === this.subconstructs){
-                    extract = this.subconstructs[i].extract();
-                }else if (location === this.nucleus) {
-                    extract = this.nucleus[i]
+            if(suction === Infinity){
+                subsuck[0] = subsuck
+            }else{
+                for (let i=0;i<suction;i++){
+                    subsuck = [subsuck]
                 }
-                result.push(extract)
-            })
+            }
 
-            return result
+            return this.extractAnon(subsuck)
         }else if(isDescription(suction)){
-            return {
-                basis:this.basis,
-                body:this._extract(undefined),
-                anon:this._extract([]),
-                origins:this.origins
-            }
+            return this.extractBeing(suction)            
+        }else if (typeof suction ==='string'){
+            let subsuck = {}; subsuck[suction]=undefined
+            return this.extractBody(suction)
         }else{
-            if (suction == undefined || typeof suction === 'object') {
-                voidspace = suction
-            } else if (typeof suction === 'string') {
-                voidspace = {};
-                voidspace[suction] = null;
-            } else {
-                throw new Error('Invalid extractor suction argument')
-            }
-
-            let extracted = {}
-            for (let key in this.subconstructs) {
-                if(voidspace == undefined || key in voidspace){
-                    let construct = this.subconstructs[key]
-                    extracted[key] = construct.extract(voidspace==undefined?undefined:voidspace[key]);
-                }
-            }
-    
-            for (let key in this.nucleus){
-                if(voidspace == undefined || (key in voidspace && voidspace[key] == undefined)){
-                    extracted[key] = this.nucleus[key]
-                }
-            }
-    
-            return extracted
+            return this.extractBody(suction)
         }
     }
 
-    extract(suction:any):any{
-        return this.anchor.fetch(suction)
+    /**
+     * 
+     * @param suction a description to 
+     */
+    extractBeing(suction){
+        let being:any = {
+            basis:this.basis,
+            head:this.head,
+            origins:this.origins
+        }
+        
+        being.body = this.extractBody(suction.body||{ basis:undefined})
+        being.anon = this.extractAnon(suction.anon||[{basis:undefined}])
+        
+        return being
+    }
+
+    extractAnon(suction){
+
+        let result = []
+
+        this.index.forEach((location, i) => {
+            let extract;
+            if (suction.length > 0) {
+                extract = this.extractChild(i, suction[0]);
+            } else {
+                extract = this.extractChild(i, []);
+            }
+            result.push(extract)
+        })
+
+        return result
+    }
+
+    /**
+     * 
+     * @param suction undefined means all, j() means all beings, {} means select with
+     */
+    extractBody(suction){
+        let extracted = {}
+
+        if(isDescription(suction) || suction === undefined){
+            // extract entire body with suction as subsuction
+            
+            for(let k in this.index){
+                if(isNaN(<any>k)){
+                    extracted[k] = this.extractChild(k, suction)
+                }
+            }
+        }else if (suction instanceof Object){
+            // extract selectively and take matched subsuctions
+
+            for(let k in this.index){
+                if(isNaN(<any>k) && k in suction){
+                    extracted[k] = this.extractChild(k, suction[k])
+                }
+            }
+        }else {
+            throw new Error("Invalid Extract Argument")
+        }
+    
+        return extracted
+
+    }
+
+    extractChild(k, voidspace){
+        let extract
+        if (k in this.subconstructs){
+            //extract will 
+            extract=this.subconstructs[k].extract(voidspace)
+
+            if(isDescription(extract)){
+                //compress description taking the voidspace description basis as target or 
+                extract = this.domain.debase(extract, isDescription(voidspace)?voidspace.basis:false)
+            }
+        }else if (k in this.nucleus){
+            //terminal extract            
+            extract=this.nucleus[k]
+        }
+
+        //apparently the child does not exist so let's try to find it in the scope
+        if(extract === undefined){
+            let qfetch = {}
+            qfetch[k]=voidspace
+            extract = this.bed.fetch(qfetch)
+        }
+
+        return extract
     }
 
     createPool(poolConfig): AgentPool {

@@ -42,6 +42,7 @@ describe('Domains', function(){
 
             
             expect(new domain.exposed.OneNature("blah").stuff).toBe("blah")
+            //console.log("inthing", domain.subdomain.oneThing.registry.inThing)
             expect(domain.subdomain.oneThing.registry.inThing.body.goods).toBe("testable")
         })
 
@@ -322,7 +323,7 @@ describe('Domains', function(){
             //exit before any debasing
             expect(d.describe(c, false)).toEqual({
                 basis:Jungle.Construct,
-                head:{},
+                head: {},
                 body:{
                     prop:1,
                     extended:'foo'

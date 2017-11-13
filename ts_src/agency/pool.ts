@@ -5,7 +5,10 @@ export interface PoolConfiguration {
 
 }
 
-
+/**
+ * A round table like listener system where all are notified of change that any other puts
+ *  and the first to provide a complete response to a query will do so.
+ */
 export class AgentPool {
 
     pool: { [key: string]: Agent }
