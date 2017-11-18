@@ -144,9 +144,9 @@ J   .sub('media')
 
     .define('cell',TRT.Cell)
 
-    .define('object',TRT.ObjectCell)
+    .define('object',TRT.Cell)
 
-    .define('array',TRT.ArrayCell)
+    .define('array',TRT.Cell)
 
     .define('law',TRT.LawConstruct)
 

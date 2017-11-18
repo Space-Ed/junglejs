@@ -1,6 +1,6 @@
 
 import Jasmine = require('jasmine')
-import {Section, Layer, Membrane} from '../../../interoperability/membranes/membrane'
+import {Section, Layer, Membrane} from '../../../interoperability/all'
 import {compileToken} from '../../../util/designation/parsing'
 import {Duplex as Contact} from '../../helpers/testContacts'
 

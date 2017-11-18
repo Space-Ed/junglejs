@@ -1,8 +1,5 @@
 import * as IO from '../../interoperability/all'
 import * as CS  from '../../construction/all'
-
-import{ShellPolicy, FreePolicy, Contact} from '../../interoperability/interfaces'
-import * as I from '../interfaces'
 import {meld} from "../../util/ogebra/operations";
 
 function forwardPointPrepare(section:IO.Layer, configval:any, point:string):{positive: IO.Layer, negative: IO.Layer}{

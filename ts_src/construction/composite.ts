@@ -1,5 +1,5 @@
  import {Construct} from './construct'
-import {isPrimative, isVanillaObject, isVanillaArray, B, meld, createVisor} from '../util/all'
+import {isPrimative} from '../util/all'
 import {Domain, Description, isDescription} from './domain'
 import {makeSplitStateProxy} from './state'
 import {BedAgent, AnchorAgent, AgentPool, Agent, createHeartBridge} from '../agency/all'

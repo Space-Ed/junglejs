@@ -1,7 +1,7 @@
 
 import * as Law from './law'
 import * as Media from './media/base'
-import {Layer} from './membranes/membrane'
+import {Layer} from './membranes/layer'
 import {BaseContact} from './contacts/base'
 
 

@@ -1,14 +1,14 @@
 import { Construct } from '../../construction/construct'
-import * as I from '../interfaces'
 import {ensureArray}  from '../../util/transforms'
 import {parseLawExpression, LawIR, Law} from '../../interoperability/law'
+import {Cell} from '../cells/cell'
 
 export class MediumConstruct extends Construct {
 
     lawhandles:any[]
     mhandle:any
 
-    attach(anchor: I.CellAnchor, label: string) {
+    attach(anchor: Cell, label: string) {
         super.attach(anchor, label)
 
         this.lawhandles = [];
@@ -50,7 +50,7 @@ export class MediumConstruct extends Construct {
 
     }
 
-    detach(anchor: I.CellAnchor, label: string) {
+    detach(anchor: Cell, label: string) {
         // anchor.mesh.removeMedium(this.nucleus, label)
 
         // for (let h of this.lawhandles){

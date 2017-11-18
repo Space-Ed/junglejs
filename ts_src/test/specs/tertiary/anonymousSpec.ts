@@ -1,4 +1,4 @@
-import {Cell, ObjectCell, ArrayCell} from '../../../tertiary/all'
+import {Cell} from '../../../tertiary/all'
 import TestApp from '../../helpers/testApp'
 import {j, J, Construct} from '../../../jungle'
 
@@ -20,7 +20,7 @@ describe('anonymisation',function(){
 
     it('should create anonymous from cell directly', function(){
 
-        let app = new ObjectCell(J)
+        let app = new Cell(J)
 
         app.init(j([
             'how', 'the', 'list'
@@ -44,7 +44,7 @@ describe('anonymisation',function(){
 
     it('should have an array typed nucleus and exposed when created under array basis ', function(){
 
-        let app = new ArrayCell(J)
+        let app = new Cell(J)
 
         J.define('simple', j(Construct))
 

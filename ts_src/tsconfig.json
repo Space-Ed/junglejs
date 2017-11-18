@@ -29,7 +29,9 @@
         "rewriteTsconfig": true
     },
     "include": [
+
         "../node_modules/@types/**/*.d.ts",
         "./**/*.ts"
+        
     ]
 }

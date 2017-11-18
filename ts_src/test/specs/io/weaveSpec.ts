@@ -1,7 +1,7 @@
 
 import {Weave} from '../../../interoperability/weave'
 import {Law, parseLawExpression} from '../../../interoperability/law'
-import {Layer, Membrane} from '../../../interoperability/membranes/membrane'
+import {Layer, Membrane} from '../../../interoperability/all'
 import {MockMedium} from '../../helpers/mockMedia'
 import TestHost from '../../helpers/testHost'
 

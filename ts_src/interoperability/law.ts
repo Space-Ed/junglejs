@@ -1,6 +1,6 @@
 import {tokenize, DTotalExp, scannerF, matches, TokenIR, DFullExp, compileToken, DTermExp, parseDesignatorString, pairByBinding, DesignatorIR} from '../util/designation/all'
 import {BaseMedium} from './media/base'
-import {Layer, Section} from './membranes/membrane'
+import {Layer, Section} from './all'
 // export interface Handle {
 //     retract()
 //     blame(reason:string, deny:(justification:string)=>never, handle:Handle):(remedy)=>never

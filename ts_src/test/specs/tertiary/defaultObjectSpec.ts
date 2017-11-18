@@ -1,5 +1,5 @@
 
-import {J, j, Cell, ObjectCell}   from '../../../jungle'
+import {J, j, Cell}   from '../../../jungle'
 
 describe('defaults of objects', function(){
 
@@ -27,7 +27,7 @@ describe('defaults of objects', function(){
                 })
             }))
 
-            expect(aCell.subconstructs.obj instanceof ObjectCell).toBe(true, 'must be a default cell')
+            expect(aCell.subconstructs.obj instanceof Cell).toBe(true, 'must be a default cell')
             expect(aCell.subconstructs.obj.exposed.one).toBe('default primative')
 
             expect(aCell.exposed.obj.one).toBe('default primative')

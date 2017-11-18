@@ -1,7 +1,6 @@
 import * as D from '../../../util/designation/all'
 import {parseDesignatorString as parse, tokenize} from '../../../util/designation/all'
 import {deeplyEqualsThrow} from '../../../util/checks'
-import {B} from '../../../util/blender'
 
 describe('',function(){
     const scan = D.scannerF('departments', 'employees')

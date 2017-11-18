@@ -1,15 +1,14 @@
 
 import {Construct} from '../../construction/construct'
-import * as I from '../interfaces'
 import {parseLawExpression, Law} from '../../interoperability/law'
-
-
+import {Cell} from '../cells/cell'
+ 
 export class LawConstruct extends Construct {
 
     nucleus:string;
     handles:any;
 
-    attach(anchor: I.CellAnchor, label:string){
+    attach(anchor: Cell, label:string){
         super.attach(anchor, label)
 
         this.handles = []
@@ -27,7 +26,7 @@ export class LawConstruct extends Construct {
         }
     }
 
-    detach(anchor:I.CellAnchor, label:string){
+    detach(anchor:Cell, label:string){
         for(let handle of this.handles){
             anchor.weave.removeLaw(handle)
         }
