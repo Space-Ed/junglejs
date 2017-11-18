@@ -1,8 +1,8 @@
 
 import * as Law from './law'
-import * as Media from './media/medium'
+import * as Media from './media/base'
 import {Layer} from './membranes/membrane'
-import {BasicContact} from './contacts/base'
+import {BaseContact} from './contacts/base'
 
 
 export interface WeaveSpec {
@@ -32,7 +32,7 @@ export class Weave {
 
     violated: Violation[]
 
-    claims:Map<Media.BaseMedium<any,any>, BasicContact<any>>
+    claims:Map<Media.BaseMedium<any,any>, BaseContact<any>>
 
     constructor(spec:WeaveSpec){
         this.layer = spec.target;

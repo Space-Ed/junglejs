@@ -1,5 +1,5 @@
 import {Membrane} from './membranes/membrane'
-import {BasicContact} from './contacts/base'
+import {BaseContact} from './contacts/base'
 
 export interface LinkSpec<A,B> {
     tokenA:string,
@@ -55,8 +55,8 @@ export const FreePolicy:ShellPolicy = {
 
 export interface MembraneWatcher {
 
-    onAddContact:(contact:BasicContact<any>, token:string)=>void;
-    onRemoveContact:(contact:BasicContact<any>, token:string)=>void;
+    onAddContact:(contact:BaseContact<any>, token:string)=>void;
+    onRemoveContact:(contact:BaseContact<any>, token:string)=>void;
 
     onAddMembrane:(membrane:Membrane, token)=>void;
     onRemoveMembrane:(membrane:Membrane, token)=>void;
@@ -76,6 +76,6 @@ export interface ContactDesignator{
     The interface for generic behaviours all mesh exposed contacts need to define,
     capped: - whether the contact has been covered by a close link or hook.
  */
-export interface Contact extends BasicContact<any> {
+export interface Contact extends BaseContact<any> {
 
 }

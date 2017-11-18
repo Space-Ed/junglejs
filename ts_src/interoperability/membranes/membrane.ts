@@ -1,7 +1,7 @@
 
 import * as I from '../interfaces'
 import {parseTokenSimple, DesignatorIR, TokenIR, matches, compileToken, parseDesignatorString, scannerF, tokenize} from '../../util/designation/all'
-import {BasicContact} from '../contacts/base'
+import {BaseContact} from '../contacts/base'
 import * as O from '../../util/ogebra/all'
 
 
@@ -10,7 +10,7 @@ export interface Watchable<Watcher> {
 }
 
 export interface SectionWatcher {
-    contactChange (token: TokenIR, thing?: BasicContact<any>):void
+    contactChange (token: TokenIR, thing?: BaseContact<any>):void
 }
 
 
@@ -77,7 +77,7 @@ export class Layer implements Watchable<SectionWatcher>, SectionWatcher{
         }
     }
 
-    contactChange(path: TokenIR, thing?: BasicContact<any>){
+    contactChange(path: TokenIR, thing?: BaseContact<any>){
 
         //notify all watchers of the change
         for(let wKey of (<any[]>Object.getOwnPropertySymbols(this.watches)).concat(Object.keys(this.watches))){
@@ -97,7 +97,7 @@ export class Section extends Layer {
     designator: DesignatorIR;
     sources:Layer[];
 
-    contacts: { [label: string]: BasicContact<any> };
+    contacts: { [label: string]: BaseContact<any> };
     subranes: { [label: string]: Layer };
 
     constructor(private positive: boolean, private expression: string){
@@ -152,7 +152,7 @@ export class Section extends Layer {
         }
     }
 
-    contactChange(token: TokenIR, contact?:BasicContact<any>) {
+    contactChange(token: TokenIR, contact?:BaseContact<any>) {
 
         let m = matches(this.designator, token)
 
@@ -184,7 +184,7 @@ export class Section extends Layer {
 
 export class Membrane extends Layer{
 
-    contacts:{[label:string]:BasicContact<any>};
+    contacts:{[label:string]:BaseContact<any>};
     subranes:{[label:string]:Layer};
 
     inverted:Membrane;
@@ -204,7 +204,7 @@ export class Membrane extends Layer{
             this.inverted.inverted = this;
 
             for(let rk in this.contacts){
-                let contact:BasicContact<any> = this.contacts[rk]
+                let contact:BaseContact<any> = this.contacts[rk]
 
                 if(contact.invertable){
                     this.inverted.addContact( contact.invert(), rk)
@@ -246,8 +246,8 @@ export class Membrane extends Layer{
         return removing
     }
 
-    addContact(contact:BasicContact<any>, label:string){
-        let existing:BasicContact<any> = this.contacts[label];
+    addContact(contact:BaseContact<any>, label:string){
+        let existing:BaseContact<any> = this.contacts[label];
         if(existing !== undefined){
             //no overriding 
         }else{
@@ -270,9 +270,9 @@ export class Membrane extends Layer{
         }
     }
 
-    removeContact(label:string):BasicContact<any>{
+    removeContact(label:string):BaseContact<any>{
 
-        let removing:BasicContact<any> = this.contacts[label];
+        let removing:BaseContact<any> = this.contacts[label];
 
         if(removing !== undefined){
             delete this.contacts[label];
@@ -289,13 +289,13 @@ export class Membrane extends Layer{
 
     //Primary Change EntryPoints
 
-    notifyContactAdd(contact:BasicContact<any>, label){
+    notifyContactAdd(contact:BaseContact<any>, label){
         if(this.notify){
             this.contactChange([[],label], contact)
         }
     }
 
-    notifyContactRemove(contact:BasicContact<any>, label){
+    notifyContactRemove(contact:BaseContact<any>, label){
         if (this.notify) {
             this.contactChange([[], label])
         }

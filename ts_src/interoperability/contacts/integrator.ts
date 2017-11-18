@@ -1,6 +1,6 @@
 
 
-import {BasicContact} from './base'
+import {BaseContact} from './base'
 import {Call} from './call'
 import * as Debug from '../../util/debug'
 import {Junction} from '../../util/all'
@@ -18,8 +18,8 @@ export class Integrator extends Call<Integrator> {
     constructor(private spec: IntegratorSpec){
         super()
 
-        this.hasInput = true
-        this.hasOutput = true
+        this.isTargetable = true
+        this.isSeatable = true
 
         this.recievers = {}
 

@@ -2,13 +2,8 @@
 import Jasmine = require('jasmine')
 import {Section, Layer, Membrane} from '../../../interoperability/membranes/membrane'
 import {compileToken} from '../../../util/designation/parsing'
-import {Op} from '../../../interoperability/contacts/op'
+import {Duplex as Contact} from '../../helpers/testContacts'
 
-function Contact(){
-    return new Op({
-        context:{}
-    })
-}
 
 function spyOnSection(section: Layer, label:string):jasmine.Spy{
     let spy = jasmine.createSpy(label)

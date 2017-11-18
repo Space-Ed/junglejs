@@ -1,10 +1,9 @@
 
 import {Junction} from '../../../util/junction/junction'
-import {Op,OpSpec,OpCallTarget} from '../../../interoperability/contacts/op'
 import {StdOp,StdOpSpec} from '../../../interoperability/contacts/stdops'
 
 interface OpTest {
-    spec:OpSpec,
+    spec:StdOpSpec,
     majorIn:boolean,
     majorOut:boolean,
     minorOut:boolean,
@@ -34,10 +33,10 @@ describe('op contact', function(){
 
         let opinv = op.invert()
 
-        expect(op.hasInput).toBe(true)
-        expect(op.hasOutput).toBe(false)
-        expect(opinv.hasInput).toBe(false)
-        expect(opinv.hasOutput).toBe(false)
+        expect(op.isTargetable).toBe(true)
+        expect(op.isSeatable).toBe(false)
+        expect(opinv.isTargetable).toBe(false)
+        expect(opinv.isSeatable).toBe(false)
 
         op.put(' my ').then(x=>{
             expect(x).toBe('Fiddle my Diddle')
@@ -56,10 +55,10 @@ describe('op contact', function(){
 
         let opinv = op.invert()
 
-        expect(op.hasInput).toBe(true)
-        expect(op.hasOutput).toBe(false)
-        expect(opinv.hasInput).toBe(false)
-        expect(opinv.hasOutput).toBe(true)
+        expect(op.isTargetable).toBe(true)
+        expect(op.isSeatable).toBe(false)
+        expect(opinv.isTargetable).toBe(false)
+        expect(opinv.isSeatable).toBe(true)
 
         let espy = jasmine.createSpy('emitinv')
         opinv.emit = espy
@@ -82,10 +81,10 @@ describe('op contact', function(){
 
         let opinv = op.invert()
 
-        expect(op.hasInput).toBe(true)
-        expect(op.hasOutput).toBe(true)
-        expect(opinv.hasInput).toBe(false)
-        expect(opinv.hasOutput).toBe(false)
+        expect(op.isTargetable).toBe(true)
+        expect(op.isSeatable).toBe(true)
+        expect(opinv.isTargetable).toBe(false)
+        expect(opinv.isSeatable).toBe(false)
 
         let espy = jasmine.createSpy('emitinv')
         op.emit = espy
@@ -121,46 +120,6 @@ describe('op contact', function(){
         opinv.put().then(x=>{expect(x).toBe(3)})
     })
 
-    it('should create full monty ', function(){
-        let op = new Op({
-            context:context,
-            major_op(data, carry, reflex){
-                return new Junction().mode('object')
-                    .merge(carry(data),'carry')
-                    .merge(reflex(data),'reflex')
-            },
-            major_return:'resolve',
-            major_arg1:'carry',
-            major_arg2:'reflex',
-
-            minor_op(data, reflex, carry){
-                return new Junction().mode('object')
-                    .merge(carry(data),'carry')
-                    .merge(reflex(data),'reflex')
-            },
-            minor_return:'resolve',
-            minor_arg1:'reflex',
-            minor_arg2:'carry'
-
-        })
-
-        let opinv = op.invert()
-
-        op.emit = x =>`op emit:${x}`
-        opinv.emit = x =>`opinv emit:${x}`
-
-        opinv.put('beep').then(resp=>{expect(resp).toEqual({
-            carry:'op emit:beep',
-            reflex:'opinv emit:beep'
-        })})
-
-        op.put('boop').then(resp=>{expect(resp).toEqual({
-            carry:'opinv emit:boop',
-            reflex:'op emit:boop'
-        })})
-
-    })
-
     it('should allow drain',function(){
 
         function drain(data){
@@ -188,15 +147,12 @@ describe('op contact', function(){
 
     it('should allow spring', function(){
 
-        let op = new Op({
+        let op = new StdOp({
+            label:'spring',
             context:context,
-            hook_op(inp, carry, reflex){
-                carry(inp)
-                reflex(inp)
-            },
-            hook_name:'hook',
-            hook_arg1:'carry',
-            hook_arg2:'reflex'
+            hook_inward:true,
+            hook_outward:true,
+            mode:'resolve'
         })
 
         let opinv = op.invert()
@@ -204,9 +160,10 @@ describe('op contact', function(){
         let opemit = jasmine.createSpy('opemit'); op.emit = opemit
         let invemit = jasmine.createSpy('invemit'); opinv.emit = invemit
 
-        context.hook('hello all')
-
+        op.hook.inward('hello all')
         expect(opemit.calls.first().args[0]).toBe('hello all')
+
+        op.hook.outward('hello all')
         expect(invemit.calls.first().args[0]).toBe('hello all')
 
     })

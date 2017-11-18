@@ -24,9 +24,9 @@ export class TestCell extends Cell{
 
                     for (let mk in this.weave.media){
                         let mlinks = links[mk] = []
-                        let medium = <BaseMedium<any,any>>this.weave.media[mk]
-                        for (let tokenA in medium.matrix.from){
-                            for (let tokenB in medium.matrix.from[tokenA]){
+                        let matrix = this.weave.media[mk].exportMatrix()
+                        for (let tokenA in matrix){
+                            for (let tokenB in matrix[tokenA]){
                                 mlinks.push([tokenA, tokenB])
                             }
                         }

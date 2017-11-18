@@ -1,13 +1,15 @@
 
 // import * as I from '../interfaces'
 
+import {ContactToMedium} from '../media/base'
+
 export namespace I {
     export interface ContactHost {
         invert():ContactHost
     }
 }
 
-export abstract class BasicContact<Partner extends BasicContact<any>> {
+export abstract class BaseContact<Partner extends BaseContact<any>> implements ContactToMedium{
 
     //exclusion flags used by mesh
     public hidden = false;  //does not appear in designations.
@@ -17,6 +19,23 @@ export abstract class BasicContact<Partner extends BasicContact<any>> {
     public inverted = false;
 
     protected partner:Partner;
+
+    abstract isTargetable:boolean;
+    abstract isSeatable:boolean;
+
+    private claims:any;
+
+    claim(medium){
+        this.claims = true
+    }
+
+    isContested():boolean {
+        return this.claims
+    }
+
+    isClaimed():boolean{
+        return !this.isContested()
+    }
 
     /**
      * if possible create the partner that will appear on the other side and put it there.

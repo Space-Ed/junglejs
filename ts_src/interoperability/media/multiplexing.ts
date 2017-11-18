@@ -1,13 +1,10 @@
 
 
-import * as I from '../interfaces'
-import {mediaConstructors,BaseMedium } from './medium'
-import {ExchangeTypes, CallExchange} from '../contacts/call/common'
+import {Claim, Link, BaseMedium } from './base'
 import {Junction} from '../../util/all'
 import * as Debug from '../../util/debug'
 
-import {BasicContact} from '../contacts/base'
-import {Op} from '../contacts/op'
+import {BaseContact} from '../contacts/base'
 import {Call} from '../contacts/call'
 
 export type CallContact = Call<any>
@@ -59,7 +56,7 @@ JunctionModeKeys[MUXRESP.ORDER]="array"
 
 
 
-export interface MuxMediumSpec extends I.MediumSpec{
+export interface MuxMediumSpec{
     symbols:string[],         //the symbols that decide what the keys to mux and demux with
     emitArgType: DEMUXARG,    //how the argment is interpreted and unpacked
     emitRetType: MUXRESP,     //how the return value is arrived at
@@ -68,21 +65,23 @@ export interface MuxMediumSpec extends I.MediumSpec{
 
 export class MuxMedium extends BaseMedium <CallOut, CallIn> {
 
-    typeA = Call;
-    typeB  = Call;
-
     emitScope:any;
 
+    seatType = Call
+    targetType = Call
+    fanIn = true
+    fanOut = true
+
     constructor(private muxspec:MuxMediumSpec){
-        super(muxspec);
+        super();
 
         if(muxspec.emitCallType == CALLTYPE.DIRECT){
-            this.multiA = false;
-            this.multiB = false;
+            this.fanIn = false;
+            this.fanOut = false;
         }
     }
 
-    emitArgProcess(inpArg, crumb, sink:CallIn, link:I.LinkSpec<CallOut, CallIn>):{arg:any, escape:boolean}{
+    emitArgProcess(inpArg, crumb, sink:CallIn, link:Link<CallOut, CallIn>):{arg:any, escape:boolean}{
         let arg, escape
 
         let eType:DEMUXARG = this.muxspec.emitArgType
@@ -132,7 +131,7 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
 
     }
 
-    emitResponse(putResp, crumb:Debug.Crumb, link:I.LinkSpec<CallOut, CallIn>){
+    emitResponse(putResp, crumb:Debug.Crumb, link:Link<CallOut, CallIn>){
         let Rtype = this.muxspec.emitRetType;
         let emitResp = putResp;
 
@@ -158,14 +157,14 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
     emitter(sourceToken, data:any, crumb){
 
         //get all outgoing
-        let allFromA = this.matrix.to[sourceToken];
+        let allFromA = this.claims[sourceToken].outbound;
 
         this.beginEmit();
 
 
         for(let sinkToken in allFromA){
-            let link:I.LinkSpec<CallOut, CallIn> = allFromA[sinkToken]
-            let sink:CallIn = link.contactB
+            let link = <Link<CallOut, CallIn>>allFromA[sinkToken]
+            let sink:CallIn = link.target.contact
 
             //perform switching 
             let {arg, escape} = this.emitArgProcess(data, crumb, sink, link);
@@ -204,31 +203,24 @@ export class MuxMedium extends BaseMedium <CallOut, CallIn> {
         return junc
     }
 
-    inductA(token:string, a:CallOut){
-        if(this.muxspec.emitCallType !== CALLTYPE.DIRECT){
-            a.emit = this.emitter.bind(this, token)
+    inductSeat(claim: Claim<CallOut>) {
+        if (this.muxspec.emitCallType !== CALLTYPE.DIRECT) {
+            claim.contact.emit = this.emitter.bind(this, claim.token)
         }
     }
 
-    inductB(token:string, b:CallIn){
-    }
+    inductTarget(claim: Claim<CallIn>) { }
+    retractSeat(token: string) { }
+    retractTarget(token: string) { }
 
-    connect(link: I.LinkSpec<CallOut, CallIn>){
-        if(this.muxspec.emitCallType == CALLTYPE.DIRECT){
-            link.contactA.emit = link.contactB.put
+    connect(link: Link<CallOut, CallIn>) {
+        if (this.muxspec.emitCallType == CALLTYPE.DIRECT) {
+            link.seat.contact.emit = link.target.contact.put
         }
     }
 
-    check(link: I.LinkSpec<CallOut, CallIn>){
-        let superok =  super.check(link)
-        let out = link.contactA.hasOutput
-        let inp = link.contactB.hasInput
-        
-        return superok && out && inp
+    disconnect(link: Link<CallOut, CallIn>) { 
+        link.seat.contact.emit = undefined;
     }
 
-    disconnect(link: I.LinkSpec<CallOut, CallIn>){
-        super.disconnect(link)
-        link.contactA.emit = undefined;
-    }
 }

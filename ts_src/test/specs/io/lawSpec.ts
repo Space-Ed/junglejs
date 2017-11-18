@@ -1,7 +1,8 @@
 import {parseLawExpression, Law, LawIR} from '../../../interoperability/law'
 import * as MUX  from '../../../interoperability/media/multiplexing'
+import {Link}  from '../../../interoperability/media/base'
 import TestHost from '../../helpers/testHost'
-import {MockMedium} from '../../helpers/mockMedium'
+import {MockMedium} from '../../helpers/mockMedia'
 
 describe('law parsing', function(){
 
@@ -44,7 +45,7 @@ describe('laws in action', function(){
         host.primary.addSubrane(hostA.primary, 'a')
         host.primary.addSubrane(hostB.primary, 'b')
         medium = new MockMedium({
-
+            fanIn:false, fanOut:true, seatType: Object, targetType:Object
         })
     })
 
@@ -60,15 +61,15 @@ describe('laws in action', function(){
         hostA.populate(acontacts);
         hostB.populate(bcontacts);
     
-        let calls = (<jasmine.Spy>medium.suppose).calls.allArgs()
+        let calls:Link[][] = (<jasmine.Spy>medium.connect).calls.allArgs()
 
         for (let [tokenA, tokenB] of connections){
             let matches = calls.filter(([val], i)=>{
-                return val.tokenA == tokenA && val.tokenB == tokenB
+                return val.seat.token == tokenA && val.target.token == tokenB
             })
 
             //only one connection of each kind 
-            expect(matches.length).toBe(1)
+            expect(matches.length).toBe(1, `expected link ${tokenA}->${tokenB} to me connected once but it was connected ${matches.length} times`)
         }
 
         

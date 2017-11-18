@@ -2,7 +2,7 @@
 import {Weave} from '../../../interoperability/weave'
 import {Law, parseLawExpression} from '../../../interoperability/law'
 import {Layer, Membrane} from '../../../interoperability/membranes/membrane'
-import {MockMedium} from '../../helpers/mockMedium'
+import {MockMedium} from '../../helpers/mockMedia'
 import TestHost from '../../helpers/testHost'
 
 describe('weave', function(){
@@ -42,7 +42,7 @@ describe('weave', function(){
             },
             addMedium(){
                 medium = new MockMedium({
-
+                    fanIn:true, fanOut:true,
                 })
                 weave.addMedium(medium, 'link')
             },
@@ -73,7 +73,7 @@ describe('weave', function(){
                 for(let act of run){
                     actions[act]()
                 }
-                expect(medium.suppose).toHaveBeenCalledTimes(1)
+                expect(medium.connect).toHaveBeenCalledTimes(1)
             })
 
         }
@@ -86,8 +86,8 @@ describe('weave', function(){
 
                 actions[removal]()
                     
-                let Abreak = (<jasmine.Spy>medium.breakA).calls.count()
-                let Bbreak = (<jasmine.Spy>medium.breakB).calls.count()
+                let Abreak = (<jasmine.Spy>medium.retractSeat).calls.count()
+                let Bbreak = (<jasmine.Spy>medium.retractTarget).calls.count()
 
                 expect(Abreak).toBeLessThan(2)
                 expect(Abreak).toBeLessThan(2)

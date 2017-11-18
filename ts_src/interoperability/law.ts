@@ -1,5 +1,5 @@
 import {tokenize, DTotalExp, scannerF, matches, TokenIR, DFullExp, compileToken, DTermExp, parseDesignatorString, pairByBinding, DesignatorIR} from '../util/designation/all'
-import {Medium } from './interfaces'
+import {BaseMedium} from './media/base'
 import {Layer, Section} from './membranes/membrane'
 // export interface Handle {
 //     retract()
@@ -15,7 +15,7 @@ export interface LinkIR {
 
 export interface Link {
     laws:Law[],
-    medium:Medium<any,any>,
+    medium: BaseMedium<any,any>,
     from: ContactRecord,
     to: ContactRecord,
 }
@@ -144,11 +144,11 @@ export class Pancedent extends Section {
        super.onAddContact(contact,token)
         
         // INDUCT
-    //    if (this.leftToRight) {
-    //         this.law.medium.inductA(compileToken(token))
-    //     } else {
-    //         this.law.medium.inductB(compileToken(token))
-    //     }
+       if (this.leftToRight) {
+            this.law.medium.claimSeat(compileToken(token), contact, this.law)
+        } else {
+            this.law.medium.claimTarget(compileToken(token), contact, this.law)
+        }
 
     }
     
@@ -156,9 +156,9 @@ export class Pancedent extends Section {
         super.onRemoveContact(token)
 
         if(this.leftToRight){
-            this.law.medium.breakA(compileToken(token))
+            this.law.medium.dropSeat(compileToken(token), this.law)
         }else{
-            this.law.medium.breakB(compileToken(token))
+            this.law.medium.dropTarget(compileToken(token), this.law)
         }
     }
 
@@ -204,7 +204,7 @@ export class Law {
 
     left:Pancedent
     right:Pancedent
-    medium:Medium<any,any>
+    medium:BaseMedium<any,any>
     links:Link[]
     target:Layer
 
@@ -216,7 +216,7 @@ export class Law {
         this.right.partner = this.left
     }
 
-    engage(layer:Layer, medium:Medium<any,any>){
+    engage(layer:Layer, medium:BaseMedium<any,any>){
 
         this.medium= medium;
         this.target = layer
@@ -227,6 +227,7 @@ export class Law {
     }
 
     disengage(){
+        //consequently dropping contact claims and therefore disconnecting
         this.left.watchOff(this.target);
         this.right.watchOff(this.target);
     }
@@ -240,19 +241,16 @@ export class Law {
 
             let linkSpec = {
                 bindings: pair.bindings,
-                contactA: from[pair.tokenA],
-                contactB: to[pair.tokenB],
-                tokenA: pair.tokenA,
-                tokenB: pair.tokenB
+                seatToken: pair.tokenA,
+                targetToken: pair.tokenB
             }
 
-            
-            let liveLink = this.medium.suppose(linkSpec)
+            let liveLink = this.medium.supposeLink(linkSpec, this)
 
             if (liveLink) {
                 //create a record of the link here
                 // this.links.push({
-                //     from: pair.tokenA,
+            //     from: pair.tokenA,
                 //     to: pair.tokenB,
                 //     laws:this
                 // })

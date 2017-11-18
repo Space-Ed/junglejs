@@ -1,5 +1,5 @@
 
-import { BasicContact } from './base'
+import { BaseContact } from './base'
 import * as Debug from '../../util/debug'
 import { Junction } from '../../util/all'
 import { Call } from './call'
@@ -36,8 +36,8 @@ export class StdOp extends Call<StdOp> {
     constructor(public spec: StdOpSpec) {
         super()
 
-        this.hasOutput = false;
-        this.hasInput = false;
+        this.isSeatable = false;
+        this.isTargetable = false;
     }
 
     // partner integration
@@ -76,12 +76,12 @@ export class StdOp extends Call<StdOp> {
         if (this.spec.inner_op instanceof Function) {
 
             if(this.spec.mode ==='carry'){
-                this.partner.hasOutput = true
+                this.partner.isSeatable = true
             } else if(this.spec.mode ==='reflex'){
-                this.hasOutput = true;
+                this.isSeatable = true;
             }
 
-            this.hasInput = true;
+            this.isTargetable = true;
             this.put = this.createInput()
         }
     }
@@ -153,12 +153,12 @@ export class StdOp extends Call<StdOp> {
     createHook():{inward:(inp)=>Junction, outward:(arg)=>Junction} {
         //only called from inner contact
 
-        this.partner.hasOutput = this.partner.hasOutput || this.spec.hook_outward === true
-        this.hasOutput = this.hasOutput || this.spec.hook_inward === true
+        this.partner.isSeatable = this.partner.isSeatable || this.spec.hook_outward === true
+        this.isSeatable = this.isSeatable || this.spec.hook_inward === true
 
         return {
-            inward:(this.hasOutput?this.createHookFunction(this):undefined),
-            outward:(this.partner.hasOutput?this.createHookFunction(this.partner):undefined)
+            inward:(this.isSeatable?this.createHookFunction(this):undefined),
+            outward:(this.partner.isSeatable?this.createHookFunction(this.partner):undefined)
         } 
     }
 

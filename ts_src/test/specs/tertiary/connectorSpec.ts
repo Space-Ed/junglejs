@@ -31,8 +31,8 @@ describe('rule connector constructs', function(){
 
         expect(app.shell.contacts.ghost.partner).toBe(app.lining.contacts.ghost, 'properly inverted')
 
-        expect(app.lining.contacts.ghost.hasOutput).toBe(true,'ghost has output on lining')
-        expect(app.lining.contacts.child.hasInput).toBe(true,'ghost has input on lining')
+        expect(app.lining.contacts.ghost.isSeatable).toBe(true,'ghost has output on lining')
+        expect(app.lining.contacts.child.isTargetable).toBe(true,'ghost has input on lining')
 
         // expect(app.weave.hasLinked(':ghost', ':child')).toBe(true,'link heeded')
 
