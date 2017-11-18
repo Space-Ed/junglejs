@@ -1,11 +1,11 @@
 import { Junction } from '../util/junction/junction'
 
 export interface Agent {
-    patch(patch: any): Junction,
-    notify(patch): Junction
+    patch(patch: any):any ,
+    notify(patch):any,
 
-    extract(voidspace: any): Junction,
-    fetch(voidspace: any): Junction,
+    extract(voidspace: any):any,
+    fetch(voidspace: any):any,
 
     config?: AgentConfig
 }

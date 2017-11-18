@@ -1,11 +1,5 @@
 
 import {Domain, Description, isDescription} from './domain'
-import * as Util from '../util/all'
-
-import {deepMeldF} from '../util/ogebra/hierarchical';
-import {meld} from '../util/ogebra/operations'
-
-import {Junction} from '../util/junction/junction'
 import {AnchorAgent, BedAgent, Agent, createHeartBridge} from '../agency/all'
 
 /*

@@ -1,7 +1,7 @@
 
 import * as T from './types'
 
-export function meld(reduce:T.Reducer):(obj1:Object, obj2:Object)=>Object{
+export function meld(reduce:T.Reducer):(obj1:Object, obj2:Object)=>any{
 
     return function(obj1:Object, obj2:Object):Object{
         let melded = {}
@@ -79,7 +79,7 @@ export function mask(reduce:T.Reducer):(obj1:Object, obj2:Object)=>Object{
 
 }
 
-export function define(reducer:T.Reducer):(obj:Object, prop:PropertyKey, val:any)=>Object{
+export function define(reducer:T.Reducer):(obj:Object, prop:PropertyKey, val:any)=>any{
     return function(obj:Object, prop:PropertyKey, val:any):Object{
         let assoced = {}
         assoced[prop] = val;
@@ -87,7 +87,7 @@ export function define(reducer:T.Reducer):(obj:Object, prop:PropertyKey, val:any
     }
 }
 
-export function invert(negate:(a:any, k:string)=>any):(obj:Object)=>Object{
+export function invert(negate:(a:any, k:string)=>any):(obj:Object)=>any{
     return function(obj:Object):Object{
         let inverted = {}
 

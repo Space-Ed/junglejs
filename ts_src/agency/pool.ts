@@ -1,5 +1,4 @@
 import { Agent } from './common'
-import { Junction } from '../util/junction/junction'
 
 export interface PoolConfiguration {
 

@@ -1,4 +1,8 @@
-import {typeCaseSplitR, typeCaseSplitF} from './typesplit'
+
+
+export function ensureArray(sometimes) {
+    return (sometimes instanceof Array) ? sometimes : (sometimes != undefined ? [sometimes] : [])
+}
 
 export function isPrimative(thing){
     return thing == undefined || typeof(thing) !== 'object';
@@ -10,33 +14,6 @@ export function isVanillaObject(thing){
 
 export function isVanillaArray(thing){
     return thing instanceof Array && Array.prototype == Object.getPrototypeOf(thing)
-}
-
-
-export function isTree(thing, stack=[]){
-    stack = stack.concat(thing)
-    function decirc(proposed){
-        if((stack.indexOf(proposed) === -1)){
-            return isTree(proposed, stack)
-        } else {
-            return false;
-        }
-    }
-    //recursively check for circularity and set the reduction to false.
-    return typeCaseSplitR(decirc, decirc, function(){return true})(thing, true, function(a,b,k){return a && b})
-}
-
-export function isVanillaTree(thing, stack=[]){
-
-    function decirc(proposed){
-        if((isVanillaObject(proposed) || isVanillaArray(proposed) && stack.indexOf(proposed) === -1)){
-            return isVanillaTree(proposed, stack.concat(proposed))
-        }else {
-            return false;
-        }
-    }
-    //recursively check for circularity and set the reduction to false.
-    return typeCaseSplitR(decirc, decirc, isPrimative)(thing, true, function(a,b,k){return a && b})
 }
 
 export function deeplyEquals(node1, node2, allowIdentical=true){

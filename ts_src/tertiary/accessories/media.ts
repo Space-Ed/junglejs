@@ -1,5 +1,5 @@
 import { Construct } from '../../construction/construct'
-import {ensureArray}  from '../../util/transforms'
+import {ensureArray}  from '../../util/checks'
 import {parseLawExpression, LawIR, Law} from '../../interoperability/law'
 import {Cell} from '../cells/cell'
 

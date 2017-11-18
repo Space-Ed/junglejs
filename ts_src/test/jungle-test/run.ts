@@ -1,4 +1,4 @@
-import { ensureArray, Debug} from '../../jungle'
+import { Debug} from '../../jungle'
 
 import {DetectorContact} from './detector'
 import {EmitterContact} from './emitter'
@@ -7,6 +7,7 @@ import {EventSequencer} from './schedule'
 import {TestCell} from './cell'
 import {TestEvent, TestRunOptions, LogEntry,LogResult} from './interfaces'
 import {TestDomain} from './domain'
+import {ensureArray} from '../../util/checks'
 
 export function run(opts: TestRunOptions) {
 

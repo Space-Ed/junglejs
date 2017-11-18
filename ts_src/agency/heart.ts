@@ -1,5 +1,4 @@
 import { Agent, AgentConfig } from './common'
-import { Junction } from '../util/junction/junction'
 
 export function createHeartBridge(spec:AgentConfig): { exposed: Agent, pooled: Agent } {
 

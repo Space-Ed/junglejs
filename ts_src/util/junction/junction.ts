@@ -1,4 +1,3 @@
-import {typeCaseSplitR} from '../typesplit'
 import * as Modes from './modes'
 
 enum JResultNatures {
