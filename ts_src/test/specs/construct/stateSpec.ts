@@ -1,115 +1,55 @@
+// import {makeHandler} from '../../../construction/state'
+import {Composite, Construct, Domain, j} from '../../../jungle'
 
-import {Construct, Composite, Domain} from '../../../construction/all'
+describe('internal state proxy', function (){
 
-import {AccessoryState, HostState} from '../../../construction/state'
+    let testDomain:Domain;
+    let testObject:Composite;
 
-describe('state model', function (){
+    beforeEach(function(){
+        testDomain = new Domain()
+        testObject = new Composite(testDomain)
 
-    describe('integrated', function(){
-
-        let domain = new Domain({
-            host:Composite,
-            accessory:Construct
-        })
-
-        it('a composite is a host and a component is an accessory', function(){
-            let composite = domain.recover({
-                basis:'host',
-                publicacc:{
-                    basis:'accessory',
-                    form: {
-                        exposure:'public',
-                        reach:'host'
-                    }
-                },
-                publichost:{
-                    basis:'host',
-                    form:{
-                        exposure:'public'
-                    }
-                }
-            })
-
-            expect(composite.subconstructs.publicacc.exposure).toBe('public')
-            let accval = composite.subconstructs.publicacc.nucleus
-
-            expect(accval).toBe(composite.local['publicacc'])
-            expect(composite.subconstructs['publichost'].exposed).toBe(composite.exposed['publichost'])
-
-        })
-
-        it('a composite has access to a local accessory and host ',function(){
-            let composite = domain.recover({
-                basis:'host',
-                localacc:{
-                    basis:'accessory',
-                    form:{
-                        exposure:'local',
-                        reach:'host'
-                    }
-                },
-                localhost:{
-                    basis:'host',
-                    form:{
-                        exposure:'local'
-                    }
-                }
-            })
-
-            expect(composite.local.localacc).toBe(composite.subconstructs.localacc.exposed.me)
-            expect(composite.local.localhost).toBe(composite.subconstructs.localhost.exposed)
-        })
-
-        it('a composite cannot access private accessory and host ',function(){
-            let composite = domain.recover({
-                basis:'host',
-                localacc:{
-                    basis:'accessory',
-                    form:{
-                        exposure:'private',
-                        reach:'host'
-                    }
-                },
-                localhost:{
-                    basis:'host',
-                    form:{
-                        exposure:'private'
-                    }
-                }
-            })
-
-            expect(composite.local.localacc).toBeUndefined()
-            expect(composite.local.localhost).toBeUndefined()
-        })
-
-        it('as an accessory changes its nucleus the reference through me is updated', function(){
-
-            let composite = domain.recover({
-                basis:'host',
-                localacc:{
-                    value:'thing',
-                    basis:'accessory',
-                    form:{
-                        exposure:'local',
-                        reach:'host'
-                    }
-                }
-            })
-
-            expect(composite.local.localacc.value).toBe(composite.subconstructs.localacc.local.me.value)
-
-            composite.patch({
-                localacc:{value:'thang'}
-            })
-
-            expect(composite.subconstructs.localacc.local.me.value).toBe('thang')
-
-
-        })
-
-
+        testObject.init(j({
+            strange:42,
+            good:j(Construct, 'Sup'),
+            bad:j(Construct),
+            anon:[
+                0,
+                j(Composite, {
+                    love:'one'
+                })
+            ]
+        }))
     })
 
-    
+    it('should access strange properties', function(){
+        expect(testObject.exposed.strange).toBe(42)
+    })
+
+    it('should access exposed of subconstruct', function(){
+        expect(testObject.exposed.good).toBe('Sup')
+    })
+
+    it('should access anonymous entries by numeric index', function(){
+        expect(Object.getOwnPropertyNames(testObject.exposed)).toEqual(['0', '1', 'length', 'strange', 'good', 'bad'])
+        expect(testObject.exposed.length).toBe(2)
+        expect(testObject.exposed[0]).toBe(0)
+        expect(testObject.exposed[1].love).toBe('one')
+    })
+
+    it('should be able to set nucleus', function(){
+        testObject.exposed[0] = 'blam'
+        expect(testObject.exposed[0]).toEqual('blam')
+
+        testObject.exposed['good'] = 'bunk'
+        expect(testObject.exposed['good']).toEqual('bunk')
+    })
+
+    it('should not be able to set composite nucleus', function(){
+        expect(()=>{testObject.exposed[1] = 'WHYYYEE'}).toThrowError('Unable to set composite body from internal context')
+    })
+
+
 
 })

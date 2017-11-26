@@ -1,4 +1,3 @@
-
-rm -r build/**
+#! /bin/bash
 tsc -p ts_src
-webpack
+#node ./node_modules/webpack/bin/webpack.js

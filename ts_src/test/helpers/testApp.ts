@@ -2,7 +2,6 @@ import Jasmine = require('jasmine')
 import {Cell} from '../../tertiary/all'
 import {Junction} from '../../util/all'
 import {Crumb} from '../../util/debug'
-import {CallIn, CallOut, CallExchange} from '../../interoperability/contacts/call/common'
 
 export interface CallResponseTestSpec {
     label?:string;
@@ -25,20 +24,18 @@ export default class TestApp extends Cell{
 
     debug:boolean;
 
-    applyForm(form:any={}){
+    applyHead(head:any={}){
         Crumb.defaultOptions.log = console
         Crumb.defaultOptions.debug = true
 
-        this.exposure = form.exposure || 'public'
-
-        super.applyForm(form);
-        this.debug = form.debug;
+        super.applyHead(head);
+        this.debug = head.debug;
 
 
     }
 
     call(contact:string, data:any){
-        let input = this.shell.designate(contact)[contact];
+        let input = this.shell.scan(contact)[contact];
 
         let crumb = new Crumb("Call from TestApp")
             .with(data)
@@ -53,11 +50,11 @@ export default class TestApp extends Cell{
      */
     callResponseTest(spec:CallResponseTestSpec):Junction{
 
-        let input = this.shell.designate(spec.inputContact)[spec.inputContact]
+        let input = this.shell.scan(spec.inputContact)[spec.inputContact]
 
         expect(input).toBeDefined("Unable to find input contact")
 
-        let output = this.shell.designate(spec.outputContact)[spec.outputContact]
+        let output = this.shell.scan(spec.outputContact)[spec.outputContact]
 
         expect(output).toBeDefined("Unable to find output contact")
 
@@ -106,8 +103,10 @@ export default class TestApp extends Cell{
 
     callReturnTest(spec:CallReturnTestSpec):Junction{
         console.log(`------------Call Return Test - ${spec.label||"unlabelled"}----------------`)
-        let input = this.shell.designate(spec.inputContact)[spec.inputContact]
-        expect(input).toBeDefined("Unable to find input contact")
+        let scan = this.shell.scan(spec.inputContact)
+        let input = scan[spec.inputContact]
+
+        expect(input).toBeDefined("Unable to find input contact, only found "+Object.keys(scan))
 
 
         let allDone = new Junction()

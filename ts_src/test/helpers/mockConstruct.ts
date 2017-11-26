@@ -8,7 +8,7 @@ export class MockConstruct extends Construct {
     spies:any
 
     constructor(spec:{message:string}){
-        super()
+        super(undefined)
 
         this.state = this.nucleus;
 

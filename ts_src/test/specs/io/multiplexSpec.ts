@@ -1,26 +1,25 @@
 import {MuxMedium,CALLTYPE} from "../../../interoperability/media/multiplexing";
 import TestApp from '../../helpers/testApp'
 
+import {j, J} from '../../../jungle'
+
 describe("multiplex medium", function(){
 
     it('should transport data across the cell', function(done){
-        let app = new TestApp();
+        let app = new TestApp(J);
 
-        app.init({
-            form:{
+        app.init(j({
+            head:{
                 debug:true,
-                media:['smear'],
-                laws:{
-                    'smear':[
-                        ':a->:b'
-                    ],
-                }
             },
 
-            a:{basis:'contact:op', carry_in:true},
-            b:{basis:'contact:op', carry_out:true}
+            smear:j('media:direct',{
+                law:':a~>:b'
+            }),
 
-        });
+            a:j('inward'),
+            b:j('outward')
+        }));
 
         // expect(app.mesh.media.smear.muxspec.emitCallType).toBe(CALLTYPE.BREADTH_FIRST)
 
@@ -40,59 +39,46 @@ describe("multiplex medium", function(){
         let app
 
         beforeAll(function(){
-            app= new TestApp();
+            app = new TestApp(J);
 
-            app.init({
-                form:{
+            app.init(j({
+                head:{
                     debug:true,
+                    retain:true
+                },
 
-                    prime(){
-                        // this.addMedium('compose', {
-                        //     symbols:['outer', 'inner']
-                        // })
-                        //
-                        // this.addMedium('split', {
-                        //     symbols:['outer', 'inner']
-                        // })
-                        //
-                        // this.addRule('compose', ':entry->outer#:inner#')
-                        // this.addRule('split', ':split->outer#:inner#')
+                composer:j('media:compose', {
+                    symbols:['outer','inner'],
+                    law:':entry->outer#:inner#'
+                }),
+
+                switcher:j('media:switch', {
+                    symbols:['outer', 'inner'],
+                    law:':split->outer#:inner#'
+                }),
+
+                a:j('cell',{
+                    head: {
+                        // withold: true,
                     },
+                    receptorA:j('resolve', { outer(val){return "receptorA in cell a got "+val}}),
+                    receptorB:j('resolve', { outer(val){return "receptorB in cell a got "+val}})
+                }),
 
-                    media:{
-                        'compose':{
-                            symbols:['outer', 'inner']
-                        },'split':{
-                            symbols:['outer', 'inner']
-                        }
+                b: j('cell', {
+                    head:{
+                        // withold:true,
                     },
-                    laws:{
-                        'compose':[
-                            ':entry->outer#:inner#'
-                        ],
-                        'split':[
-                            ':split->outer#:inner#'
-                        ]
-                    }
-                },
+                    receptorA:j('resolve',{ outer(val){return "receptorA in cell b got "+val}}),
+                    receptorB:j('resolve', { outer(val){return "receptorB in cell b got "+val}})
+                }),
 
-                a:{
-                    basis:'cell',
-                    receptorA:{basis:'contact:op', resolve_in(val){return "receptorA in cell a got "+val}},
-                    receptorB:{basis:'contact:op', resolve_in(val){return "receptorB in cell a got "+val}}
-                },
+                entry:j('inward'),
+                split:j('inward')
 
-                b:{
-                    basis:'cell',
-                    receptorA:{basis:'contact:op', resolve_in(val){return "receptorA in cell b got "+val}},
-                    receptorB:{basis:'contact:op', resolve_in(val){return "receptorB in cell b got "+val}}
-                },
-
-                entry:{basis:'contact:op', carry_in:true},
-                split:{basis:'contact:op', carry_in:true}
-
-            });
+            }));
         })
+
         it('should perform recomposition the cell', function(done){
 
             app.callReturnTest({

@@ -1,9 +1,13 @@
 
+export * from './membranes/layer'
 export * from './membranes/membrane'
-export * from './mesh/ruleMesh'
+export * from './membranes/section'
+export * from './membranes/common'
 
-export * from './media/medium'
+export * from './weave'
+
+export * from './media/base'
 export * from "./media/multiplexing"
 
 export * from './contacts/base'
-export * from './contacts/op'
+export * from './contacts/stdops'

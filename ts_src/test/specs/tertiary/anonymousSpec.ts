@@ -1,23 +1,18 @@
-import Jasmine = require('jasmine')
-import {Cell, DefaultCell, ArrayCell} from '../../../tertiary/all'
+import {Cell} from '../../../tertiary/all'
 import TestApp from '../../helpers/testApp'
-import {Reset, Get} from '../../../aliases/all'
+import {j, J, Construct} from '../../../jungle'
 
 describe('anonymisation',function(){
 
-
-    pending('Full review of anonymisation')
-
-
     it('should parse anonymous array members of a Cell', function(){
 
-        let app = new TestApp()
+        let app = new TestApp(J)
 
-        app.init({
-            ohmynon:[
+        app.init(j('test',{
+            ohmynon:j([
                 "what", "the", "sequence"
-            ]
-        })
+            ])
+        }))
 
         expect(app.exposed.ohmynon[0]).toBe("what")
 
@@ -25,21 +20,21 @@ describe('anonymisation',function(){
 
     it('should create anonymous from cell directly', function(){
 
-        let app = new DefaultCell()
+        let app = new Cell(J)
 
-        app.init([
+        app.init(j([
             'how', 'the', 'list'
-        ]);
+        ]));
 
         expect(app.exposed[0]).toBe('how')
 
     })
 
     it('additions without a given name are pushed to the anonymous', function(){
-        let app = new TestApp()
+        let app = new TestApp(J)
 
-        app.add("anon1")
-        app.init({})
+        app.addAnon("anon1")
+        app.init(j('test', {}))
         app.add('anon2')
 
         expect(app.nucleus[0]).toBe('anon1')
@@ -49,51 +44,49 @@ describe('anonymisation',function(){
 
     it('should have an array typed nucleus and exposed when created under array basis ', function(){
 
-        let app = new ArrayCell()
+        let app = new Cell(J)
+
+        J.define('simple', j(Construct))
 
         let spy = jasmine.createSpy("hiyo");
 
-        app.init([
-            0,1, {}
-        ])
-
+        app.init(j([
+            0,1, j('simple', 'body'), 'after',  'thought'
+        ]))
+        
         expect(app.exposed instanceof Array).toBe(true)
         expect(Object.getPrototypeOf(app.exposed)).toBe(Array.prototype);
-
-        //for(let i=0 ;i<app.exposed.length; i++)
 
         app.exposed.forEach((x)=>{
             spy(x)
         })
 
-        expect(app.exposed instanceof Array).toBe(true)
-
-        expect(spy).toHaveBeenCalledTimes(3)
-
+        spy.calls.allArgs().forEach(([arg], i)=>{
+            expect(arg).toBe([0,1,'body','after','thought'][i])
+        })
     })
 
 
     it('should support multiple array nesting', function(){
 
-        let app = new TestApp()
+        let app = new TestApp(J)
 
-        app.init({
-            form:{
+        app.init(j({
+            head:{
                 debug:true
             },
 
-            level:[
-                [0, 1],
-                ['a', 'b']
-            ],
+            level:j([
+                j([0, 1]),
+                j(['a', 'b'])
+            ]),
 
-            grab:{
-                basis:'contact:op',
-                resolve_in(x){
-                    return this.level[x[0]][x[1]]
+            grab:j('resolve',{
+                outer(x){
+                    return this.earth.level[x[0]][x[1]]
                 }
-            }
-        })
+            })
+        }))
 
         app.callReturnTest({
             label:'Multiple Array Nesting',
@@ -105,25 +98,23 @@ describe('anonymisation',function(){
 
     it('should support designation of contacts within array structure', function(){
 
-        let app = new TestApp()
+        let app:any = new TestApp(J)
 
-        app.init({
-            form:{
+        app.init(j({
+            head:{
                 debug:true
             },
 
-            brave: [Reset('defaultA'), Get('defaultB')],
+            brave: j([j('deposit', 'defaultA'), j('deposit', 'defaultB')]),
 
-            drop:{
-                basis:'contact:op',
-                resolve_in(x){this.brave[1] = x}
-            },
+            drop:j('resolve',{
+                outer(x){this.earth.brave[1] = x}
+            }),
 
-            grab:{
-                basis:'contact:op',
-                resolve_in(x){return this.brave[x]}
-            }
-        })
+            grab:j('resolve', {
+                outer(x){return this.earth.brave[x]}
+            })
+        }))
 
         expect(app.shell.subranes.brave.contacts['0']).not.toBeUndefined()
 

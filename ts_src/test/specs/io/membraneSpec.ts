@@ -1,6 +1,6 @@
 import * as Jungle from '../../../jungle'
 
-let {Membrane} = Jungle.IO;
+let Membrane = Jungle.Membrane;
 import TestHost from '../../helpers/testHost'
 import {Input, Output} from '../../helpers/testContacts'
 
@@ -53,7 +53,7 @@ describe('basic membrane', function(){
         })
 
         it('should have inverted those contactes already present', function(){
-            let desall = invert.designate(":*");
+            let desall = invert.scan(":*");
 
             expect(desall[':y']).not.toBeUndefined();
             expect(desall[':x']).not.toBeUndefined();
@@ -62,22 +62,22 @@ describe('basic membrane', function(){
         it('should invert further contactes added', function(){
             memb.addContact(Output(), 'lame-o');
 
-           //console.log(invert.contacts)
-            let desall = invert.designate(":*");
+           //
+            let desall = invert.scan(":*");
 
             expect(desall[':lame-o']).not.toBeUndefined();
 
             //a caller in the inversion is a called in the original
             invert.addContact(Output(), 'cool-cat');
-            let desallop = memb.designate(":*");
+            let desallop = memb.scan(":*");
             expect(desallop[':cool-cat']).not.toBeUndefined();
         })
 
         it('should remove from both sides', function(){
-            let desiga = invert.designate(':a', false);
+            let desiga = invert.scan(':a', false);
 
             invert.removeContact(desiga[0]);
-            expect(invert.designate(':a',  false)[0]).toBeUndefined();
+            expect(invert.scan(':a',  false)[0]).toBeUndefined();
         })
 
     })
@@ -96,7 +96,7 @@ describe('basic membrane', function(){
 
         it('should allow designation at depth', function(){
 
-            let desig = memb.designate('sub:a')
+            let desig = memb.scan('sub:a')
             expect(desig['sub:a']).toBe(submemb.contacts.a)
         })
 
@@ -106,11 +106,11 @@ describe('basic membrane', function(){
             sub2.addContact(Input() , 'a');
             submemb.addSubrane(sub2, 'sub')
 
-            let desig = memb.designate('sub.sub:a')
+            let desig = memb.scan('sub.sub:a')
             //
             expect(desig['sub.sub:a']).toBe(sub2.contacts.a)
 
-            let desigAll = memb.designate('**.sub:a')
+            let desigAll = memb.scan('**.sub:a')
             expect(desigAll['sub.sub:a']).toBe(sub2.contacts.a)
             expect(desigAll['sub:a']).toBe(submemb.contacts.a)
 
@@ -118,7 +118,7 @@ describe('basic membrane', function(){
 
 
     })
-    describe('membrane change notifications', function(){
+    describe('- membrane change notifications', function(){
 
         beforeEach(function(){
 
@@ -128,17 +128,8 @@ describe('basic membrane', function(){
         it('should notify host when membrane has a contact added',function(){
             //all additions reported
             host.populate(['_door']);
-            expect(host.addspy.calls.allArgs()[0][0]).toBe(memb.contacts.door)
-            expect(host.addspy.calls.allArgs()[0][1]).toBe(':door')
-        });
-
-        it('should notify me when a membrane is added',function(){
-            let sub = new Membrane()
-
-            memb.addSubrane(sub, 'sub')
-
-            let membadd = host.membaddspy.calls.allArgs()
-            expect(host.membaddspy.calls.allArgs()[0][0]).toBe(sub)
+            expect(host.addspy.calls.allArgs()[0][1]).toBe(memb.contacts.door)
+            expect(host.addspy.calls.allArgs()[0][0]).toEqual([[],'door'])
         });
 
         it('should notify when a sub membrane has a contact added',function(){
@@ -147,8 +138,8 @@ describe('basic membrane', function(){
 
             sub.addContact(Input(), 'piwi')
 
-            expect(host.addspy.calls.allArgs()[0][0]).toBe(sub.contacts.piwi)
-            expect(host.addspy.calls.allArgs()[0][1]).toBe('sub:piwi')
+            expect(host.addspy.calls.allArgs()[0][1]).toBe(sub.contacts.piwi)
+            expect(host.addspy.calls.allArgs()[0][0]).toEqual([['sub'], 'piwi'])
         });
 
 
@@ -158,8 +149,7 @@ describe('basic membrane', function(){
             memb.removeContact('door');
 
             expect(memb.contacts.door).toBeUndefined()
-            expect(host.remspy.calls.allArgs()[0][0]).toBe(removed)
-            expect(host.remspy.calls.allArgs()[0][1]).toBe(':door')
+            expect(host.remspy.calls.allArgs()[0][0]).toEqual([[],'door'])
         })
 
         it('should notify me when a contact is removed from a sub membrane',function(){
@@ -171,35 +161,20 @@ describe('basic membrane', function(){
             let removed = sub.removeContact('piwi')
 
             expect(memb.contacts.door).toBeUndefined()
-            expect(host.remspy.calls.allArgs()[0][0]).toBe(removed)
-            expect(host.remspy.calls.allArgs()[0][1]).toBe('sub:piwi')
-        })
-
-        it('should notify me when a sub membrane is added',function(){
-            let sub = new Membrane()
-            memb.addSubrane(sub, 'sub')
-
-            host.membaddspy.calls.reset();
-            let sub2 = new Membrane()
-            sub.addSubrane(sub2, 'sub2')
-
-            expect(host.membaddspy.calls.allArgs()[0][0]).toBe(sub2)
-            expect(host.membaddspy.calls.allArgs()[0][1]).toBe('sub.sub2')
+            expect(host.remspy.calls.allArgs()[0][0]).toEqual([['sub'], 'piwi'])
         })
 
         it('should notify contact additions of an added sub membrane', function(){
             let sub = new Membrane()
             memb.addSubrane(sub, 'sub')
 
-            host.membaddspy.calls.reset();
-
             let sub2 = new Membrane()
             sub2.addContact(Output(),'fogle')
 
             sub.addSubrane(sub2, 'sub2')
 
-            expect(host.addspy.calls.allArgs()[0][0]).toBe(sub2.contacts.fogle)
-            expect(host.addspy.calls.allArgs()[0][1]).toBe('sub.sub2:fogle')
+            expect(host.addspy.calls.allArgs()[0][1]).toBe(sub2.contacts.fogle)
+            expect(host.addspy.calls.allArgs()[0][0]).toEqual([['sub','sub2'],'fogle'])
         })
     })
 
@@ -216,20 +191,20 @@ describe('basic membrane', function(){
             let indexSpy = jasmine.createSpy('change on index').and.callFake(check)
 
             memb.addWatch({
-                changeOccurred:changeSpy
+                contactChange:changeSpy
             })
 
 
             memb.addWatch({
-                changeOccurred:indexSpy
+                contactChange:indexSpy
             }, 0)
 
             let contact = Input()
             memb.addContact(contact, 'twice')
 
-            expect(changeSpy.calls.allArgs()[0][2]).toBe(':twice', "because anonymous wipes the front")
+            expect(changeSpy.calls.allArgs()[0][0]).toEqual([[],'twice'], "because anonymous wipes the front")
 
-            expect(indexSpy.calls.allArgs()[0][2]).toBe('0:twice', "because numeric designation is allowed")
+            expect(indexSpy.calls.allArgs()[0][0]).toEqual([['0'],'twice'], "because numeric designation is allowed")
 
         })
     })

@@ -1,20 +1,16 @@
 
 import Jasmine = require('jasmine')
-import {MembraneEvents, Section, Membrane} from '../../../interoperability/membranes/membrane'
-import {Op} from '../../../interoperability/contacts/op'
+import {Section, Layer, Membrane} from '../../../interoperability/all'
+import {compileToken} from '../../../util/designation/parsing'
+import {Duplex as Contact} from '../../helpers/testContacts'
 
-function Contact(){
-    return new Op({
-        context:{}
-    })
-}
 
-function spyOnSection(section: Section, label:string):jasmine.Spy{
+function spyOnSection(section: Layer, label:string):jasmine.Spy{
     let spy = jasmine.createSpy(label)
 
     section.addWatch({
-        changeOccurred(event, subject, token){
-            spy(event, subject, token)
+        contactChange(token, contact){
+            spy(token, contact)
         }
     })
 
@@ -26,59 +22,162 @@ describe("sectionalization", function(){
     it('should be able to section a membrane', function(){
 
         let memb = new Membrane();
+
+        
+        memb.addContact(Contact(), "pre")
+
         let sect = memb.createSection("**:*");
+        
+        memb.addContact(Contact(), "post")
 
-        memb.addContact(Contact(), "contact")
 
-        let desig = sect.designate(":hi", false)
+        let notThere = sect.scan(":hi", true)
+        expect(notThere[':hi']).toBeUndefined()
+        
+        let thereBefore = sect.scan(":pre", true)
+        expect(thereBefore[':pre']).toBe(memb.contacts.pre)
+        
 
-        expect(desig[':hi']).toBe(memb.contacts.hi)
-
+        let addedAfter = sect.scan(":post", true)
+        expect(addedAfter[':post']).toBe(memb.contacts.post)
     })
 
     it('should notify the section as the membrane is changed', function(){
         let memb = new Membrane();
+        
         let sect = memb.createSection("**:*");
+
+        memb.addContact(Contact(), "pre")
+
         let addspy = spyOnSection(sect, "sect")
 
-        memb.addContact( Contact(), "contact")
-        expect(addspy).toHaveBeenCalledWith(MembraneEvents.AddContact, memb.contacts.contact, ":contact")
+        memb.addContact( Contact(), "post")
+
+        expect(addspy.calls.allArgs()[0][0]).toEqual([[],"pre"])
+        expect(addspy.calls.allArgs()[1][0]).toEqual([[],"post"])
 
     })
 
-    it('should obscure visibility to the membrane', function(){
+    it('should create negative section for designator', function(){
         let memb = new Membrane();
-        let sect = memb.createSection("**:*");
-        let addspy = spyOnSection(memb,"memb")
+
+        memb.addContact(Contact(), "pre")
+
+        //a section containing everything except everything
+        let sect = memb.createSection("**:*", null, false);
+        let addspy = spyOnSection(sect, "negative")
 
         memb.addContact( Contact(), "contact")
+
         expect(addspy).not.toHaveBeenCalled()
-        expect(memb.designate(':contact')[':contact']).toBeUndefined()
+        expect(sect.scan(':contact')[':contact']).toBeUndefined()
+        expect(sect.scan(':pre')[':pre']).toBeUndefined()
 
     })
 
-    it('should cut into two parts', function(){
+    describe('systematic', function(){
 
-        let memb = new Membrane();
-        let sect = memb.createSection("a:*");
+        let memb:Membrane, subA:Membrane, subB:Membrane
+     
+        beforeEach(function(){
+            memb = new Membrane();
 
-        let subA = new Membrane()
-        let subB = new Membrane()
+            subA = new Membrane()
+            subB = new Membrane()
 
-        memb.addSubrane(subA, 'a')
-        memb.addSubrane(subB, 'b')
+            memb.addSubrane(subA, 'a')
+            memb.addSubrane(subB, 'b')
 
-        let sectspy = spyOnSection(sect, "sect")
-        let membspy = spyOnSection(memb, "memb")
+            subA.addContact(Contact(), "A")
+            subA.addContact(Contact(), "B")
+            subB.addContact(Contact(), "B")
+            subB.addContact(Contact(), "C")
+            memb.addContact(Contact(), "A")
+            memb.addContact(Contact(), "C")
+        })
 
-        subA.addContact( Contact(), "aContact")
-        subB.addContact ( Contact(), "bContact")
+        function removal(){
+            memb.removeSubrane('b')
+            // subB.removeContact('B')
+            // subB.removeContact('C')
+            subA.removeContact('A')
+            subA.removeContact('B')
+            memb.removeContact('A')
+            memb.removeContact('C')
+        }
 
-        expect(sectspy).toHaveBeenCalledTimes(1)
-        expect(membspy).toHaveBeenCalledTimes(1)
+        const complete = ['a:A', 'a:B', 'b:B', 'b:C', ':A', ':C']
+        const tests = [
+            ['**:*', ['a:A', 'a:B', 'b:B', 'b:C', ':A', ':C']],
+            ['*:*', ['a:A', 'a:B', 'b:B', 'b:C']],
+            ['*:B', [ 'a:B', 'b:B']],
+            ['a:*', ['a:A', 'a:B']],
+            ['**:C', [':C', 'b:C']],
+            [':*', [':A', ':C']],
+        ]
+        
+        for (let [sectd, positive] of tests){
 
-        expect(sect.designate('**:*')['a:aContact']).toBe(subA.contacts.aContact)
-        expect(memb.designate('**:*')['b:bContact']).toBe(subB.contacts.bContact)
+            it(`should create scannable positive and negative section for ${sectd}`, function(){
+                let sect = memb.createSection(<string>sectd)
+                let neg = memb.createSection(<string>sectd, null, false)
+                let scan = sect.scan('**:*', true)
+                let nscan = neg.scan('**:*', true)
+
+                for (let token of complete){
+
+                    if(positive.indexOf(token) > -1){
+                        expect(token in scan).toBe(true, `positive scan should contain ${token}`)
+                    }else{
+                        expect(token in nscan).toBe(true, `negative scan should contain ${token}`)
+                    }
+                }
+            })
+
+            it(`watching the section should notify for each existing contact ${sectd}`, function(){
+                let sect = memb.createSection(<string>sectd)
+                let neg = memb.createSection(<string>sectd, null, false)
+
+                let pcalls = new Set()
+                let ncalls = new Set()
+
+                sect.addWatch({
+                    contactChange(token, contact){
+                        let c = compileToken(token)
+                        pcalls.add(c)
+                    }
+                })
+
+                neg.addWatch({
+                    contactChange(token, contact) {
+                        let c = compileToken(token)
+                        ncalls.add(c)
+                    }
+                })
+
+                for (let token of complete) {
+
+                    if (positive.indexOf(token) > -1) {
+                        expect(pcalls.has(token)).toBe(true, `positive scan should contain ${token}`)
+                    } else {
+                        expect(ncalls.has(token)).toBe(true, `negative scan should contain ${token}`)
+                    }
+                }
+            })
+
+            it(`should respond to the removal of things`, function(){
+    
+                let sect = memb.createSection(<string>sectd)
+                let neg = memb.createSection(<string>sectd, null, false)
+                
+                removal()
+    
+                expect(Object.keys(sect.scan('**:*', true)).length).toBe(0, "there are no things left to scan")
+                expect(Object.keys(neg.scan('**:*', true)).length).toBe(0, 'nothing negative left to scan')                
+    
+            })
+        }
+        
 
     })
 

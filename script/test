@@ -1,5 +1,2 @@
 #! /bin/bash
-
-#./script/build
-
-jasmine
+./node_modules/jasmine/bin/jasmine.js

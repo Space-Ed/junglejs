@@ -1,4 +1,3 @@
-import {typeCaseSplitR} from '../typesplit'
 import * as Modes from './modes'
 
 enum JResultNatures {
@@ -175,21 +174,23 @@ export class Junction {
                 }
             }),
             ((err)=>{
-                this.error = this.cache.backERR(ticket, {
+                let error = this.cache.backERR(ticket, {
                     message:err,
                     key:ticket
                 });
 
-                if (this.error !== undefined){
-                }
-                this.fried = true;
-
-                //Default value, sideways reports, thrown error
-                if (this.fried && this.hasFuture()){
-                    this.proceedCatch(this.error);
-                }
+                this.raise(error)
             })
         ]
+    }
+
+    raise(error){
+        this.fried = true;
+        this.error = error;
+        //Default value, sideways reports, thrown error
+        if (this.hasFuture()) {
+            this.proceedCatch(this.error);
+        }
     }
 
     catch(callback:Function):Junction{
@@ -199,8 +200,8 @@ export class Junction {
         frontier.future.blocked = true;
         frontier.catchCallback = callback;
 
-        if (frontier.fried && frontier.hasFuture()){
-            frontier.proceedCatch(frontier.error);
+        if (frontier.fried ){
+            frontier.raise(frontier.error)
         }
 
         return frontier.future;
@@ -227,6 +228,10 @@ export class Junction {
         frontier.future.blocked = true;
         frontier.future._mode(this.cachetype);
         frontier.future.thenargs = thenargs;
+
+        //error propogation
+        frontier.future.fried = frontier.fried;
+        frontier.future.error = frontier.error;
 
         frontier.thenCallback = callback;
 

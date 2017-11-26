@@ -1,13 +1,10 @@
 import * as Jungle from '../../jungle'
-
-import Jasmine = require('jasmine')
-
-let {Membrane, DemuxWatchMethodsF, Op} = Jungle.IO;
+let {Membrane} = Jungle;
 
 import {Input, Output, Duplex} from './testContacts'
 
 export default class TestHost {
-    changeOccurred;
+    contactChange;
     primary:Jungle.Membrane;
     invert:Jungle.Membrane;
 
@@ -21,41 +18,26 @@ export default class TestHost {
 
     constructor(labels){
 
-        this.changeOccurred = DemuxWatchMethodsF(this)
+        this.contactChange = (token, contact)=>{
+            if (contact){
+                this.addspy(token, contact)
+            }else{
+                this.remspy(token)
+            }
+        }
+
         this.primary = new Membrane()
         this.primary.addWatch(this)
         this.invert = this.primary.invert()
 
         this.addspy = jasmine.createSpy("add contact")
         this.remspy = jasmine.createSpy("remove contact")
-        this.membaddspy = jasmine.createSpy("add membrane")
-        this.membremspy = jasmine.createSpy("remove membrane")
 
         this.inputs = {}
         this.outputs = {}
 
         this.populate(labels)
 
-    }
-
-    onAddContact(crux, token){
-        this.addspy(crux, token)
-    }
-
-    onRemoveContact(crux,token){
-        this.remspy(crux,  token)
-    }
-
-    onAddMembrane(membrane, token){
-        this.membaddspy(membrane, token)
-    }
-
-    onRemoveMembrane(membrane, token){
-        this.membremspy(membrane, token)
-    }
-
-    retrieveContext(port){
-        return this
     }
 
     /**

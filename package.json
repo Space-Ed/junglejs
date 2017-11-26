@@ -1,6 +1,6 @@
 {
   "name": "jungle-core",
-  "version": "0.7.1",
+  "version": "0.8.2",
   "description": "The organic programming framework",
   "main": "./build/jungle",
   "types": "./build/jungle",
@@ -39,7 +39,6 @@
   "homepage": "https://github.com/Space-Ed/junglejs#readme",
   "devDependencies": {
     "@types/jasmine": "^2.5.51",
-    "browserify": "^13.1.0",
     "jasmine": "^2.5.2",
     "jasmine-node": "^1.14.5",
     "karma": "^0.12.31",
@@ -52,7 +51,8 @@
     "source-map-support": "^0.4.15",
     "ts-loader": "^2.1.0",
     "tsify": "^1.0.1",
-    "typescript": "^1.8.10",
+    "tslint": "^5.7.0",
+    "typescript": "^2.5.2",
     "uuid": "^2.0.3",
     "webpack": "^2.6.1"
   },

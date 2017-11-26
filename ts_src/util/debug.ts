@@ -1,5 +1,5 @@
 import {isPrimative} from './checks'
-import {melder} from './transforms'
+import {meld} from './ogebra/all'
 
 /*
 
@@ -140,7 +140,7 @@ export class Crumb {
             }
         }
 
-        this.options = melder(
+        this.options = meld((a,b)=>(b))(
             Crumb.defaultOptions,
             optionObj
         )
