@@ -96,10 +96,9 @@ export class Construct{
                 return this.nucleus
             },
             set: (value) => {
-                //when the 
-                this.dark.patch(value)
-                this.notify(value)
-                return this.nucleus = value
+                this.dark.patch(value) //notify the heart
+                this.notify(value)     //notify above
+                return this.nucleus = value //enact the change
             }
         })
     }
@@ -115,6 +114,7 @@ export class Construct{
         this.heart = exposed 
         this.dark = pooled
 
+        //called on this.heart.patch
         this.dark.notify = (nt) => {
             this.nucleus = nt
 
@@ -125,6 +125,7 @@ export class Construct{
             return null
         }
 
+        //called on this.heart.extract
         this.dark.fetch = (ft) => {
             let res = this.nucleus
             if (res == undefined) {
@@ -144,10 +145,7 @@ export class Construct{
             },
 
             heart: {
-                get: () => {
-                    
-                    return this.heart
-                }
+                get: () => (this.heart)
             },
         })
     }
@@ -225,17 +223,18 @@ export class Construct{
         delete this.self.world;
         delete this.self.agent;
     }
+    
+    patch(patch?:any){
+        this._patch(patch)
+        this.dark.notify(patch)
+    }
+
     /**
         modification of structure by application of a patch,
         @param: patch the value to reset
     */
     _patch(patch?:any){
         this.nucleus = patch
-    }
-
-    patch(patch?:any){
-        this._patch(patch)
-        this.dark.notify(patch)
     }
 
     notify:(patch)=>any

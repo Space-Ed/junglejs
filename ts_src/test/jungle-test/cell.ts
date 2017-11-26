@@ -43,7 +43,6 @@ export class TestCell extends Cell{
 
     applyHead(head){
         super.applyHead(head)
-
         
         if(head.tid){
             this.domain.targets[head.tid] = this;

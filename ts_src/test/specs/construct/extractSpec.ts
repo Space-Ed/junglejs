@@ -18,26 +18,30 @@ describe('extraction', function(){
     } )
 
     describe( 'of composite constructs', function(){
-        
-        let D = new Domain()
-            .define('comp', Comp)
-            .define('array', Comp)
-            .define('cons', Construct)
 
-        let seed = j('comp', {
-            x: "basic data",
-            y: j('comp', {
-                data: 'not so basic'
-            }),
-            z: j('comp', {
-                info: j('cons', 'so deep')
-            }),
-            anon: [
-                0, 'one', j('cons', 'two'), j(['a','b','c'])
-            ]
+        let D:Domain, seed, composite
+
+        beforeEach(()=>{
+            D = new Domain()
+                .define('comp', Comp)
+                .define('array', Comp)
+                .define('cons', Construct)
+    
+            seed = j('comp', {
+                x: "basic data",
+                y: j('comp', {
+                    data: 'not so basic'
+                }),
+                z: j('comp', {
+                    info: j('cons', 'so deep')
+                }),
+                anon: [
+                    0, 'one', j('cons', 'two'), j(['a','b','c'])
+                ]
+            })
+    
+            composite = D.recover(seed)
         })
-
-        let composite = D.recover(seed)
 
         it('should extract whole body with no arg / null', function(){
             expect(composite.extract()).toEqual({

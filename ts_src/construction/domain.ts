@@ -7,8 +7,15 @@ import {isVanillaObject, isVanillaArray} from '../util/checks'
 export interface SeekResult {
     domain: Domain,
     name: string,
-    entry?: Description
+    entry?: Description,
+    reason?:string
 }
+
+export interface SeekQuery { 
+    location: string[],
+    name: string
+}
+
 
 export interface Description { 
     basis: any, 
@@ -27,7 +34,7 @@ export interface GDescription<H,B>{
     anon?: any[],
 
     domain?: Domain,
-    origins?: string[]
+    origins?: string[],
 
 }
 
@@ -49,7 +56,7 @@ function parseBasisString(str:string):{location:string[], name:string, invasive:
     }
 }
 
-export function isConstruct(thing:any):boolean{
+export function isNature(thing:any):boolean{
     return thing instanceof Function && (thing.prototype instanceof Construct || thing === Construct)
 }
 
@@ -57,10 +64,6 @@ export function isDescription(thing:any):boolean {
     return isVanillaObject(thing) && 'basis' in thing
 }
 
-export interface DomainOps {
-    isolated?:boolean,
-    rebasing?:boolean
-}
 
 
 export function descmeld(entry, desc, k?) {
@@ -68,6 +71,7 @@ export function descmeld(entry, desc, k?) {
         basis: entry.basis,
         head: headmeld(entry.head||{}, desc.head||{}),
         body: safeMeld(bodyMeldItem)(entry.body||{}, desc.body||{}),
+        domain: entry.domain || desc.domain
     }
 
     if(desc.anon) meld.anon = desc.anon
@@ -143,10 +147,11 @@ function debaseBodyItem (desc, base, k?){
 
 }
 
+
 /*
     a place where constructs are stored in either static or serial form and recovered from a serial form using a basis
 */
-export class Domain {
+export class Domain{
 
     parent:Domain;
     exposed:any;
@@ -156,54 +161,52 @@ export class Domain {
     melder:(a:any, b:any)=>any
     debaser:(a:any, b:any)=>any
 
-    private isolated: boolean
-    private rebasing: boolean
 
-    constructor(ops:DomainOps = {}){
-        this.isolated = ops.isolated !== undefined ? ops.isolated : false;
-        this.rebasing = ops.rebasing !== undefined ? ops.rebasing : false;
+    constructor(){
 
         this.registry = {};
         this.subdomain = {};
+        this.exposed = {};
 
-        // this.exposed = ExposeProxy(this, 'exposed', this.exposure){
-        this.exposed = {
-            define:(key, desc)=>{
-                this.define(key, desc)
-            }
-        };
     }
 
-    /**
-    * add a new entry to the domain, splitting cases between descriptions, natures, subdomains and others
-    */
-    define(name: string, val: any):Domain {
+    public define(name: string, val: any): Domain {
         let m = name.match(/^[a-zA-Z0-9_]+$/)
-        if(m){
+        if (m) {
             if (isDescription(val)) {           //description
                 this.addDescription(name, val)
-            } else if (isConstruct(val)) {      //direct nature 
+
+            } else if (isNature(val)) {      //direct nature 
                 this.addDescription(name, {
-                    basis:val
+                    basis: val,
                 })
             } else {                            //other
                 this.addStatic(name, val)
             }
 
             return this
-        }else{
-            throw new Error("Invalid basis name (must be alphanumeric+_")
+        } else {
+            throw new Error("Invalid basis name")
         }
     }
-    
+
+
+
     addDescription(name, desc:Description){
         // 
 
         if(!(name in this.registry)){
             this.registry[name] = desc;
 
-            if (desc.domain == undefined) {
-                desc.domain = this;
+            if(typeof desc.domain === 'string'){
+                let domloc = (<string>desc.domain).split('.')
+                let domain = this.seekInherit({ location: domloc, name: null }).domain
+
+                if(domain != undefined){
+                    desc.domain = domain
+                }else {
+                    throw new Error(`cant find domain "${desc.domain}" required for definition of "${name}"`)
+                }
             }
         }else{
             throw new Error(`Cannot Redefine: "${name}" is already defined in this domain`)
@@ -218,12 +221,9 @@ export class Domain {
      * @param desc  a description object that will be overlaid on the basis
      */
     recover(desc: Description|string): Construct {
-
+        //coerce to description and initialize origins
         let _desc =  (typeof desc == 'string')?{basis:desc}:desc
-
         _desc.origins = [];
-
-        // 
 
         //reduce the description to a final one
         let final = this.collapse(_desc);
@@ -231,8 +231,6 @@ export class Domain {
         //instantiate and initialise
         let nature = <any>final.basis
         let recovered = new nature(final.domain);
-
-        // 
 
         recovered.init(final)
         return recovered
@@ -242,40 +240,41 @@ export class Domain {
      * reduce by following the chain of basis references
      */
     private collapse (desc:Description):Description{
-        if (isConstruct(desc.basis)) {
+        if (isNature(desc.basis)) {
             //terminal case 
             return desc
         } else if (typeof desc.basis === 'string') {
-            //collapse case - locate the new base, meld and recover
+            //locate the description for the present basis
 
-            //handling the redfine case if the origin is the same as the desc we will go up a level 
-            let sresult;
+            let sresult:SeekResult;
+
             if(desc.basis === desc.origins[0]){
+                //handling the redfine case if the origin is the same as the desc we will go up a level
                 desc.origins = desc.origins.slice(1)
                 
-                if(this.parent && !this.isolated){
+                if(this.parent){
                     sresult = this.parent.seek(desc.basis, true);
+                }else{
+                    throw new Error(`Domain must be based on superdomain for redefinition of ${desc.basis}`)
                 }
             }else{
                 sresult = this.seek(desc.basis, true)
             }
 
-            //find entry 
+            //Curate the Description Collapsed one more layer
             let {domain, entry} = sresult;
-
 
             let melded = descmeld(entry, desc)
             melded.origins = [desc.basis, ...desc.origins] //<--base level--   --top level
-            melded.domain = domain
-
-            if(this.rebasing){
-                //keep trying to find next basis from initial domain
-                return this.collapse(melded)
-            }else{
-                //instead within in that which the basis was found in
-                return domain.collapse(melded)
-            }
-
+            melded.domain = melded.domain || this
+            return melded.domain.collapse(melded)
+            // if(entry.domain == undefined){
+            //     return domain.collapse(melded)
+            // }else{
+            //     //collapse into 
+            // return melded.domain.collapse(melded)
+            // }
+            
         } else {
             throw new Error("Invalid recovery basis must be basis designator or Construct function")
         }
@@ -327,21 +326,17 @@ export class Domain {
                 if(debased.basis === target){
                     return debased //reached target debase level
                 }else{
-                    if(this.rebasing){
-                        return this.debase(debased, target)
-                    }else{
-                        return find.domain.debase(debased, target)
-                    }
-
+                    return this.debase(debased, target)
                 }
             }
         }
     }
 
     seek(basis: string, fussy:boolean=false): SeekResult {
-        let parsed = parseBasisString(basis)
-        let result = this._seek(parsed)
 
+        let parsed = <SeekQuery> parseBasisString(basis)
+        let result = this.seekInherit(parsed)
+        
         //When a domain is found and did not have any digging
         if(parsed.location.length === 0 && result.domain !== undefined){
             result.domain = this
@@ -356,44 +351,43 @@ export class Domain {
         }
     }
 
-    //recurse out when not found and not isolated or root
-    private _seek(place: { location: string[], name: string, invasive:boolean }): SeekResult {
-        let result = this.__seek(place)
+    //recurse out when not found or root
+    private seekInherit(place: SeekQuery): SeekResult {
+        let result = this.seekDelve(place)
 
-        if (result.entry == undefined || result.domain == undefined) {
-
-            if (!this.isolated && this.parent !== undefined) {
-                result = this.parent._seek(place)
-            }
+        if ((result.entry == undefined || result.domain == undefined) && this.parent !== undefined) {
+            //being unable to find it we will inherit if possible
+            result = this.parent.seekInherit(place)
         }
 
          return result
     }
 
     //recurse in when basis has terms remaining 
-    private __seek({ location, name , invasive}: { location: string[], name: string, invasive:boolean }): SeekResult {
+    private seekDelve({ location, name }: SeekQuery): SeekResult {
 
         let result;
         if (location.length === 0) {
-            if (name in this.registry) {
-                result = {
-                    domain: this,
-                    name: name,
-                    entry: this.registry[name]
-                }
-            } else {
-                //unable to find basis
+            if (!(name in this.registry)) {
                 result = {
                     domain: this,
                     name: name,
                     entry: null
                 }
+            }else {
+                // console.log(`pulled registry entry for ${name} %o`, this.registry[name] )
+                result = {
+                    domain: this,
+                    name: name,
+                    entry: this.registry[name]
+                }
             }
         } else {
-            let subdomain = location[0]
+            let [subdomain, ...rest] = location
+
             if (subdomain in this.subdomain) {
                 //dig deeper
-                result = this.subdomain[subdomain].__seek({ location: location.slice(1), name: name, invasive:true })
+                result = this.subdomain[subdomain].seekDelve({ location: rest, name: name})
             } else {
                 //unable to find domain
                 result = {
@@ -407,26 +401,26 @@ export class Domain {
     }
 
     /**
-     * create a new subdomain 
+     * create a new subdomain that is based on this
      */
-    sub(name: string,  opts={}):Domain{
+    sub(name: string):Domain{
         if(name in this.subdomain){
             return this.subdomain[name]
         }
 
-        let domain = opts instanceof Domain ? opts :new Domain(opts)
+        let domain = new Domain()
+        domain.on(this.parent || this)
+
         this.addSubdomain(name, domain)
         return domain        
     }
 
-    isosub(name):Domain{
-        if (name in this.subdomain) {
-            return this.subdomain[name]
+    with(subdomains:{[subID:string]:Domain}):Domain{
+        for (let k in subdomains){
+            this.addSubdomain(k, subdomains[k])
         }
 
-        let domain = new Domain({isolated: true })
-        this.addSubdomain(name, domain)
-        return domain
+        return this
     }
 
     up():Domain{
@@ -437,21 +431,37 @@ export class Domain {
         }
     } 
 
-    private addSubdomain(key: string, val: Domain) {
+    on(domain:Domain):Domain{
+        if(this.parent !== undefined){
+            throw new  Error(`Domain must have exactly one ground but was already defined`)
+        }
+        
+        this.parent = domain
+
+        return this
+    }
+
+    private addSubdomain(key: string, newsub: Domain) {
         if (key in this.subdomain) {
             throw new Error(`Subdomain ${key} already exists cannot redefine`);
         } else {
-            this.subdomain[key] = val;
-            val.parent = this;
-        }
-    }
+            
+            this.subdomain[key] = newsub;
+            // if (this.parent === undefined || isGroundedOn(newsub, this)){
+            // }else {
+            //     throw new Error(`This domain does not support the domain mounting as ${key}: Must be it's ground or be on its ground`)
+            // }
 
-    addStatic(name, value){
+        }
+    } 
+
+    private addStatic(name, value){
         this.exposed[name] = value
     }
+}
 
-    getExposure(){
-        return this.exposed
-    }
 
+function isGroundedOn(domain:Domain, ground:Domain):boolean {
+    //where there is ground and that ground or its ground ad inf, 
+    return ground !== undefined && (domain.parent === ground || isGroundedOn(domain, ground.parent))
 }

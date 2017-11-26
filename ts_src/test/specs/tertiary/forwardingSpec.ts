@@ -1,6 +1,6 @@
 import {run} from '../../jungle-test/run'
 import {TestCell} from '../../jungle-test/domain'
-import {j, J} from '../../../jungle'
+import {j, J, Domain} from '../../../jungle'
 
 let SubDomain
 
@@ -9,8 +9,8 @@ let SubDomain
 
 describe('forwarding', function(){
     beforeAll(function(){
-        SubDomain = J.sub('forwards', {rebasing:false})
-
+        
+        SubDomain = new Domain().on(J)
             .define('sitch', j('test:cell', {
                 head:{
                     tid:'root'

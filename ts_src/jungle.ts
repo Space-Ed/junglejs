@@ -1,5 +1,5 @@
 
-import {Domain, isConstruct} from './construction/domain'
+import {Domain, isNature} from './construction/domain'
 
 import * as Util from './util/all'
 import * as IO  from './interoperability/all'
@@ -34,7 +34,7 @@ export function j(nature:Function, body?):JDescription
 export function j(basis?: any, patch?: any) {  
     let head, domain, body, anon, dbasis;
 
-    if (typeof basis === 'string' || isConstruct(basis)) {
+    if (typeof basis === 'string' || isNature(basis)) {
         dbasis = basis;
         if (Util.isVanillaObject(patch)) { //("",{})
             if('body' in patch && !('head' in patch)){
@@ -99,42 +99,42 @@ J   .sub('media')
             }
         }))
 
-        .define('direct',j('multiplexer', {
+        .define('direct',j('media:multiplexer', {
             symbols:[],
             emitArgType: IO.DEMUXARG.ONE,
             emitRetType: IO.MUXRESP.LAST,
             emitCallType:IO.CALLTYPE.DIRECT
         }))
 
-        .define('cast', j('multiplexer', {
+        .define('cast', j('media:multiplexer', {
             symbols: [],
             emitArgType: IO.DEMUXARG.DONT,
             emitRetType: IO.MUXRESP.LAST,
             emitCallType: IO.CALLTYPE.BREADTH_FIRST
         }))
         
-        .define('switch', j('multiplexer', {
+        .define('switch', j('media:multiplexer', {
             symbols: [],
             emitArgType: IO.DEMUXARG.SOME,
             emitRetType: IO.MUXRESP.MAP,
             emitCallType: IO.CALLTYPE.BREADTH_FIRST
         }))
 
-        .define('compose', j('multiplexer', {
+        .define('compose', j('media:multiplexer', {
             symbols: [],
             emitArgType: IO.DEMUXARG.DONT,
             emitRetType: IO.MUXRESP.MAP,
             emitCallType: IO.CALLTYPE.BREADTH_FIRST
         }))
 
-        .define('race', j('multiplexer', {
+        .define('race', j('media:multiplexer', {
             symbols: [],
             emitArgType: IO.DEMUXARG.DONT,
             emitRetType: IO.MUXRESP.RACE,
             emitCallType: IO.CALLTYPE.BREADTH_FIRST
         }))
 
-        .define('serial', j('multiplexer', {
+        .define('serial', j('media:multiplexer', {
             symbols: [],
             emitArgType: IO.DEMUXARG.DONT,
             emitRetType: IO.MUXRESP.LAST,

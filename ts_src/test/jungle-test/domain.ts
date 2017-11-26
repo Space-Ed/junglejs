@@ -7,7 +7,7 @@ export * from './cell'
 
 import {EmitterContact, DetectorContact, TestCell, EventSequencer, EventLog} from '../jungle-test/domain'
 
-import {Domain} from '../../jungle'
+import {j, Domain} from '../../jungle'
 
 export class TestDomain extends Domain {
 
@@ -35,9 +35,9 @@ export class TestDomain extends Domain {
         })
 
         this
-            .define('detector', DetectorContact)
-            .define('emitter', EmitterContact)
-            .define('cell', TestCell)
+            .define('detector', j(DetectorContact, {domain:this}))
+            .define('emitter', j(EmitterContact, {domain:this}))
+            .define('cell', j(TestCell, {domain:this}))
             // .define('client', j(TestClient, {
             //     domain: 'test'
             // }))
@@ -46,4 +46,6 @@ export class TestDomain extends Domain {
         this.log = log
         this.targets = targets
     }
+
+    
 }

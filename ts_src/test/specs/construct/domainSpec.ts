@@ -15,12 +15,12 @@ const j = Jungle.j
 describe('Domains', function(){
 
     describe('functions', function(){
-        it('is construct', function(){
+        it('is test', function(){
             class B extends Jungle.Construct {}
-            expect(D.isConstruct(B)).toBe(true)
+            expect(D.isNature(B)).toBe(true)
 
             function Cons () {}
-            expect(D.isConstruct(Cons)).toBe(false)
+            expect(D.isNature(Cons)).toBe(false)
         })
 
     })
@@ -46,27 +46,39 @@ describe('Domains', function(){
             expect(domain.subdomain.oneThing.registry.inThing.body.goods).toBe("testable")
         })
 
-        it('can be defined as isolated', function(){
+        it('can be defined to target a new domain', function(){
 
             // a test nature
             class Bike extends Jungle.Construct {}
+            class SuperBike extends Jungle.Construct {}
+
+            let outerdom = new Jungle.Domain()
+                .define('bike', SuperBike)
 
             let domain = new Jungle.Domain()
-                .define('uniso', Bike)
-                .sub('sub1',{isolated:true})
-                    .define('iso1', Bike)
+                .define('bike', Bike)
+                .define('regular', Jungle.Composite)
+                .define('super', j(Jungle.Composite, {
+                    domain: outerdom
+                }))
                 .up()
 
-            let located = domain.subdomain.sub1;
-            expect((<any>located).isolated).toBe(true, 'is isolated')
-            expect(located instanceof Jungle.Domain).toBe(true, 'can still find isolated instanceof domain')
+            expect((<Jungle.Composite>domain.recover(j('regular', { b: j('bike') }))).subconstructs.b instanceof SuperBike).toBe(false)
+            expect((<Jungle.Composite>domain.recover(j('super', {b : j('bike') }))).subconstructs.b instanceof SuperBike).toBe(true)            
 
-            expect(located.recover({basis:'iso1'}) instanceof Bike).toBe(true)
+        })
 
-            //if the domain was not isolated it would find the nature in the root
-            expect(function(){
-                located.seek('uniso', true)
-            }).toThrowError()
+        it('can define with a domain string', function(){
+            let external = new Jungle.Domain()
+                .define('blob', Jungle.Construct)
+
+            let domain = new Jungle.Domain()
+                .with({ext:external})
+                .define('ext', j('ext:blob', { domain: 'ext' }))
+
+            expect(()=>{
+                domain.define('ex2', j('oxt', {domain:'oxt'}))
+            }).toThrowError(`cant find domain "oxt" required for definition of "ex2"`)
 
         })
 
@@ -114,25 +126,26 @@ describe('Domains', function(){
                     .up()
                 .up()
 
+
             expect(domain.seek('sub0.sub1:thing').entry.basis.name).toBe('thing')
         })
 
         it('can select from the parent domain by basis fallback', function(){
-            let subDom = new Jungle.Domain({})
+            let subDom = new Jungle.Domain()
 
             let domain  = new Jungle.Domain()
-                .sub('sub',subDom)
-                .define('fallback', j((x) => (x)))
-            
+            .define('fallback', j((x) => (x)))
+
+            subDom.on(domain)    
 
             expect(subDom.seek('fallback').entry.body(0)).toBe(0)
         })
 
         it('can select a deep domain by fallback', function (){
-            let root = new Jungle.Domain({})
+            let root = new Jungle.Domain()
                 .define('comp', Jungle.Composite)
                 .define('cstr', Jungle.Construct)
-
+            
             let field = root.sub('field')
                 .define('situation', j('comp', {
                     deep:j('comp',{
@@ -148,8 +161,6 @@ describe('Domains', function(){
             let scene = field.recover('situation')
 
             expect(scene.exposed.deep.tacked.word).toBe('bird')
-            expect((<any>scene).subconstructs.deep.subconstructs.tacked.domain).toBe(tack, 
-         "when domains are chosen the target will be given their domain of definition")
         })
 
     })
@@ -354,33 +365,6 @@ describe('Domains', function(){
 
         })
 
-        it('should deep describe ', function(){
-
-        })
-    })
-
-    /**
-     * domains should be able to rest upon the presence of some other domain from outside.
-     this will be achieved using external modules to manage the dependency.
-
-        the domain should be able to define extensions of depended at run.
-
-        this is lower priority because it is a sugar layer over the module system of the platform
-
-     */
-    xdescribe('domain dependency', function(){
-        let otherDomain = new Jungle.Domain()
-
-        function require(somemodule){
-            //load the domain or nature import
-        }
-
-        let domain = new Jungle.Domain()
-            //.use(otherDomain)
-
-
-        //export defualt domain
-
     })
 
     /**
@@ -394,18 +378,6 @@ describe('Domains', function(){
         it('can verify a sceme as matching, subvening, and supervening to its own')
 
     })
-
-    /**
-     * Theoretically possible but unknown implications of complexity
-     */
-    xdescribe('hot redefine', function(){
-
-        it('is possible to redefine a basis and have it automatically reset its active instances', function(){
-
-        })
-
-    })
-
 
 
 })

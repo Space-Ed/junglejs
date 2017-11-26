@@ -91,24 +91,33 @@ export class Composite extends Construct{
 
     patch(patch: any): any {
         //external patching is considered to be from the host
-        return this.anchor.notify(patch)
+        if (isDescription(patch)) {
+            // 
+            this.dispose()
+            this.init(patch)
+        }else{
+            return this.anchor.notify(patch)
+
+        }
     }
 
     /*
         modification of structure by application of a patch,
-        when alive and being reformed it will kill it first and then apply a recursive patching
     */
     _patch(patch:any):any{
         if(patch == undefined){
             this.disposeBody()
-        }if(!(patch instanceof Object)){
+        }
+        else if(!(patch instanceof Object)){
             // non object patches are singular anonymous
             this._patch([patch])
-        }else if(patch instanceof Array){
+        }
+        else if(patch instanceof Array){
             for(let i=0; i<patch.length; i++){
                 this.addAnon(patch[i])
             }
-        }else{
+        }
+        else{
             for(let k in patch){
                 let v = patch[k];
                 this.patchChild(k, v)

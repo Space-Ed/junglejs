@@ -11,8 +11,14 @@ import {ensureArray} from '../../util/checks'
 
 export function run(opts: TestRunOptions) {
 
-    let tdom = <TestDomain>opts.domain.sub('test', new TestDomain(opts))
+    delete opts.domain.subdomain['test']
+
+
+    let tdom = <TestDomain>new TestDomain(opts)
+    .on(opts.domain)
     
+    opts.domain.with({test: tdom})
+
     let seq = tdom.seq
     let log = tdom.log
     let targets = tdom.targets

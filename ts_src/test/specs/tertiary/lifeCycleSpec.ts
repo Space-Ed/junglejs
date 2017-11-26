@@ -47,7 +47,7 @@ describe('life cycle', function(){
         })
 
         it('should have base properties exposed to prime when extended', function(){
-            let subd = Jungle.J.sub("pollute", {rebasing:false})
+            let subd = Jungle.J.sub("pollute")
                 .define('object', j('object',{
                     head:{
                         dispose(){
