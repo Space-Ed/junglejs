@@ -139,9 +139,7 @@ class Construct {
                 get: () => (this.exposed)
             },
             heart: {
-                get: () => {
-                    return this.heart;
-                }
+                get: () => (this.heart)
             },
         });
     }
@@ -194,12 +192,12 @@ class Construct {
         delete this.self.world;
         delete this.self.agent;
     }
-    _patch(patch) {
-        this.nucleus = patch;
-    }
     patch(patch) {
         this._patch(patch);
         this.dark.notify(patch);
+    }
+    _patch(patch) {
+        this.nucleus = patch;
     }
     _extract(sucker) {
         if (domain_1.isDescription(sucker)) {
@@ -311,10 +309,10 @@ function parseBasisString(str) {
         throw new RangeError(`invalid basis desiginator expression ${str}`);
     }
 }
-function isConstruct(thing) {
+function isNature(thing) {
     return thing instanceof Function && (thing.prototype instanceof construct_1.Construct || thing === construct_1.Construct);
 }
-exports.isConstruct = isConstruct;
+exports.isNature = isNature;
 function isDescription(thing) {
     return checks_1.isVanillaObject(thing) && 'basis' in thing;
 }
@@ -324,6 +322,7 @@ function descmeld(entry, desc, k) {
         basis: entry.basis,
         head: headmeld(entry.head || {}, desc.head || {}),
         body: all_1.safeMeld(bodyMeldItem)(entry.body || {}, desc.body || {}),
+        domain: entry.domain || desc.domain
     };
     if (desc.anon)
         meld.anon = desc.anon;
@@ -395,16 +394,10 @@ function debaseBodyItem(desc, base, k) {
     }
 }
 class Domain {
-    constructor(ops = {}) {
-        this.isolated = ops.isolated !== undefined ? ops.isolated : false;
-        this.rebasing = ops.rebasing !== undefined ? ops.rebasing : false;
+    constructor() {
         this.registry = {};
         this.subdomain = {};
-        this.exposed = {
-            define: (key, desc) => {
-                this.define(key, desc);
-            }
-        };
+        this.exposed = {};
     }
     define(name, val) {
         let m = name.match(/^[a-zA-Z0-9_]+$/);
@@ -412,9 +405,9 @@ class Domain {
             if (isDescription(val)) {
                 this.addDescription(name, val);
             }
-            else if (isConstruct(val)) {
+            else if (isNature(val)) {
                 this.addDescription(name, {
-                    basis: val
+                    basis: val,
                 });
             }
             else {
@@ -423,14 +416,21 @@ class Domain {
             return this;
         }
         else {
-            throw new Error("Invalid basis name (must be alphanumeric+_");
+            throw new Error("Invalid basis name");
         }
     }
     addDescription(name, desc) {
         if (!(name in this.registry)) {
             this.registry[name] = desc;
-            if (desc.domain == undefined) {
-                desc.domain = this;
+            if (typeof desc.domain === 'string') {
+                let domloc = desc.domain.split('.');
+                let domain = this.seekInherit({ location: domloc, name: null }).domain;
+                if (domain != undefined) {
+                    desc.domain = domain;
+                }
+                else {
+                    throw new Error(`cant find domain "${desc.domain}" required for definition of "${name}"`);
+                }
             }
         }
         else {
@@ -447,15 +447,18 @@ class Domain {
         return recovered;
     }
     collapse(desc) {
-        if (isConstruct(desc.basis)) {
+        if (isNature(desc.basis)) {
             return desc;
         }
         else if (typeof desc.basis === 'string') {
             let sresult;
             if (desc.basis === desc.origins[0]) {
                 desc.origins = desc.origins.slice(1);
-                if (this.parent && !this.isolated) {
+                if (this.parent) {
                     sresult = this.parent.seek(desc.basis, true);
+                }
+                else {
+                    throw new Error(`Domain must be based on superdomain for redefinition of ${desc.basis}`);
                 }
             }
             else {
@@ -464,13 +467,8 @@ class Domain {
             let { domain, entry } = sresult;
             let melded = descmeld(entry, desc);
             melded.origins = [desc.basis, ...desc.origins];
-            melded.domain = domain;
-            if (this.rebasing) {
-                return this.collapse(melded);
-            }
-            else {
-                return domain.collapse(melded);
-            }
+            melded.domain = melded.domain || this;
+            return melded.domain.collapse(melded);
         }
         else {
             throw new Error("Invalid recovery basis must be basis designator or Construct function");
@@ -498,19 +496,14 @@ class Domain {
                     return debased;
                 }
                 else {
-                    if (this.rebasing) {
-                        return this.debase(debased, target);
-                    }
-                    else {
-                        return find.domain.debase(debased, target);
-                    }
+                    return this.debase(debased, target);
                 }
             }
         }
     }
     seek(basis, fussy = false) {
         let parsed = parseBasisString(basis);
-        let result = this._seek(parsed);
+        let result = this.seekInherit(parsed);
         if (parsed.location.length === 0 && result.domain !== undefined) {
             result.domain = this;
         }
@@ -524,37 +517,35 @@ class Domain {
             return result;
         }
     }
-    _seek(place) {
-        let result = this.__seek(place);
-        if (result.entry == undefined || result.domain == undefined) {
-            if (!this.isolated && this.parent !== undefined) {
-                result = this.parent._seek(place);
-            }
+    seekInherit(place) {
+        let result = this.seekDelve(place);
+        if ((result.entry == undefined || result.domain == undefined) && this.parent !== undefined) {
+            result = this.parent.seekInherit(place);
         }
         return result;
     }
-    __seek({ location, name, invasive }) {
+    seekDelve({ location, name }) {
         let result;
         if (location.length === 0) {
-            if (name in this.registry) {
-                result = {
-                    domain: this,
-                    name: name,
-                    entry: this.registry[name]
-                };
-            }
-            else {
+            if (!(name in this.registry)) {
                 result = {
                     domain: this,
                     name: name,
                     entry: null
                 };
             }
+            else {
+                result = {
+                    domain: this,
+                    name: name,
+                    entry: this.registry[name]
+                };
+            }
         }
         else {
-            let subdomain = location[0];
+            let [subdomain, ...rest] = location;
             if (subdomain in this.subdomain) {
-                result = this.subdomain[subdomain].__seek({ location: location.slice(1), name: name, invasive: true });
+                result = this.subdomain[subdomain].seekDelve({ location: rest, name: name });
             }
             else {
                 result = {
@@ -566,21 +557,20 @@ class Domain {
         }
         return result;
     }
-    sub(name, opts = {}) {
+    sub(name) {
         if (name in this.subdomain) {
             return this.subdomain[name];
         }
-        let domain = opts instanceof Domain ? opts : new Domain(opts);
+        let domain = new Domain();
+        domain.on(this.parent || this);
         this.addSubdomain(name, domain);
         return domain;
     }
-    isosub(name) {
-        if (name in this.subdomain) {
-            return this.subdomain[name];
+    with(subdomains) {
+        for (let k in subdomains) {
+            this.addSubdomain(k, subdomains[k]);
         }
-        let domain = new Domain({ isolated: true });
-        this.addSubdomain(name, domain);
-        return domain;
+        return this;
     }
     up() {
         if (this.parent) {
@@ -590,23 +580,29 @@ class Domain {
             return this;
         }
     }
-    addSubdomain(key, val) {
+    on(domain) {
+        if (this.parent !== undefined) {
+            throw new Error(`Domain must have exactly one ground but was already defined`);
+        }
+        this.parent = domain;
+        return this;
+    }
+    addSubdomain(key, newsub) {
         if (key in this.subdomain) {
             throw new Error(`Subdomain ${key} already exists cannot redefine`);
         }
         else {
-            this.subdomain[key] = val;
-            val.parent = this;
+            this.subdomain[key] = newsub;
         }
     }
     addStatic(name, value) {
         this.exposed[name] = value;
     }
-    getExposure() {
-        return this.exposed;
-    }
 }
 exports.Domain = Domain;
+function isGroundedOn(domain, ground) {
+    return ground !== undefined && (domain.parent === ground || isGroundedOn(domain, ground.parent));
+}
 //# sourceMappingURL=domain.js.map
 
 /***/ }),
@@ -924,13 +920,19 @@ class Composite extends construct_1.Construct {
         super.clearHead();
     }
     patch(patch) {
-        return this.anchor.notify(patch);
+        if (domain_1.isDescription(patch)) {
+            this.dispose();
+            this.init(patch);
+        }
+        else {
+            return this.anchor.notify(patch);
+        }
     }
     _patch(patch) {
         if (patch == undefined) {
             this.disposeBody();
         }
-        if (!(patch instanceof Object)) {
+        else if (!(patch instanceof Object)) {
             this._patch([patch]);
         }
         else if (patch instanceof Array) {
@@ -2857,7 +2859,7 @@ __export(__webpack_require__(9));
 __export(__webpack_require__(6));
 function j(basis, patch) {
     let head, domain, body, anon, dbasis;
-    if (typeof basis === 'string' || domain_1.isConstruct(basis)) {
+    if (typeof basis === 'string' || domain_1.isNature(basis)) {
         dbasis = basis;
         if (Util.isVanillaObject(patch)) {
             if ('body' in patch && !('head' in patch)) {
@@ -2925,37 +2927,37 @@ exports.J.sub('media')
         medium: IO.MuxMedium,
     }
 }))
-    .define('direct', j('multiplexer', {
+    .define('direct', j('media:multiplexer', {
     symbols: [],
     emitArgType: IO.DEMUXARG.ONE,
     emitRetType: IO.MUXRESP.LAST,
     emitCallType: IO.CALLTYPE.DIRECT
 }))
-    .define('cast', j('multiplexer', {
+    .define('cast', j('media:multiplexer', {
     symbols: [],
     emitArgType: IO.DEMUXARG.DONT,
     emitRetType: IO.MUXRESP.LAST,
     emitCallType: IO.CALLTYPE.BREADTH_FIRST
 }))
-    .define('switch', j('multiplexer', {
+    .define('switch', j('media:multiplexer', {
     symbols: [],
     emitArgType: IO.DEMUXARG.SOME,
     emitRetType: IO.MUXRESP.MAP,
     emitCallType: IO.CALLTYPE.BREADTH_FIRST
 }))
-    .define('compose', j('multiplexer', {
+    .define('compose', j('media:multiplexer', {
     symbols: [],
     emitArgType: IO.DEMUXARG.DONT,
     emitRetType: IO.MUXRESP.MAP,
     emitCallType: IO.CALLTYPE.BREADTH_FIRST
 }))
-    .define('race', j('multiplexer', {
+    .define('race', j('media:multiplexer', {
     symbols: [],
     emitArgType: IO.DEMUXARG.DONT,
     emitRetType: IO.MUXRESP.RACE,
     emitCallType: IO.CALLTYPE.BREADTH_FIRST
 }))
-    .define('serial', j('multiplexer', {
+    .define('serial', j('media:multiplexer', {
     symbols: [],
     emitArgType: IO.DEMUXARG.DONT,
     emitRetType: IO.MUXRESP.LAST,
