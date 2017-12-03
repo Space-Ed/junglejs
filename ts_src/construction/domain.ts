@@ -64,14 +64,12 @@ export function isDescription(thing:any):boolean {
     return isVanillaObject(thing) && 'basis' in thing
 }
 
-
-
 export function descmeld(entry, desc, k?) {
     let meld:Description =  {
         basis: entry.basis,
         head: headmeld(entry.head||{}, desc.head||{}),
         body: safeMeld(bodyMeldItem)(entry.body||{}, desc.body||{}),
-        domain: entry.domain || desc.domain
+        domain: desc.domain||entry.domain
     }
 
     if(desc.anon) meld.anon = desc.anon
@@ -190,10 +188,7 @@ export class Domain{
         }
     }
 
-
-
     addDescription(name, desc:Description){
-        // 
 
         if(!(name in this.registry)){
             this.registry[name] = desc;
@@ -207,6 +202,10 @@ export class Domain{
                 }else {
                     throw new Error(`cant find domain "${desc.domain}" required for definition of "${name}"`)
                 }
+            }else if(desc.domain === undefined){
+
+            }else if (!(desc.domain instanceof Domain)){
+                throw new Error(`Invalid domain provided to description (should be string or Domain)`)
             }
         }else{
             throw new Error(`Cannot Redefine: "${name}" is already defined in this domain`)
@@ -230,7 +229,9 @@ export class Domain{
 
         //instantiate and initialise
         let nature = <any>final.basis
-        let recovered = new nature(final.domain);
+
+
+        let recovered = new nature(final.domain?final.domain:this);
 
         recovered.init(final)
         return recovered
@@ -266,15 +267,7 @@ export class Domain{
 
             let melded = descmeld(entry, desc)
             melded.origins = [desc.basis, ...desc.origins] //<--base level--   --top level
-            melded.domain = melded.domain || this
-            return melded.domain.collapse(melded)
-            // if(entry.domain == undefined){
-            //     return domain.collapse(melded)
-            // }else{
-            //     //collapse into 
-            // return melded.domain.collapse(melded)
-            // }
-            
+            return domain.collapse(melded)
         } else {
             throw new Error("Invalid recovery basis must be basis designator or Construct function")
         }

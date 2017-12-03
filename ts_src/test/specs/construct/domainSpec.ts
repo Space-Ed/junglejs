@@ -148,7 +148,7 @@ describe('Domains', function(){
             
             let field = root.sub('field')
                 .define('situation', j('comp', {
-                    deep:j('comp',{
+                    deep:j('comp', {
                         tacked:j('tack:fact')
                     })
                 }))

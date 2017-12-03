@@ -99,42 +99,42 @@ J   .sub('media')
             }
         }))
 
-        .define('direct',j('media:multiplexer', {
+        .define('direct',j('multiplexer', {
             symbols:[],
             emitArgType: IO.DEMUXARG.ONE,
             emitRetType: IO.MUXRESP.LAST,
             emitCallType:IO.CALLTYPE.DIRECT
         }))
 
-        .define('cast', j('media:multiplexer', {
+        .define('cast', j('multiplexer', {
             symbols: [],
             emitArgType: IO.DEMUXARG.DONT,
             emitRetType: IO.MUXRESP.LAST,
             emitCallType: IO.CALLTYPE.BREADTH_FIRST
         }))
         
-        .define('switch', j('media:multiplexer', {
+        .define('switch', j('multiplexer', {
             symbols: [],
             emitArgType: IO.DEMUXARG.SOME,
             emitRetType: IO.MUXRESP.MAP,
             emitCallType: IO.CALLTYPE.BREADTH_FIRST
         }))
 
-        .define('compose', j('media:multiplexer', {
+        .define('compose', j('multiplexer', {
             symbols: [],
             emitArgType: IO.DEMUXARG.DONT,
             emitRetType: IO.MUXRESP.MAP,
             emitCallType: IO.CALLTYPE.BREADTH_FIRST
         }))
 
-        .define('race', j('media:multiplexer', {
+        .define('race', j('multiplexer', {
             symbols: [],
             emitArgType: IO.DEMUXARG.DONT,
             emitRetType: IO.MUXRESP.RACE,
             emitCallType: IO.CALLTYPE.BREADTH_FIRST
         }))
 
-        .define('serial', j('media:multiplexer', {
+        .define('serial', j('multiplexer', {
             symbols: [],
             emitArgType: IO.DEMUXARG.DONT,
             emitRetType: IO.MUXRESP.LAST,
