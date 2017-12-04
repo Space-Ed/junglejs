@@ -289,7 +289,7 @@ export class Construct{
         if (this.host !== undefined){
             return this.host.getLocation()+'/'+ this.id
         } else {
-            return '/'
+            return ''
         }
     }
 
