@@ -52,7 +52,7 @@ export class Spring extends OpConstruct<SpringBody> {
     createOp(body:SpringBody, key) {
 
         return new StdOp({
-            label: this.getLocation() + key,
+            label: this.getLocation(),
             context: this.self,
             description: this.nucleus.description,
             hook_inward: this.nucleus.inward,
@@ -85,7 +85,7 @@ export class Resolve extends OpConstruct<ResolveBody> {
     createOp(body: ResolveBody, key) {
         
         return new StdOp({
-            label: this.getLocation() + key,
+            label: this.getLocation(),
             context: this.self,
             description: this.nucleus.description,
             hook_inward: false,
@@ -107,7 +107,7 @@ export class Reflex extends OpConstruct<ReflexBody> {
     createOp(body: ReflexBody, key) {
 
         return new StdOp({
-            label: this.getLocation() + key,
+            label: this.getLocation(),
             context: this.self,
             description: this.nucleus.description,
             hook_inward: false,
@@ -128,7 +128,7 @@ export class Carry extends OpConstruct<CarryBody> {
     createOp(body: CarryBody, key) {
 
         return new StdOp({
-            label: this.getLocation() + key,
+            label: this.getLocation(),
             context: this.self,
             description: this.nucleus.description,
             hook_inward: false,
@@ -149,7 +149,7 @@ export class Deposit extends Construct {
 
         const drop = (x) => { if (x == undefined) { return this.nucleus } else { this.nucleus = x } } 
         let op = new StdOp({
-            label: this.getLocation() + key,
+            label: this.getLocation(),
             context: this.self,
             description: "A simple deposit",
             hook_inward: false,
