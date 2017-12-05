@@ -3,7 +3,7 @@
   "version": "0.9.1",
   "description": "The organic programming framework",
   "main": "./build/jungle.js",
-  "types": "./build",
+  "types": "./build/jungle.d.ts",
   "scripts": {
     "test": "jasmine"
   },
