@@ -1,3 +1,4 @@
+var Jungle =
 /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -238,7 +239,7 @@ class Construct {
             return this.host.getLocation() + '/' + this.id;
         }
         else {
-            return '/';
+            return '';
         }
     }
 }
@@ -322,7 +323,7 @@ function descmeld(entry, desc, k) {
         basis: entry.basis,
         head: headmeld(entry.head || {}, desc.head || {}),
         body: all_1.safeMeld(bodyMeldItem)(entry.body || {}, desc.body || {}),
-        domain: entry.domain || desc.domain
+        domain: desc.domain || entry.domain
     };
     if (desc.anon)
         meld.anon = desc.anon;
@@ -432,6 +433,11 @@ class Domain {
                     throw new Error(`cant find domain "${desc.domain}" required for definition of "${name}"`);
                 }
             }
+            else if (desc.domain === undefined) {
+            }
+            else if (!(desc.domain instanceof Domain)) {
+                throw new Error(`Invalid domain provided to description (should be string or Domain)`);
+            }
         }
         else {
             throw new Error(`Cannot Redefine: "${name}" is already defined in this domain`);
@@ -442,7 +448,7 @@ class Domain {
         _desc.origins = [];
         let final = this.collapse(_desc);
         let nature = final.basis;
-        let recovered = new nature(final.domain);
+        let recovered = new nature(final.domain ? final.domain : this);
         recovered.init(final);
         return recovered;
     }
@@ -467,8 +473,7 @@ class Domain {
             let { domain, entry } = sresult;
             let melded = descmeld(entry, desc);
             melded.origins = [desc.basis, ...desc.origins];
-            melded.domain = melded.domain || this;
-            return melded.domain.collapse(melded);
+            return domain.collapse(melded);
         }
         else {
             throw new Error("Invalid recovery basis must be basis designator or Construct function");
@@ -2927,37 +2932,37 @@ exports.J.sub('media')
         medium: IO.MuxMedium,
     }
 }))
-    .define('direct', j('media:multiplexer', {
+    .define('direct', j('multiplexer', {
     symbols: [],
     emitArgType: IO.DEMUXARG.ONE,
     emitRetType: IO.MUXRESP.LAST,
     emitCallType: IO.CALLTYPE.DIRECT
 }))
-    .define('cast', j('media:multiplexer', {
+    .define('cast', j('multiplexer', {
     symbols: [],
     emitArgType: IO.DEMUXARG.DONT,
     emitRetType: IO.MUXRESP.LAST,
     emitCallType: IO.CALLTYPE.BREADTH_FIRST
 }))
-    .define('switch', j('media:multiplexer', {
+    .define('switch', j('multiplexer', {
     symbols: [],
     emitArgType: IO.DEMUXARG.SOME,
     emitRetType: IO.MUXRESP.MAP,
     emitCallType: IO.CALLTYPE.BREADTH_FIRST
 }))
-    .define('compose', j('media:multiplexer', {
+    .define('compose', j('multiplexer', {
     symbols: [],
     emitArgType: IO.DEMUXARG.DONT,
     emitRetType: IO.MUXRESP.MAP,
     emitCallType: IO.CALLTYPE.BREADTH_FIRST
 }))
-    .define('race', j('media:multiplexer', {
+    .define('race', j('multiplexer', {
     symbols: [],
     emitArgType: IO.DEMUXARG.DONT,
     emitRetType: IO.MUXRESP.RACE,
     emitCallType: IO.CALLTYPE.BREADTH_FIRST
 }))
-    .define('serial', j('media:multiplexer', {
+    .define('serial', j('multiplexer', {
     symbols: [],
     emitArgType: IO.DEMUXARG.DONT,
     emitRetType: IO.MUXRESP.LAST,
@@ -3114,7 +3119,7 @@ exports.OpConstruct = OpConstruct;
 class Spring extends OpConstruct {
     createOp(body, key) {
         return new stdops_1.StdOp({
-            label: this.getLocation() + key,
+            label: this.getLocation(),
             context: this.self,
             description: this.nucleus.description,
             hook_inward: this.nucleus.inward,
@@ -3139,7 +3144,7 @@ exports.Spring = Spring;
 class Resolve extends OpConstruct {
     createOp(body, key) {
         return new stdops_1.StdOp({
-            label: this.getLocation() + key,
+            label: this.getLocation(),
             context: this.self,
             description: this.nucleus.description,
             hook_inward: false,
@@ -3154,7 +3159,7 @@ exports.Resolve = Resolve;
 class Reflex extends OpConstruct {
     createOp(body, key) {
         return new stdops_1.StdOp({
-            label: this.getLocation() + key,
+            label: this.getLocation(),
             context: this.self,
             description: this.nucleus.description,
             hook_inward: false,
@@ -3169,7 +3174,7 @@ exports.Reflex = Reflex;
 class Carry extends OpConstruct {
     createOp(body, key) {
         return new stdops_1.StdOp({
-            label: this.getLocation() + key,
+            label: this.getLocation(),
             context: this.self,
             description: this.nucleus.description,
             hook_inward: false,
@@ -3191,7 +3196,7 @@ class Deposit extends construct_1.Construct {
             this.nucleus = x;
         } };
         let op = new stdops_1.StdOp({
-            label: this.getLocation() + key,
+            label: this.getLocation(),
             context: this.self,
             description: "A simple deposit",
             hook_inward: false,
