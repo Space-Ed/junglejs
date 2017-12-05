@@ -2,8 +2,8 @@
   "name": "jungle-core",
   "version": "0.9.0",
   "description": "The organic programming framework",
-  "main": "./build/jungle",
-  "types": "./build/jungle",
+  "main": "./build/jungle.js",
+  "types": "./build",
   "scripts": {
     "test": "jasmine"
   },
@@ -41,13 +41,6 @@
     "@types/jasmine": "^2.5.51",
     "jasmine": "^2.5.2",
     "jasmine-node": "^1.14.5",
-    "karma": "^0.12.31",
-    "karma-chrome-launcher": "^2.1.1",
-    "karma-cli": "^0.0.4",
-    "karma-jasmine": "^1.1.0",
-    "karma-sourcemap-loader": "^0.3.7",
-    "karma-typescript": "^3.0.4",
-    "karma-webpack": "^2.0.3",
     "source-map-support": "^0.4.15",
     "ts-loader": "^2.1.0",
     "tsify": "^1.0.1",
@@ -56,5 +49,9 @@
     "uuid": "^2.0.3",
     "webpack": "^2.6.1"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "files": [
+    "dist/jungle.js",
+    "build"
+  ]
 }

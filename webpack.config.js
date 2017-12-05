@@ -1,12 +1,23 @@
 const path = require('path')
 
-module.exports = {
-
-    entry: './build/jungle.js',
+var serverConfig = {
+    target: 'node',
+    entry: path.resolve(__dirname, 'build', 'jungle.js'),
     output: {
-        library:'Jungle',
-        path: path.resolve( __dirname, 'dist'),
-        filename: "jungle.js"
+        library:'jungle-core',
+        libraryTarget:'commonjs2',
+        path: path.resolve(__dirname, 'dist'),
+        filename: 'jungle.node.js'
     }
-    
-}
+};
+
+var clientConfig = {
+    entry: path.resolve(__dirname, 'build', 'jungle.js'),
+    output: {
+        library: 'Jungle',
+        path: path.resolve(__dirname, 'dist'),
+        filename: 'jungle.js'
+    }
+};
+
+module.exports = [serverConfig, clientConfig];
