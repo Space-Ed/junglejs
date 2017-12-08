@@ -23,9 +23,6 @@ export interface StdOpSpec {
 }
 
 
-
-
-
 export class StdOp extends Call<StdOp> {
 
     hook: { inward: (inp) => Junction, outward: (arg) => Junction}

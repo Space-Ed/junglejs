@@ -11,3 +11,4 @@ export * from "./media/multiplexing"
 
 export * from './contacts/base'
 export * from './contacts/stdops'
+export * from './contacts/call'
