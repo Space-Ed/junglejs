@@ -1,3 +1,2 @@
-
 ts_src/
-build/test/
+build/test/**

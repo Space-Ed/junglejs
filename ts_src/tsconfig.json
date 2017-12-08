@@ -11,7 +11,7 @@
         "noImplicitAny": false,
         "noImplicitUseStrict": false,
         "removeComments": true,
-        "noLib": false,
+        "lib":["es6"],
         "preserveConstEnums": true,
         "suppressImplicitAnyIndexErrors": true,
         "sourceMap": true,
@@ -19,9 +19,6 @@
         "watch": false
     },
     "exclude": [
-        "node_modules",
-        "typings/browser",
-        "typings/browser.d.ts"
     ],
     "compileOnSave": true,
     "buildOnSave": false,
@@ -30,7 +27,6 @@
     },
     "include": [
         "../node_modules/@types/**/*.d.ts",
-        "./**/*.ts"
-        
+        "./**/*.ts"   
     ]
 }
