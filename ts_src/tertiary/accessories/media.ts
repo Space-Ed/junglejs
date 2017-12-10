@@ -2,11 +2,13 @@ import { Construct } from '../../construction/construct'
 import {ensureArray}  from '../../util/checks'
 import {parseLawExpression, LawIR, Law} from '../../interoperability/law'
 import {Cell} from '../cells/cell'
+import { BaseMedium } from '../../interoperability/media/base';
 
 export class MediumConstruct extends Construct {
 
     lawhandles:any[]
     mhandle:any
+    medium:BaseMedium<any,any>
 
     attach(anchor: Cell, label: string) {
         super.attach(anchor, label)
@@ -15,9 +17,9 @@ export class MediumConstruct extends Construct {
         let medium = this.head.medium
         let args = this.nucleus
 
-        let _medium = new medium(args)
+        this.medium = new medium(args)
         
-        let mhandle = anchor.weave.addMedium(_medium, label)
+        let mhandle = anchor.weave.addMedium(this.medium, label)
         this.handleMedium(mhandle)
         
         for(let lawexp of ensureArray(this.nucleus.law)){
