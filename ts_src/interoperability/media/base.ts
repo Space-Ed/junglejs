@@ -59,7 +59,8 @@ export interface Claim <C extends BaseContact<any> = BaseContact<any>> {
     inbound?: {[from: string]:Link<BaseContact<any>, C>}
     token:string,
     contact:C,
-    valid:boolean
+    valid:boolean,
+    medium:BaseMedium<any, any>,
 }
 
 export abstract class BaseMedium<S extends BaseContact<any>, T extends BaseContact<any>> implements MediumConsumed, MediumImplementor{
@@ -81,34 +82,38 @@ export abstract class BaseMedium<S extends BaseContact<any>, T extends BaseConta
         this.claimCommon(token, seat, sponsor, true)
     }
 
-    claimCommon(token: string, claim: BaseContact<any>, sponsor: Law, isSeat:boolean){
+    claimCommon(token: string, contact: BaseContact<any>, sponsor: Law, isSeat:boolean){
         if (token in this.claims) {
             let existing = this.claims[token]
             existing.sponsors.add(sponsor)
-            existing[isSeat?'outbound':'inbound'] = existing[isSeat?'outbound':'inbound'] || {}
+
+            if (existing[isSeat ? 'outbound' : 'inbound']===undefined){
+                existing[isSeat?'outbound':'inbound'] = {}
+            }
         } else {
             let newclaim: Claim = {
                 sponsors: new Set([sponsor]),
-                contact: claim,
+                contact: contact,
                 token: token,
-                valid: true
+                valid: true,
+                medium:this
             }
 
+            //mark as 
             newclaim[isSeat ? 'outbound' : 'inbound'] = {}
 
-            // if (claim.isClaimed()) {
-            //     newclaim.valid = false
-            //     claim.contest(this, newclaim)
-            //     sponsor.contest()
-            // }
+            //hypothetical
+            contact[isSeat?'claimAsSeat':'claimAsTarget'](newclaim)
 
-            claim.claim(this)
-            this[isSeat?'inductSeat':'inductTarget'](newclaim)
+            //register claim
             this.claims[token] = newclaim
+
+            //actually claim
+            this[isSeat?'inductSeat':'inductTarget'](newclaim)
         }
     }
 
-
+  
     supposeLink(link: LinkSpec, sponsor: Law){
         
         let seatClaim = this.claims[link.seatToken]
@@ -150,9 +155,16 @@ export abstract class BaseMedium<S extends BaseContact<any>, T extends BaseConta
 
             this.claims[link.seatToken].outbound[link.targetToken] = newlink
             this.claims[link.targetToken].inbound[link.seatToken] = newlink
-            this.connect(newlink)
-        }
 
+            //can only connect if all constraints will be clear after the link is made
+
+
+        }
+        
+    }
+    
+    private actuallyConnect(){
+        this.connect(newlink)
     }
 
     private reduceBindings(existing, neu){

@@ -67,10 +67,7 @@ export class Section extends Layer {
     }
 
     contactChange(token: D.TokenIR, contact?: BaseContact<any>) {
-
         let m = D.matches(this.designator, token)
-
-
 
         if (m) {
             m = D.compileToken(token) in m;

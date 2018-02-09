@@ -1,7 +1,9 @@
 
 // import * as I from '../interfaces'
 
-import {ContactToMedium} from '../media/base'
+import {implicantsOfClaim, implicantsOfLink, Implicant} from '../implication'
+import {ConstraintToken, evaluateConstraint, ConstraintResult} from '../constraint'
+import {ContactToMedium, Claim} from '../media/base'
 
 export namespace I {
     export interface ContactHost {
@@ -11,31 +13,111 @@ export namespace I {
 
 export abstract class BaseContact<Partner extends BaseContact<any>> implements ContactToMedium{
 
-    //exclusion flags used by mesh
-    public hidden = false;  //does not appear in designations.
-    public plugged = false; //no further links allowed
-    public gloved = false;  //no further rules allowed
-    public claimed = false; //no further media allowed
+    //has bee
     public inverted = false;
-
     protected partner:Partner;
 
-    abstract isTargetable:boolean;
-    abstract isSeatable:boolean;
+    abstract seatConstraint:ConstraintToken;
+    abstract targetConstraint:ConstraintToken;
 
-    private claims:any;
+    claims:Set<Claim>
+    pendingClaims:Set<Claim>
 
-    claim(medium){
-        this.claims = true
+    constructor(){
+        this.claims = new Set()
+        this.pendingClaims = new Set() 
+    }
+    
+    attemptClaim(claim:Claim){
+        this.pendingClaims.add(claim)
+
+        this.checkSelf()
+
+        let implicants = []
+        let impressions = this.collectImpressions()
+
+        impressions.links.forEach(link=>{
+            implicants = [...implicants, ...implicantsOfLink(link)]
+        })
+
+        implicants.every((implicant:Implicant)=>{
+            //are you ok with this claim
+            return implicant.check()
+        })
+
+
+
     }
 
-    isContested():boolean {
-        return this.claims
+    seatClaims(){
+        const filt = (claim) => (claim.outbound !== undefined)
+        return [...this.claims].filter(filt).concat([...this.pendingClaims].filter(filt))
     }
 
-    isClaimed():boolean{
-        return !this.isContested()
+    targetClaims(){
+        const filt = (claim) => (claim.inbound !== undefined)
+        return [...this.claims].filter(filt).concat([...this.pendingClaims].filter(filt))    }
+
+    //check that all pending 
+    checkSelf(){
+        let seatClaimsCount = this.seatClaims().length
+        let targetClaimsCount = this.targetClaims().length
+
+        let targetConstraintResult = evaluateConstraint(this.targetConstraint, targetClaimsCount)
+        let seatConstraintResult = evaluateConstraint(this.seatConstraint, seatClaimsCount)
+
+        if (targetConstraintResult === true && seatConstraintResult === true){
+            return true
+        } else {
+            
+        }
     }
+
+    collectImpressions(){
+        let impressions= {
+            links:new Set<Link>(),
+            claims:new Set<Claim>()
+        }
+
+        this.claims.forEach((claim)=>{
+            impressions.claims.add(claim)
+
+            for(let t in claim.outbound){
+                impressions.links.add(claim.outbound[t])
+            }
+
+            for (let t in claim.inbound) {
+                impressions.links.add(claim.inbound[t])
+            }
+        })
+
+        return impressions
+        
+
+    }
+
+
+    status(){
+
+    }
+
+    complete(){
+
+    }
+
+    hypotheticalDrop(claim:Claim){
+
+    }
+
+    lodgeClaim(claim:Claim){
+
+    }
+
+    lodgeDrop(){
+
+    }
+
+
 
     /**
      * if possible create the partner that will appear on the other side and put it there.
